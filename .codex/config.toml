@@ -1,0 +1,5 @@
+# skillforge:begin (auto-generated, edit outside this block)
+[mcp_servers.codegraph]
+command = "cmd"
+args = ["/c", "codegraph", "serve", "--mcp"]
+# skillforge:end

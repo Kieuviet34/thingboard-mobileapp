@@ -1,0 +1,286 @@
+{
+  "version": "2.0.0",
+  "preset": "mobile-cross",
+  "targets": [
+    "claude",
+    "codex",
+    "antigravity"
+  ],
+  "items": [
+    "mattpocock-core",
+    "flutter-ui-naime",
+    "context7-skill",
+    "mcp-codegraph",
+    "impeccable",
+    "api-designer-rest",
+    "sentry-security-review",
+    "tool-codegraph"
+  ],
+  "scaffold": true,
+  "updated": "2026-11-20T04:11:10",
+  "format": 2,
+  "tools": {},
+  "sources": {
+    "api-designer-jeff": {
+      "repo": "Jeffallan/claude-skills",
+      "ref": "HEAD",
+      "commit": "67c1961b180dc92cf08983344627109e983e8f51"
+    },
+    "context7": {
+      "repo": "upstash/context7",
+      "ref": "master",
+      "commit": "f1872ebb2f3d943b293bb86fdc0c2905988820d9"
+    },
+    "impeccable": {
+      "repo": "pbakaus/impeccable",
+      "ref": "HEAD",
+      "commit": "b49177d32788f2dc585c42831d845dacf1ebed2c"
+    },
+    "flutter-ui-naime": {
+      "repo": "Naimehossein77/claude-flutter-ui-skills",
+      "ref": "HEAD",
+      "commit": "da647c4e373216554fa9ce2fe0e7129bb4cdd769"
+    },
+    "sentry": {
+      "repo": "getsentry/skills",
+      "ref": "HEAD",
+      "commit": "a582c51ee29d0f35e6ac321340796f77d43da733"
+    },
+    "mattpocock": {
+      "repo": "mattpocock/skills",
+      "ref": "HEAD",
+      "commit": "abeeaf95660ba9e8b7c753eb38f441ca707a8823"
+    }
+  },
+  "skills": {
+    "api-designer": {
+      "item": "api-designer-rest",
+      "source": "api-designer-jeff",
+      "path": "skills/api-designer",
+      "sha": "67c1961b180dc92cf08983344627109e983e8f51",
+      "digest": "9a20ef0cf8af447c95c246a73b2ea200169c22184f64f0f8ed9c5d8e46adfbe6",
+      "digest_algo": 2,
+      "dirs": [
+        ".claude/skills",
+        ".agents/skills"
+      ]
+    },
+    "code-review": {
+      "item": "mattpocock-core",
+      "source": "mattpocock",
+      "path": "skills/engineering/code-review",
+      "sha": "abeeaf95660ba9e8b7c753eb38f441ca707a8823",
+      "digest": "e14d83d727f514a484858272f5a45d83d42ba7f84c078758a0341ffe6e8832e5",
+      "digest_algo": 2,
+      "dirs": [
+        ".claude/skills",
+        ".agents/skills"
+      ]
+    },
+    "diagnosing-bugs": {
+      "item": "mattpocock-core",
+      "source": "mattpocock",
+      "path": "skills/engineering/diagnosing-bugs",
+      "sha": "abeeaf95660ba9e8b7c753eb38f441ca707a8823",
+      "digest": "eb364bd413d5b65ec3360466dfc8fe36a2f6c6de6a2c84a3b39bbf60fdbc120d",
+      "digest_algo": 2,
+      "dirs": [
+        ".claude/skills",
+        ".agents/skills"
+      ]
+    },
+    "domain-modeling": {
+      "item": "mattpocock-core",
+      "source": "mattpocock",
+      "path": "skills/engineering/domain-modeling",
+      "sha": "abeeaf95660ba9e8b7c753eb38f441ca707a8823",
+      "digest": "ab7acbca5aaf6e976caef1ccd1c14bac9459702f5b8e9d6d96e5a8ca8e3c7ee9",
+      "digest_algo": 2,
+      "dirs": [
+        ".claude/skills",
+        ".agents/skills"
+      ]
+    },
+    "find-bugs": {
+      "item": "sentry-security-review",
+      "source": "sentry",
+      "path": "skills/find-bugs",
+      "sha": "a582c51ee29d0f35e6ac321340796f77d43da733",
+      "digest": "583df04f993092f326224035a51feb769297d338a538ae05f86ba69373efeba3",
+      "digest_algo": 2,
+      "dirs": [
+        ".claude/skills",
+        ".agents/skills"
+      ]
+    },
+    "find-docs": {
+      "item": "context7-skill",
+      "source": "context7",
+      "path": "skills/find-docs",
+      "sha": "f1872ebb2f3d943b293bb86fdc0c2905988820d9",
+      "digest": "cd43f925af2d1c9364a22753f12860dd14c889c4ad354687378df835b84d6ad4",
+      "digest_algo": 2,
+      "dirs": [
+        ".claude/skills",
+        ".agents/skills"
+      ]
+    },
+    "flutter-ui": {
+      "item": "flutter-ui-naime",
+      "source": "flutter-ui-naime",
+      "path": "flutter-ui",
+      "sha": "da647c4e373216554fa9ce2fe0e7129bb4cdd769",
+      "digest": "1d2c51b7059bc7cc7827dde0dce659ecb370e087c1b76295210c2658d41b7dfd",
+      "digest_algo": 2,
+      "dirs": [
+        ".claude/skills",
+        ".agents/skills"
+      ]
+    },
+    "grill-me": {
+      "item": "mattpocock-core",
+      "source": "mattpocock",
+      "path": "skills/productivity/grill-me",
+      "sha": "abeeaf95660ba9e8b7c753eb38f441ca707a8823",
+      "digest": "eb2880386e9259f4ca51167f518c81cea969850d8f45bd8f79f579dcbbad902e",
+      "digest_algo": 2,
+      "dirs": [
+        ".claude/skills",
+        ".agents/skills"
+      ]
+    },
+    "handoff": {
+      "item": "mattpocock-core",
+      "source": "mattpocock",
+      "path": "skills/productivity/handoff",
+      "sha": "abeeaf95660ba9e8b7c753eb38f441ca707a8823",
+      "digest": "9f7eab21188d0c5d95a1a123d8b4dc8337774cf880166ade009622d766102f16",
+      "digest_algo": 2,
+      "dirs": [
+        ".claude/skills",
+        ".agents/skills"
+      ]
+    },
+    "impeccable": {
+      "item": "impeccable",
+      "source": "impeccable",
+      "path": ".agents/skills/impeccable",
+      "sha": "b49177d32788f2dc585c42831d845dacf1ebed2c",
+      "digest": "1bf0505e2533f49b8369af49824d44c2f71af7770f306d07417caab6e9b772e3",
+      "digest_algo": 2,
+      "dirs": [
+        ".claude/skills",
+        ".agents/skills"
+      ]
+    },
+    "implement": {
+      "item": "mattpocock-core",
+      "source": "mattpocock",
+      "path": "skills/engineering/implement",
+      "sha": "abeeaf95660ba9e8b7c753eb38f441ca707a8823",
+      "digest": "3465060b2e4776f9e791293720a66869f265c83f9a5323e3ab0115f0558cc65b",
+      "digest_algo": 2,
+      "dirs": [
+        ".claude/skills",
+        ".agents/skills"
+      ]
+    },
+    "improve-codebase-architecture": {
+      "item": "mattpocock-core",
+      "source": "mattpocock",
+      "path": "skills/engineering/improve-codebase-architecture",
+      "sha": "abeeaf95660ba9e8b7c753eb38f441ca707a8823",
+      "digest": "3c72a8a3852beda9b28b6a14ce665506ea57a59a76568cf826873ec17d798c5a",
+      "digest_algo": 2,
+      "dirs": [
+        ".claude/skills",
+        ".agents/skills"
+      ]
+    },
+    "research": {
+      "item": "mattpocock-core",
+      "source": "mattpocock",
+      "path": "skills/engineering/research",
+      "sha": "abeeaf95660ba9e8b7c753eb38f441ca707a8823",
+      "digest": "4a52e8e17a984526a0f3f25bc138097b4ca8b5f15e35b7c318fa024c6b04e0fd",
+      "digest_algo": 2,
+      "dirs": [
+        ".claude/skills",
+        ".agents/skills"
+      ]
+    },
+    "security-review": {
+      "item": "sentry-security-review",
+      "source": "sentry",
+      "path": "skills/security-review",
+      "sha": "a582c51ee29d0f35e6ac321340796f77d43da733",
+      "digest": "c2fc6912ee18bf3cc4ba0c7f6d4e1919a8b1edf348ba2c759d845f6157369ade",
+      "digest_algo": 2,
+      "dirs": [
+        ".claude/skills",
+        ".agents/skills"
+      ]
+    },
+    "setup-matt-pocock-skills": {
+      "item": "mattpocock-core",
+      "source": "mattpocock",
+      "path": "skills/engineering/setup-matt-pocock-skills",
+      "sha": "abeeaf95660ba9e8b7c753eb38f441ca707a8823",
+      "digest": "fb96a61c2698a9f4299778861547b92f11719d033d1cd5dea7e95a98fe8e438a",
+      "digest_algo": 2,
+      "dirs": [
+        ".claude/skills",
+        ".agents/skills"
+      ]
+    },
+    "tdd": {
+      "item": "mattpocock-core",
+      "source": "mattpocock",
+      "path": "skills/engineering/tdd",
+      "sha": "abeeaf95660ba9e8b7c753eb38f441ca707a8823",
+      "digest": "cb510a538834fd446bae7cff1e6e46c4b625524d162bfc56c6d64486115a48e3",
+      "digest_algo": 2,
+      "dirs": [
+        ".claude/skills",
+        ".agents/skills"
+      ]
+    },
+    "to-spec": {
+      "item": "mattpocock-core",
+      "source": "mattpocock",
+      "path": "skills/engineering/to-spec",
+      "sha": "abeeaf95660ba9e8b7c753eb38f441ca707a8823",
+      "digest": "7c0ac5892441627cbe76e8587d47cbe3adedc61f779df5c9f82d473588503330",
+      "digest_algo": 2,
+      "dirs": [
+        ".claude/skills",
+        ".agents/skills"
+      ]
+    },
+    "to-tickets": {
+      "item": "mattpocock-core",
+      "source": "mattpocock",
+      "path": "skills/engineering/to-tickets",
+      "sha": "abeeaf95660ba9e8b7c753eb38f441ca707a8823",
+      "digest": "7e0aa33c2d0ccd99d92a7b45405243f7a948425e161723d4535f178ee0af3d59",
+      "digest_algo": 2,
+      "dirs": [
+        ".claude/skills",
+        ".agents/skills"
+      ]
+    }
+  },
+  "deny": [
+    "Read(./build/**)",
+    "Read(./.dart_tool/**)",
+    "Read(./node_modules/**)",
+    "Read(./ios/Pods/**)",
+    "Read(./android/.gradle/**)",
+    "Read(./**/build/**)",
+    "Read(./.expo/**)",
+    "Read(./.git/**)"
+  ],
+  "mcp": [
+    "codegraph"
+  ]
+}

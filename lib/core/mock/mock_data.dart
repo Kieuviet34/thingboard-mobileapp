@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_democloud_app/core/models/models.dart';
 
 enum AlarmSeverityType {
   critical('Critical', Color(0xFFD12730)),
@@ -90,6 +91,7 @@ class MockAlarm {
     bool? isActive,
     bool? isAcknowledged,
     String? assigneeName,
+    bool clearAssignee = false,
     List<MockAlarmComment>? comments,
   }) {
     return MockAlarm(
@@ -100,7 +102,7 @@ class MockAlarm {
       isActive: isActive ?? this.isActive,
       isAcknowledged: isAcknowledged ?? this.isAcknowledged,
       createdTime: createdTime,
-      assigneeName: assigneeName ?? this.assigneeName,
+      assigneeName: clearAssignee ? null : (assigneeName ?? this.assigneeName),
       dashboardId: dashboardId,
       comments: comments ?? this.comments,
     );
@@ -508,7 +510,10 @@ class AlarmsStateNotifier extends StateNotifier<List<MockAlarm>> {
     state = [
       for (final alarm in state)
         if (alarm.id == id)
-          alarm.copyWith(assigneeName: assigneeName)
+          alarm.copyWith(
+            assigneeName: assigneeName,
+            clearAssignee: assigneeName == null,
+          )
         else
           alarm,
     ];
@@ -543,31 +548,25 @@ final alarmsProvider =
     });
 
 final deviceProfilesProvider = Provider<List<MockDeviceProfile>>((ref) {
-  return const [
-    MockDeviceProfile(
-      id: 'dp-1',
-      name: 'Thermostat',
-      activeCount: 4,
-      inactiveCount: 1,
-    ),
-    MockDeviceProfile(
-      id: 'dp-2',
-      name: 'Energy Meter',
-      activeCount: 3,
-      inactiveCount: 0,
-    ),
-    MockDeviceProfile(
-      id: 'dp-3',
-      name: 'GPS Tracker',
-      activeCount: 2,
-      inactiveCount: 1,
-    ),
-    MockDeviceProfile(
-      id: 'dp-4',
-      name: 'Water Sensor',
-      activeCount: 2,
-      inactiveCount: 1,
-    ),
+  final devices = ref.watch(devicesProvider);
+  const profileDefs = [
+    (id: 'dp-1', name: 'Thermostat'),
+    (id: 'dp-2', name: 'Energy Meter'),
+    (id: 'dp-3', name: 'GPS Tracker'),
+    (id: 'dp-4', name: 'Water Sensor'),
+  ];
+  return [
+    for (final def in profileDefs)
+      MockDeviceProfile(
+        id: def.id,
+        name: def.name,
+        activeCount: devices
+            .where((d) => d.type == def.name && d.active)
+            .length,
+        inactiveCount: devices
+            .where((d) => d.type == def.name && !d.active)
+            .length,
+      ),
   ];
 });
 
@@ -896,12 +895,13 @@ class NotificationsStateNotifier
   }
 }
 
-final notificationsProvider = StateNotifierProvider<
-  NotificationsStateNotifier,
-  List<MockNotificationItem>
->((ref) {
-  return NotificationsStateNotifier();
-});
+final notificationsProvider =
+    StateNotifierProvider<
+      NotificationsStateNotifier,
+      List<MockNotificationItem>
+    >((ref) {
+      return NotificationsStateNotifier();
+    });
 
 class UserProfileNotifier extends StateNotifier<MockUserProfile> {
   UserProfileNotifier() : super(const MockUserProfile());
@@ -915,3 +915,232 @@ final userProfileProvider =
     StateNotifierProvider<UserProfileNotifier, MockUserProfile>((ref) {
       return UserProfileNotifier();
     });
+
+/// Seeded entity relations for Demo Mode (Asset <-> Device hierarchy).
+final List<TbEntityRelationInfo> demoEntityRelations = [
+  const TbEntityRelationInfo(
+    from: EntityId(entityType: EntityType.asset, id: 'asset-1'),
+    to: EntityId(entityType: EntityType.device, id: 'dev-1'),
+    type: 'Contains',
+    fromName: 'Headquarters Building A',
+    toName: 'Thermostat-Floor-1',
+  ),
+  const TbEntityRelationInfo(
+    from: EntityId(entityType: EntityType.asset, id: 'asset-1'),
+    to: EntityId(entityType: EntityType.device, id: 'dev-2'),
+    type: 'Contains',
+    fromName: 'Headquarters Building A',
+    toName: 'Thermostat-Floor-3',
+  ),
+  const TbEntityRelationInfo(
+    from: EntityId(entityType: EntityType.asset, id: 'asset-2'),
+    to: EntityId(entityType: EntityType.device, id: 'dev-3'),
+    type: 'Contains',
+    fromName: 'Cold Storage Warehouse #2',
+    toName: 'Thermostat-Warehouse',
+  ),
+  const TbEntityRelationInfo(
+    from: EntityId(entityType: EntityType.asset, id: 'asset-2'),
+    to: EntityId(entityType: EntityType.device, id: 'dev-5'),
+    type: 'Contains',
+    fromName: 'Cold Storage Warehouse #2',
+    toName: 'GPS-Tracker-Van-04',
+  ),
+  const TbEntityRelationInfo(
+    from: EntityId(entityType: EntityType.asset, id: 'asset-3'),
+    to: EntityId(entityType: EntityType.device, id: 'dev-4'),
+    type: 'Contains',
+    fromName: 'Solar Substation North',
+    toName: 'EM-Main-Feeder-01',
+  ),
+  const TbEntityRelationInfo(
+    from: EntityId(entityType: EntityType.asset, id: 'asset-4'),
+    to: EntityId(entityType: EntityType.device, id: 'dev-6'),
+    type: 'Contains',
+    fromName: 'Reservoir Pumping Zone 1',
+    toName: 'Water-Pump-Station-2',
+  ),
+];
+
+/// Seeded device attributes per scope for Demo Mode.
+final Map<String, Map<TbAttributeScope, List<TbAttributeEntry>>>
+demoDeviceAttributes = {
+  'dev-1': {
+    TbAttributeScope.serverScope: const [
+      TbAttributeEntry(
+        key: 'inactivityAlarmTime',
+        value: 1731840000000,
+        lastUpdateTs: 1731840000000,
+        scope: TbAttributeScope.serverScope,
+      ),
+      TbAttributeEntry(
+        key: 'floor',
+        value: '1',
+        lastUpdateTs: 1731840000000,
+        scope: TbAttributeScope.serverScope,
+      ),
+    ],
+    TbAttributeScope.sharedScope: const [
+      TbAttributeEntry(
+        key: 'targetTemp',
+        value: 22.0,
+        lastUpdateTs: 1731840000000,
+        scope: TbAttributeScope.sharedScope,
+      ),
+      TbAttributeEntry(
+        key: 'fanMode',
+        value: 'AUTO',
+        lastUpdateTs: 1731840000000,
+        scope: TbAttributeScope.sharedScope,
+      ),
+    ],
+    TbAttributeScope.clientScope: const [
+      TbAttributeEntry(
+        key: 'firmwareVersion',
+        value: '2.4.1',
+        lastUpdateTs: 1731840000000,
+        scope: TbAttributeScope.clientScope,
+      ),
+    ],
+  },
+  'dev-2': {
+    TbAttributeScope.serverScope: const [
+      TbAttributeEntry(
+        key: 'inactivityTimeout',
+        value: 600,
+        lastUpdateTs: 1731840000000,
+        scope: TbAttributeScope.serverScope,
+      ),
+    ],
+    TbAttributeScope.sharedScope: const [
+      TbAttributeEntry(
+        key: 'targetTemp',
+        value: 21.0,
+        lastUpdateTs: 1731840000000,
+        scope: TbAttributeScope.sharedScope,
+      ),
+    ],
+    TbAttributeScope.clientScope: const [
+      TbAttributeEntry(
+        key: 'firmwareVersion',
+        value: '2.4.1',
+        lastUpdateTs: 1731840000000,
+        scope: TbAttributeScope.clientScope,
+      ),
+    ],
+  },
+};
+
+/// Seeded persistent RPCs for Demo Mode.
+final Map<String, List<TbPersistentRpc>> demoPersistentRpcs = {
+  'dev-2': [
+    TbPersistentRpc(
+      id: 'rpc-1',
+      deviceId: 'dev-2',
+      createdTime: DateTime(2026, 11, 17, 14, 25).millisecondsSinceEpoch,
+      status: RpcStatus.successful,
+      request: const {
+        'method': 'setTargetTemp',
+        'params': {'value': 21.0},
+      },
+      response: const {'applied': true},
+    ),
+  ],
+  'dev-6': [
+    TbPersistentRpc(
+      id: 'rpc-2',
+      deviceId: 'dev-6',
+      createdTime: DateTime(2026, 11, 16, 19, 32).millisecondsSinceEpoch,
+      status: RpcStatus.timeout,
+      request: const {
+        'method': 'setPumpState',
+        'params': {'enabled': true, 'rpm': 1800},
+      },
+    ),
+  ],
+};
+
+/// Seeded assignee candidates for Demo Mode alarms.
+const List<TbUserEmailInfo> demoAssignees = [
+  TbUserEmailInfo(
+    id: 'user-1',
+    email: 'tenant@thingsboard.org',
+    firstName: 'John',
+    lastName: 'Doe',
+  ),
+  TbUserEmailInfo(
+    id: 'user-2',
+    email: 'alice.ops@thingsboard.org',
+    firstName: 'Alice',
+    lastName: 'Morgan',
+  ),
+  TbUserEmailInfo(
+    id: 'user-3',
+    email: 'bob.noc@thingsboard.org',
+    firstName: 'Bob',
+    lastName: 'Chen',
+  ),
+];
+
+/// Generates deterministic 24-hour telemetry history points for Demo Mode charts.
+Map<String, List<TbTsPoint>> buildDemoTelemetryHistory({
+  required List<String> keys,
+  required int startTs,
+  required int endTs,
+  int count = 24,
+}) {
+  final safeCount = count < 2 ? 2 : count;
+  final step = (endTs - startTs) ~/ (safeCount - 1);
+  final result = <String, List<TbTsPoint>>{};
+
+  for (final key in keys) {
+    final base = switch (key.toLowerCase()) {
+      'temperature' => 22.0,
+      'humidity' => 48.0,
+      'voltage' => 230.0,
+      'power' => 3.8,
+      'speed' => 55.0,
+      'batterylevel' => 65.0,
+      'flowrate' => 120.0,
+      'pressure' => 4.1,
+      _ => 20.0,
+    };
+    final amplitude = switch (key.toLowerCase()) {
+      'temperature' => 3.5,
+      'humidity' => 6.0,
+      'voltage' => 2.5,
+      'power' => 0.9,
+      _ => 4.0,
+    };
+
+    result[key] = [
+      for (var i = 0; i < safeCount; i++)
+        TbTsPoint(
+          ts: startTs + step * i,
+          rawValue: double.parse(
+            (base + amplitude * (((i % 6) - 2.5) / 2.5)).toStringAsFixed(2),
+          ),
+          numericValue: double.parse(
+            (base + amplitude * (((i % 6) - 2.5) / 2.5)).toStringAsFixed(2),
+          ),
+        ),
+    ];
+  }
+  return result;
+}
+
+/// Seeded user notification preferences for Demo Mode.
+const TbUserNotificationSettings demoNotificationSettings =
+    TbUserNotificationSettings(
+      prefs: {
+        'ALARM': {'WEB': true, 'MOBILE_APP': true, 'EMAIL': true},
+        'DEVICE_ACTIVITY': {'WEB': true, 'MOBILE_APP': true, 'EMAIL': false},
+      },
+    );
+
+/// Seeded general user settings for Demo Mode.
+const Map<String, dynamic> demoUserGeneralSettings = {
+  'lang': 'en_US',
+  'unitSystem': 'METRIC',
+  'homeDashboardHideToolbar': true,
+};

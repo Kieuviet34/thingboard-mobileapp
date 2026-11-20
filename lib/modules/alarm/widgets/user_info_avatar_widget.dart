@@ -1,38 +1,64 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:thingsboard_democloud_app/config/themes/design_tokens.dart';
 
+/// Compact circular initials avatar styled via Material 3 [ColorScheme] and [TextTheme].
 class UserInfoAvatarWidget extends StatelessWidget {
   const UserInfoAvatarWidget({
     required this.shortName,
-    required this.color,
+    this.color,
+    this.foregroundColor,
+    this.size = 32,
+    this.semanticLabel,
     super.key,
   });
 
   final String shortName;
-  final Color color;
+  final Color? color;
+  final Color? foregroundColor;
+  final double size;
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final trimmed = shortName.trim();
+    final initials = trimmed.isEmpty
+        ? 'U'
+        : (trimmed.length > 2 ? trimmed.substring(0, 2) : trimmed)
+              .toUpperCase();
+
+    final background = color ?? scheme.primaryContainer;
+    final foreground =
+        foregroundColor ??
+        (color == null ? scheme.onPrimaryContainer : scheme.onPrimary);
+
+    final avatar = Container(
+      width: size,
+      height: size,
+      padding: const EdgeInsets.all(DesignTokens.spacing4),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(100),
-        color: color,
+        color: background,
+        borderRadius: DesignTokens.borderRadiusRound,
       ),
-      padding: const EdgeInsets.all(4),
-      height: 32,
-      width: 32,
-      child: Center(
+      alignment: Alignment.center,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
         child: Text(
-          shortName.length > 2 ? shortName.substring(0, 2) : shortName,
-          style: GoogleFonts.roboto(
+          initials,
+          maxLines: 1,
+          style: textTheme.labelMedium?.copyWith(
             fontWeight: FontWeight.w700,
-            fontSize: 14,
-            letterSpacing: 1,
-            height: 1.14,
-            color: Colors.white,
+            letterSpacing: 0.6,
+            color: foreground,
           ),
         ),
       ),
     );
+
+    if (semanticLabel != null && semanticLabel!.isNotEmpty) {
+      return Semantics(label: semanticLabel, child: avatar);
+    }
+    return ExcludeSemantics(child: avatar);
   }
 }

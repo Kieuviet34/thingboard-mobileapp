@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:reactive_forms/reactive_forms.dart';
-import 'package:thingsboard_democloud_app/config/themes/app_colors.dart';
-import 'package:thingsboard_democloud_app/config/themes/tb_text_styles.dart';
+import 'package:thingsboard_democloud_app/config/themes/design_tokens.dart';
 
-class TbValicationMessages {
+class TbValidationMessages {
   static const invalidCode = 'invalidCode';
   static const tooManyRequests = 'tooManyRequest';
 }
+
+@Deprecated('Use TbValidationMessages instead.')
+typedef TbValicationMessages = TbValidationMessages;
 
 class TbTextField extends HookWidget {
   const TbTextField({
@@ -60,9 +62,9 @@ class TbTextField extends HookWidget {
     final isError = useRef(false);
     final isErrorState = useState(false);
     final counter = useState(0);
-    final errorColor =
-        Theme.of(context).inputDecorationTheme.errorStyle?.color ??
-        AppColors.textError;
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final errorColor = scheme.error;
 
     useEffect(() {
       void updateState() {
@@ -85,7 +87,7 @@ class TbTextField extends HookWidget {
       };
     }, [formControl?.statusChanged, formControl?.touchChanges]);
 
-    return ReactiveTextField(
+    return ReactiveTextField<dynamic>(
       focusNode: node,
       readOnly: readOnly,
       onTap: (control) {
@@ -103,7 +105,6 @@ class TbTextField extends HookWidget {
       autofocus: autoFocus,
       onSubmitted: (_) => onSubmit?.call(),
       maxLength: counterMaxValue,
-      cursorHeight: TbTextStyles.bodyLarge.fontSize,
       obscureText: obscureText && !isVisible.value,
       keyboardType: type,
       autofillHints: autoFillHints,
@@ -120,51 +121,55 @@ class TbTextField extends HookWidget {
           final desc = error as Map;
           return '$label is too long, required length is ${desc['requiredLength']}';
         },
-        TbValicationMessages.tooManyRequests:
-            (error) => 'Too many requests check verification code',
-        TbValicationMessages.invalidCode:
-            (error) => 'Invalid verification code format',
+        TbValidationMessages.tooManyRequests: (error) =>
+            'Too many requests check verification code',
+        TbValidationMessages.invalidCode: (error) =>
+            'Invalid verification code format',
       },
-      style: TbTextStyles.bodyLarge.copyWith(
-        color: isErrorState.value ? errorColor : null,
+      style: textTheme.bodyLarge?.copyWith(
+        color: isErrorState.value ? errorColor : scheme.onSurface,
       ),
       decoration: InputDecoration(
-        counterText:
-            maxLengthValidator != null
-                ? '${counter.value}/$counterMaxValue'
-                : null,
+        counterText: maxLengthValidator != null
+            ? '${counter.value}/$counterMaxValue'
+            : null,
         suffixIcon:
             suffixIcon ??
             (obscureText
                 ? IconButton(
-                  splashRadius: 10,
-                  icon: Icon(
-                    !isVisible.value ? Icons.visibility_off : Icons.visibility,
-                    color:
-                        Theme.of(context).inputDecorationTheme.suffixIconColor ??
-                        AppColors.iconDisabled,
-                    size: 24,
-                  ),
-                  onPressed: () {
-                    isVisible.value = !isVisible.value;
-                  },
-                )
-                : const SizedBox(width: 24)),
+                    tooltip: isVisible.value
+                        ? 'Hide password'
+                        : 'Show password',
+                    constraints: const BoxConstraints(
+                      minWidth: DesignTokens.minTouchTarget,
+                      minHeight: DesignTokens.minTouchTarget,
+                    ),
+                    icon: Icon(
+                      !isVisible.value
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                      color: scheme.onSurfaceVariant,
+                      size: DesignTokens.iconMedium,
+                    ),
+                    onPressed: () {
+                      isVisible.value = !isVisible.value;
+                    },
+                  )
+                : null),
         prefixIcon: prefixIcon,
         labelText: isRequired ? '$label*' : label,
         hintText: hint,
         isDense: true,
-        border: const OutlineInputBorder(),
-        labelStyle:
-            isErrorState.value
-                ? TbTextStyles.bodyLarge.copyWith(color: errorColor)
-                : null,
-        floatingLabelStyle:
-            isErrorState.value
-                ? WidgetStateTextStyle.resolveWith((Set<WidgetState> states) {
-                  return TbTextStyles.labelSmall.copyWith(color: errorColor);
-                })
-                : null,
+        labelStyle: isErrorState.value
+            ? textTheme.bodyLarge?.copyWith(color: errorColor)
+            : null,
+        floatingLabelStyle: isErrorState.value
+            ? WidgetStateTextStyle.resolveWith((Set<WidgetState> states) {
+                return (textTheme.labelSmall ?? const TextStyle()).copyWith(
+                  color: errorColor,
+                );
+              })
+            : null,
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+/// Design tokens for spacing, shape radii, breakpoints, accessibility targets, and motion.
 class DesignTokens {
   DesignTokens._();
 
@@ -38,6 +39,17 @@ class DesignTokens {
   static const double iconLarge = 32.0;
   static const double iconXl = 40.0;
 
+  // Accessibility & adaptive layout tokens
+  static const double minTouchTarget = 48.0;
+  static const double compactMaxWidth = 600.0;
+  static const double mediumMaxWidth = 840.0;
+  static const double maxReadableWidth = 720.0;
+
+  // Motion durations
+  static const Duration motionFast = Duration(milliseconds: 150);
+  static const Duration motionMedium = Duration(milliseconds: 250);
+  static const Duration motionSlow = Duration(milliseconds: 320);
+
   // Button heights
   static const double buttonHeightSmall = 32.0;
   static const double buttonHeightMedium = 40.0;
@@ -54,6 +66,9 @@ class DesignTokens {
   static const EdgeInsets paddingMedium = EdgeInsets.all(spacing16);
   static const EdgeInsets paddingLarge = EdgeInsets.all(spacing24);
   static const EdgeInsets paddingXl = EdgeInsets.all(spacing32);
+  static const EdgeInsets paddingZero = EdgeInsets.zero;
+
+  @Deprecated('Use paddingZero instead.')
   static const EdgeInsets paddigZero = EdgeInsets.zero;
 
   // Button padding

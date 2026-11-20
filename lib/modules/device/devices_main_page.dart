@@ -1,182 +1,283 @@
-import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:thingsboard_democloud_app/constants/assets_path.dart';
-import 'package:thingsboard_democloud_app/core/mock/mock_data.dart';
+import 'package:thingsboard_democloud_app/config/routes/router.dart';
+import 'package:thingsboard_democloud_app/config/themes/design_tokens.dart';
+import 'package:thingsboard_democloud_app/config/themes/tb_status_colors.dart';
+import 'package:thingsboard_democloud_app/config/themes/tb_text_styles.dart';
+import 'package:thingsboard_democloud_app/core/api/controllers/device_controller.dart';
+import 'package:thingsboard_democloud_app/core/models/device_models.dart';
+import 'package:thingsboard_democloud_app/core/models/tb_failure.dart';
+import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_bar.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_motion.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_shimmer.dart';
 
+/// Material 3 Device Profiles hub with synced "All devices" summary tile
+/// and adaptive 2-column profile cards using custom [TbIcon] glyphs.
 class DevicesMainPage extends ConsumerWidget {
   const DevicesMainPage({super.key});
 
+  void _openDeviceList(
+    BuildContext context, {
+    String? profileId,
+    String? title,
+    bool? active,
+    bool search = false,
+  }) {
+    final router = GoRouter.maybeOf(context);
+    if (router == null) return;
+    final params = <String, String>{
+      if (profileId != null && profileId.isNotEmpty) 'profileId': profileId,
+      if (title != null && title.isNotEmpty) 'title': title,
+      if (active != null) 'active': active.toString(),
+      if (search) 'search': 'true',
+    };
+    final uri = Uri(
+      path: AppRoutes.deviceList,
+      queryParameters: params.isEmpty ? null : params,
+    );
+    router.push(uri.toString());
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profiles = ref.watch(deviceProfilesProvider);
-    final devices = ref.watch(devicesProvider);
-    final activeTotal = devices.where((d) => d.active).length;
-    final inactiveTotal = devices.where((d) => !d.active).length;
+    final profilesAsync = ref.watch(deviceProfilesListProvider);
+    final width = MediaQuery.sizeOf(context).width;
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+    final crossAxisCount = width >= DesignTokens.mediumMaxWidth
+        ? 4
+        : width >= DesignTokens.compactMaxWidth
+        ? 3
+        : 2;
+    final cardExtent = 160.0 + ((textScale - 1.0).clamp(0.0, 1.5) * 68.0);
 
     return Scaffold(
       appBar: TbAppBar(
         canGoBack: false,
         title: const Text('Devices'),
+        actions: [
+          IconButton(
+            key: const Key('devices-main-search-button'),
+            tooltip: 'Search devices',
+            constraints: const BoxConstraints(
+              minWidth: DesignTokens.minTouchTarget,
+              minHeight: DesignTokens.minTouchTarget,
+            ),
+            icon: const Icon(Icons.search),
+            onPressed: () => _openDeviceList(context, search: true),
+          ),
+          IconButton(
+            key: const Key('devices-main-qr-button'),
+            tooltip: 'Scan QR to claim device',
+            constraints: const BoxConstraints(
+              minWidth: DesignTokens.minTouchTarget,
+              minHeight: DesignTokens.minTouchTarget,
+            ),
+            icon: const TbIcon(TbIconKind.qrFrame),
+            onPressed: () => GoRouter.maybeOf(context)?.push(AppRoutes.qrScan),
+          ),
+        ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await Future<void>.delayed(const Duration(milliseconds: 300));
-        },
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-                child: _AllDevicesCard(
-                  activeCount: activeTotal,
-                  inactiveCount: inactiveTotal,
-                ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 156 / 200,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final profile = profiles[index];
-                    return GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () {
-                        context.push(
-                          '/devices/deviceList?deviceType=${Uri.encodeComponent(profile.name)}',
-                        );
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withAlpha(
-                                (255 * 0.05).ceil(),
-                              ),
-                              blurRadius: 6.0,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Card(
-                          margin: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          elevation: 0,
-                          child: _DeviceProfileCard(profile: profile),
-                        ),
-                      ),
-                    );
-                  },
-                  childCount: profiles.length,
-                ),
-              ),
-            ),
-          ],
+      body: profilesAsync.when(
+        loading: () => const SingleChildScrollView(
+          padding: DesignTokens.paddingMedium,
+          child: TbShimmerList(itemCount: 4),
         ),
+        error: (err, _) => TbEmptyState(
+          icon: TbIconKind.severityCritical,
+          title: 'Failed to load devices',
+          subtitle: err is TbFailure ? err.message : err.toString(),
+          isError: true,
+          actionLabel: 'Retry',
+          onAction: () =>
+              ref.read(deviceProfilesListProvider.notifier).refresh(),
+        ),
+        data: (paged) {
+          if (paged.items.isEmpty) {
+            return TbEmptyState(
+              icon: TbIconKind.navDevices,
+              title: 'No device profiles',
+              subtitle: 'Claim or add a device to get started',
+              actionLabel: 'Refresh',
+              onAction: () =>
+                  ref.read(deviceProfilesListProvider.notifier).refresh(),
+            );
+          }
+
+          final activeTotal = paged.items.fold<int>(
+            0,
+            (sum, p) => sum + p.activeCount,
+          );
+          final inactiveTotal = paged.items.fold<int>(
+            0,
+            (sum, p) => sum + p.inactiveCount,
+          );
+
+          return RefreshIndicator(
+            onRefresh: () =>
+                ref.read(deviceProfilesListProvider.notifier).refresh(),
+            child: CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    DesignTokens.spacing16,
+                    DesignTokens.spacing12,
+                    DesignTokens.spacing16,
+                    DesignTokens.spacing12,
+                  ),
+                  sliver: SliverToBoxAdapter(
+                    child: _AllDevicesSummaryTile(
+                      activeCount: activeTotal,
+                      inactiveCount: inactiveTotal,
+                      onOpenAll: () => _openDeviceList(context),
+                      onOpenOnline: () =>
+                          _openDeviceList(context, active: true),
+                      onOpenOffline: () =>
+                          _openDeviceList(context, active: false),
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    DesignTokens.spacing16,
+                    0,
+                    DesignTokens.spacing16,
+                    DesignTokens.spacing24,
+                  ),
+                  sliver: SliverGrid.builder(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      mainAxisSpacing: DesignTokens.spacing12,
+                      crossAxisSpacing: DesignTokens.spacing12,
+                      mainAxisExtent: cardExtent,
+                    ),
+                    itemCount: paged.items.length,
+                    itemBuilder: (context, index) {
+                      final profile = paged.items[index];
+                      return TbStaggeredEntry(
+                        index: index,
+                        child: _DeviceProfileCard(
+                          profile: profile,
+                          onTap: () => _openDeviceList(
+                            context,
+                            profileId: profile.id,
+                            title: profile.name,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 }
 
-class _AllDevicesCard extends StatelessWidget {
-  const _AllDevicesCard({
+class _AllDevicesSummaryTile extends StatelessWidget {
+  const _AllDevicesSummaryTile({
     required this.activeCount,
     required this.inactiveCount,
+    required this.onOpenAll,
+    required this.onOpenOnline,
+    required this.onOpenOffline,
   });
 
   final int activeCount;
   final int inactiveCount;
+  final VoidCallback onOpenAll;
+  final VoidCallback onOpenOnline;
+  final VoidCallback onOpenOffline;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => context.push('/devices/deviceList'),
-      child: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha((255 * 0.05).ceil()),
-              blurRadius: 6.0,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Card(
-          margin: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-          elevation: 0,
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final statusColors = TbStatusColors.of(context);
+    final total = activeCount + inactiveCount;
+
+    return Material(
+      key: const Key('all-devices-summary-card'),
+      color: scheme.surfaceContainerLow,
+      shape: RoundedRectangleBorder(
+        borderRadius: DesignTokens.borderRadiusLarge,
+        side: BorderSide(color: scheme.outlineVariant),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: TbPressScale(
+        onTap: onOpenAll,
+        child: Padding(
+          padding: DesignTokens.cardPadding,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: DesignTokens.spacing12,
             children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 12, 16, 15),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'All devices',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w500,
-                        fontSize: 14,
-                        height: 20 / 14,
-                      ),
-                    ),
-                    Icon(Icons.arrow_forward, size: 18),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
               Row(
                 children: [
-                  Flexible(
-                    fit: FlexFit.tight,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap:
-                          () => context.push('/devices/deviceList?active=true'),
-                      child: Container(
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: _buildDeviceCount(context, true, activeCount),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(
-                    width: 1,
+                  Container(
+                    width: 40,
                     height: 40,
-                    child: VerticalDivider(width: 1),
-                  ),
-                  Flexible(
-                    fit: FlexFit.tight,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap:
-                          () =>
-                              context.push('/devices/deviceList?active=false'),
-                      child: Container(
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: _buildDeviceCount(context, false, inactiveCount),
-                      ),
+                    decoration: BoxDecoration(
+                      color: scheme.primaryContainer,
+                      borderRadius: DesignTokens.borderRadiusMedium,
                     ),
+                    alignment: Alignment.center,
+                    child: TbIcon(
+                      TbIconKind.navDevices,
+                      color: scheme.onPrimaryContainer,
+                    ),
+                  ),
+                  const SizedBox(width: DesignTokens.spacing12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'All devices',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          '$total total',
+                          style: TbTextStyles.tabular(
+                            textTheme.bodySmall ?? TbTextStyles.bodySmall,
+                          ).copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
+                ],
+              ),
+              Wrap(
+                spacing: DesignTokens.spacing8,
+                runSpacing: DesignTokens.spacing8,
+                children: [
+                  _CountFilterButton(
+                    key: const Key('all-devices-online-pill'),
+                    icon: TbIconKind.livePulse,
+                    label: '$activeCount Online',
+                    bg: statusColors.onlineContainer,
+                    fg: statusColors.onOnlineContainer,
+                    accent: statusColors.online,
+                    onTap: onOpenOnline,
+                  ),
+                  _CountFilterButton(
+                    key: const Key('all-devices-offline-pill'),
+                    icon: TbIconKind.offlineNode,
+                    label: '$inactiveCount Offline',
+                    bg: statusColors.offlineContainer,
+                    fg: statusColors.onOfflineContainer,
+                    accent: statusColors.offline,
+                    onTap: onOpenOffline,
                   ),
                 ],
               ),
@@ -188,145 +289,213 @@ class _AllDevicesCard extends StatelessWidget {
   }
 }
 
-class _DeviceProfileCard extends StatelessWidget {
-  const _DeviceProfileCard({required this.profile});
+class _CountFilterButton extends StatelessWidget {
+  const _CountFilterButton({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.bg,
+    required this.fg,
+    required this.accent,
+    required this.onTap,
+  });
 
-  final MockDeviceProfile profile;
+  final TbIconKind icon;
+  final String label;
+  final Color bg;
+  final Color fg;
+  final Color accent;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(4),
-      child: Column(
-        children: [
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: SvgPicture.asset(
-                width: 64,
-                height: 64,
-                ThingsboardImage.deviceProfilePlaceholder,
-                semanticsLabel: 'Device profile',
-              ),
+    final textTheme = Theme.of(context).textTheme;
+    return Semantics(
+      button: true,
+      label: label,
+      child: Material(
+        color: bg,
+        borderRadius: DesignTokens.borderRadiusRound,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minWidth: DesignTokens.minTouchTarget,
+              minHeight: DesignTokens.minTouchTarget,
             ),
-          ),
-          SizedBox(
-            height: 44,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              child: Center(
-                child: AutoSizeText(
-                  profile.name,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w500,
-                    fontSize: 14,
-                    height: 20 / 14,
+              padding: const EdgeInsets.symmetric(
+                horizontal: DesignTokens.spacing12,
+                vertical: DesignTokens.spacing8,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TbIcon(icon, size: DesignTokens.iconSmall, color: accent),
+                  const SizedBox(width: DesignTokens.spacing8),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TbTextStyles.tabular(
+                        textTheme.labelMedium ?? TbTextStyles.labelMedium,
+                      ).copyWith(color: fg, fontWeight: FontWeight.w600),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ),
-          const Divider(height: 1),
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              context.push(
-                '/devices/deviceList?active=true&deviceType=${Uri.encodeComponent(profile.name)}',
-              );
-            },
-            child: _buildDeviceCount(context, true, profile.activeCount),
-          ),
-          const Divider(height: 1),
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              context.push(
-                '/devices/deviceList?active=false&deviceType=${Uri.encodeComponent(profile.name)}',
-              );
-            },
-            child: _buildDeviceCount(context, false, profile.inactiveCount),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-Widget _buildDeviceCount(BuildContext context, bool active, int count) {
-  final Color color =
-      active ? const Color(0xFF008A00) : const Color(0xFFAFAFAF);
-  return Padding(
-    padding: const EdgeInsets.all(12),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            Stack(
-              children: [
-                Icon(Icons.devices_other, size: 16, color: color),
-                if (!active)
-                  CustomPaint(
-                    size: const Size.square(16),
-                    painter: StrikeThroughPainter(color: color, offset: 2),
+class _DeviceProfileCard extends StatelessWidget {
+  const _DeviceProfileCard({required this.profile, required this.onTap});
+
+  final TbDeviceProfileSummary profile;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final statusColors = TbStatusColors.of(context);
+    final kind = TbIcons.kindForDeviceType(profile.name);
+
+    return Material(
+      key: Key('device-profile-card-${profile.id}'),
+      color: scheme.surfaceContainerLow,
+      shape: RoundedRectangleBorder(
+        borderRadius: DesignTokens.borderRadiusLarge,
+        side: BorderSide(color: scheme.outlineVariant),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: TbPressScale(
+        onTap: onTap,
+        child: Padding(
+          padding: DesignTokens.cardPadding,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: scheme.secondaryContainer,
+                      borderRadius: DesignTokens.borderRadiusMedium,
+                    ),
+                    alignment: Alignment.center,
+                    child: TbIcon(
+                      kind,
+                      size: DesignTokens.iconMedium,
+                      color: scheme.onSecondaryContainer,
+                    ),
                   ),
-              ],
-            ),
-            const SizedBox(width: 8.67),
-            Text(
-              active ? 'Active' : 'Inactive',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                height: 16 / 12,
-                color: color,
+                  const Spacer(),
+                  Text(
+                    '${profile.activeCount + profile.inactiveCount}',
+                    style:
+                        TbTextStyles.tabular(
+                          textTheme.titleMedium ?? TbTextStyles.titleMedium,
+                        ).copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface,
+                        ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(width: 8.67),
-            Text(
-              count.toString(),
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                height: 16 / 12,
-                color: color,
+              Text(
+                profile.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurface,
+                ),
               ),
+              Wrap(
+                spacing: DesignTokens.spacing8,
+                runSpacing: DesignTokens.spacing4,
+                children: [
+                  _MiniStatusCount(
+                    icon: TbIconKind.livePulse,
+                    count: profile.activeCount,
+                    color: statusColors.online,
+                    bg: statusColors.onlineContainer,
+                    fg: statusColors.onOnlineContainer,
+                    semanticPrefix: 'online',
+                  ),
+                  _MiniStatusCount(
+                    icon: TbIconKind.offlineNode,
+                    count: profile.inactiveCount,
+                    color: statusColors.offline,
+                    bg: statusColors.offlineContainer,
+                    fg: statusColors.onOfflineContainer,
+                    semanticPrefix: 'offline',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniStatusCount extends StatelessWidget {
+  const _MiniStatusCount({
+    required this.icon,
+    required this.count,
+    required this.color,
+    required this.bg,
+    required this.fg,
+    required this.semanticPrefix,
+  });
+
+  final TbIconKind icon;
+  final int count;
+  final Color color;
+  final Color bg;
+  final Color fg;
+  final String semanticPrefix;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Semantics(
+      label: '$count $semanticPrefix',
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DesignTokens.spacing8,
+          vertical: DesignTokens.spacing4,
+        ),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: DesignTokens.borderRadiusRound,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TbIcon(icon, size: DesignTokens.iconXs, color: color),
+            const SizedBox(width: DesignTokens.spacing4),
+            Text(
+              '$count',
+              style: TbTextStyles.tabular(
+                textTheme.labelSmall ?? TbTextStyles.labelSmall,
+              ).copyWith(color: fg, fontWeight: FontWeight.w700),
             ),
           ],
         ),
-        const Icon(Icons.chevron_right, size: 16, color: Color(0xFFACACAC)),
-      ],
-    ),
-  );
-}
-
-class StrikeThroughPainter extends CustomPainter {
-  StrikeThroughPainter({required this.color, this.offset = 0});
-  final Color color;
-  final double offset;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color;
-    paint.strokeWidth = 1.5;
-    canvas.drawLine(
-      Offset(offset, offset),
-      Offset(size.width - offset, size.height - offset),
-      paint,
+      ),
     );
-    paint.color = Colors.white;
-    canvas.drawLine(
-      const Offset(2, 0),
-      Offset(size.width + 2, size.height),
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant StrikeThroughPainter oldDelegate) {
-    return color != oldDelegate.color;
   }
 }

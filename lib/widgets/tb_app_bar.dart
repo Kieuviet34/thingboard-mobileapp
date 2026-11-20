@@ -1,14 +1,16 @@
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:thingsboard_democloud_app/config/themes/design_tokens.dart';
 
+/// Material 3 app bar with accessible `>=48dp` back control and optional progress bar.
 class TbAppBar extends StatelessWidget implements PreferredSizeWidget {
   TbAppBar({
     super.key,
     this.leading,
     this.title,
     this.actions,
-    this.elevation = 8,
+    this.elevation = 0,
     this.shadowColor,
     this.showLoadingIndicator = false,
     this.canGoBack = true,
@@ -32,17 +34,19 @@ class TbAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final leadingWidget = getLeading(context);
+    final isEmptyLeading = leadingWidget is EmptyLeading;
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         AppBar(
           automaticallyImplyLeading: false,
-          leadingWidth: leadingWidget is EmptyLeading ? 20 : 40,
-          titleSpacing: 4,
+          leadingWidth: isEmptyLeading ? 16 : DesignTokens.minTouchTarget,
+          titleSpacing: isEmptyLeading ? 0 : DesignTokens.spacing4,
           leading: leadingWidget,
           title: buildTitle(context),
           actions: actions,
-          elevation: elevation ?? 8,
-          shadowColor: shadowColor ?? const Color(0xFFFFFFFF).withAlpha(150),
+          elevation: elevation,
+          shadowColor: shadowColor,
           centerTitle: false,
         ),
         if (showLoadingIndicator) const LinearProgressIndicator(),
@@ -53,26 +57,32 @@ class TbAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget getLeading(BuildContext context) {
     if (leading != null) return leading!;
 
-    if (canGoBack && context.canPop()) {
+    final router = GoRouter.maybeOf(context);
+    if (canGoBack && router != null && router.canPop()) {
       return IconButton(
+        tooltip: 'Back',
+        constraints: const BoxConstraints(
+          minWidth: DesignTokens.minTouchTarget,
+          minHeight: DesignTokens.minTouchTarget,
+        ),
         icon: backIcon ?? const Icon(Icons.arrow_back),
-        onPressed: context.pop,
+        onPressed: router.pop,
       );
     }
     return const EmptyLeading();
   }
 
   Widget? buildTitle(BuildContext context) {
-    if (title == null) {
-      return title;
-    }
+    if (title == null) return null;
     if (title is Text) {
       final text = title! as Text;
+      final baseStyle = text.style ?? Theme.of(context).textTheme.titleLarge;
       return AutoSizeText(
         text.data ?? '',
         maxLines: 1,
-        style: text.style,
-        minFontSize: text.style?.fontSize ?? 12,
+        overflow: TextOverflow.ellipsis,
+        style: baseStyle,
+        minFontSize: 12,
       );
     }
     return title;
@@ -83,7 +93,5 @@ class EmptyLeading extends StatelessWidget {
   const EmptyLeading({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return const SizedBox();
-  }
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }

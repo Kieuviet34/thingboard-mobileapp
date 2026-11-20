@@ -1,24 +1,27 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_democloud_app/config/themes/tb_theme_utils.dart';
-import 'package:thingsboard_democloud_app/constants/app_constants.dart';
+import 'package:thingsboard_democloud_app/core/api/controllers/auth_controller.dart'
+    as api_auth;
 import 'package:thingsboard_democloud_app/core/auth/login/login_theme.dart';
 import 'package:thingsboard_democloud_app/core/auth/login/widgets/o_auth_buttons.dart';
 
-/// Pre-configured Dio HTTP client pointing to https://thingsboard.democloud.xyz/
-/// Ready for backend integration in the next phase.
-final dioClientProvider = Provider<Dio>((ref) {
-  return Dio(
-    BaseOptions(
-      baseUrl: ThingsboardAppConstants.thingsBoardApiEndpoint,
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 15),
-      headers: {'Content-Type': 'application/json'},
-    ),
-  );
-});
+export 'package:thingsboard_democloud_app/core/api/controllers/auth_controller.dart'
+    show AuthController, authRepositoryProvider;
+export 'package:thingsboard_democloud_app/core/api/controllers/server_config_controller.dart'
+    show
+        dioClientProvider,
+        serverConfigProvider,
+        tbApiClientProvider,
+        tbAppPreferencesProvider,
+        tbStorageProvider,
+        telemetryWsServiceProvider;
 
+/// Canonical AsyncNotifier auth provider for Wave 2B+ screens and router guard.
+final authSessionProvider = api_auth.authProvider;
+
+/// Temporary UI-compatibility state preserved until Wave 2B migrates
+/// `login_page.dart`, `main.dart`, and `home_placeholder_page.dart`.
 class AuthUiState {
   const AuthUiState({
     this.isAuthenticated = false,
@@ -59,26 +62,29 @@ class AuthUiState {
 }
 
 class AuthNotifier extends StateNotifier<AuthUiState> {
-  AuthNotifier() : super(const AuthUiState());
+  AuthNotifier(this._ref) : super(const AuthUiState());
 
-  /// UI replica login handler (simulates network latency, ready to wire to
-  /// POST https://thingsboard.democloud.xyz/api/auth/login later).
+  final Ref _ref;
+
   Future<void> login(String email, String password) async {
-    await Future<void>.delayed(const Duration(milliseconds: 800));
+    await _ref.read(api_auth.authProvider.notifier).login(email, password);
     state = state.copyWith(isAuthenticated: true, userEmail: email);
   }
 
-  /// UI replica password reset handler (simulates network latency, ready to wire to
-  /// POST https://thingsboard.democloud.xyz/api/noauth/resetPasswordByEmail later).
-  Future<void> requestPasswordReset(String email) async {
-    await Future<void>.delayed(const Duration(milliseconds: 800));
+  Future<void> requestPasswordReset(String email) {
+    return _ref
+        .read(api_auth.authProvider.notifier)
+        .requestPasswordReset(email);
   }
 
   Future<void> logout() async {
+    await _ref.read(api_auth.authProvider.notifier).logout();
     state = state.copyWith(isAuthenticated: false, userEmail: '');
   }
 }
 
+/// Legacy bridge kept compiling for Wave 2B migration; new screens use [authSessionProvider]
+/// or `auth_controller.dart`'s `authProvider`.
 final authProvider = StateNotifierProvider<AuthNotifier, AuthUiState>((ref) {
-  return AuthNotifier();
+  return AuthNotifier(ref);
 });

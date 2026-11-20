@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:thingsboard_democloud_app/config/themes/tb_text_styles.dart';
+import 'package:thingsboard_democloud_app/config/themes/design_tokens.dart';
 
 class OAuthButton extends StatelessWidget {
   const OAuthButton({
@@ -7,30 +7,52 @@ class OAuthButton extends StatelessWidget {
     required this.logo,
     required this.onTap,
     this.title,
+    this.semanticLabel,
   });
+
   final Widget logo;
   final VoidCallback onTap;
   final String? title;
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton(
-      style: OutlinedButton.styleFrom(padding: const EdgeInsets.all(16)),
-      onPressed: onTap,
-      child: Row(
-        spacing: 8,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          logo,
-          if (title != null)
-            Text(
-              title!,
-              style: TbTextStyles.bodyLarge.copyWith(
-                color: Theme.of(context).textTheme.bodyLarge?.color,
-                height: 1,
+    final textTheme = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+
+    return Semantics(
+      button: true,
+      label: semanticLabel ?? title ?? 'OAuth sign in',
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(
+            DesignTokens.minTouchTarget,
+            DesignTokens.buttonHeightLarge,
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: DesignTokens.spacing16,
+            vertical: DesignTokens.spacing12,
+          ),
+        ),
+        onPressed: onTap,
+        child: Row(
+          spacing: DesignTokens.spacing8,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            logo,
+            if (title != null)
+              Flexible(
+                child: Text(
+                  title!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.labelLarge?.copyWith(
+                    color: scheme.onSurface,
+                  ),
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:thingsboard_democloud_app/config/themes/design_tokens.dart';
+import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 
 class BottomNavbarItems extends StatelessWidget {
   const BottomNavbarItems({
@@ -8,6 +10,7 @@ class BottomNavbarItems extends StatelessWidget {
     required this.unSelectedTextStyle,
     required this.onTap,
     required this.index,
+    this.tbIconKind,
     this.currentIndex,
     this.lineIndicatorWidth = 3,
     this.showAdditionalIcon = false,
@@ -17,9 +20,10 @@ class BottomNavbarItems extends StatelessWidget {
 
   final String label;
   final IconData icon;
+  final TbIconKind? tbIconKind;
   final int? currentIndex;
   final int index;
-  final Function(int) onTap;
+  final ValueChanged<int> onTap;
   final double lineIndicatorWidth;
   final TextStyle selectedTextStyle;
   final TextStyle unSelectedTextStyle;
@@ -28,69 +32,59 @@ class BottomNavbarItems extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bottomTheme = BottomNavigationBarTheme.of(context);
+    final scheme = Theme.of(context).colorScheme;
     final isSelected = currentIndex == index;
+    final iconColor = isSelected ? scheme.primary : scheme.onSurfaceVariant;
 
     return SafeArea(
       left: false,
       right: false,
-      child: Padding(
-        padding: const EdgeInsets.only(right: 7),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            splashColor: Theme.of(context).primaryColor.withValues(alpha: .10),
-            onTap: () => onTap(index),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(
-                    color:
-                        isSelected
-                            ? bottomTheme.selectedItemColor!
-                            : Colors.transparent,
-                    width: isSelected ? lineIndicatorWidth : 0,
-                  ),
-                ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => onTap(index),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minWidth: DesignTokens.minTouchTarget,
+              minHeight: DesignTokens.minTouchTarget,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                vertical: DesignTokens.spacing8,
               ),
-              padding: const EdgeInsets.symmetric(vertical: 7),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Padding(
-                    padding: EdgeInsets.only(
-                      left: showAdditionalIcon ? 18 : 0,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (tbIconKind != null)
+                        TbIcon(
+                          tbIconKind!,
+                          size: DesignTokens.iconMedium,
+                          color: iconColor,
+                          filled: isSelected,
+                        )
+                      else
                         Icon(
                           icon,
-                          size: 26,
-                          color:
-                              isSelected
-                                  ? bottomTheme.selectedItemColor
-                                  : bottomTheme.unselectedItemColor,
+                          size: DesignTokens.iconMedium,
+                          color: iconColor,
                         ),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(
-                            maxHeight: 30,
-                            maxWidth: 30,
+                      if (showAdditionalIcon && additionalIcon != null)
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            left: DesignTokens.spacing4,
                           ),
-                          child: Visibility(
-                            visible: showAdditionalIcon,
-                            child: additionalIcon ?? const SizedBox.shrink(),
-                          ),
+                          child: additionalIcon,
                         ),
-                      ],
-                    ),
+                    ],
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: DesignTokens.spacing4),
                   Text(
                     label,
                     textAlign: TextAlign.center,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: isSelected ? selectedTextStyle : unSelectedTextStyle,
                   ),

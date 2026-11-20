@@ -1,16 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_democloud_app/config/themes/app_colors.dart';
 import 'package:thingsboard_democloud_app/config/themes/tb_theme.dart';
 
-abstract class TbThemeUtils {
-  static final MaterialColor tbPrimary = _mergeColors(Colors.teal, {
-    500: Colors.teal[800]!,
-  });
-  static final MaterialColor tbAccent = Colors.deepOrange;
-  static final Color tbPrimaryColor = tbPrimary[500]!;
-  static final Color tbAccentColor = tbAccent[500]!;
+/// App-wide Light/Dark/System [ThemeMode] controller.
+class TbThemeModeNotifier extends Notifier<ThemeMode> {
+  @override
+  ThemeMode build() => ThemeMode.system;
 
-  static ThemeData get defaultTheme =>
-      tbTheme(tbPrimary, tbPrimaryColor, tbAccentColor);
+  void setThemeMode(ThemeMode mode) {
+    if (state != mode) {
+      state = mode;
+    }
+  }
+}
+
+final themeModeProvider = NotifierProvider<TbThemeModeNotifier, ThemeMode>(
+  TbThemeModeNotifier.new,
+);
+
+abstract class TbThemeUtils {
+  static final MaterialColor tbPrimary = AppColors.primarySwatch;
+  static final MaterialColor tbAccent = _mergeColors(Colors.deepOrange, {
+    500: AppColors.accentOrange,
+  });
+  static final Color tbPrimaryColor = AppColors.primaryBlue;
+  static final Color tbAccentColor = AppColors.accentOrange;
+
+  static ThemeData get lightTheme => tbLightTheme();
+  static ThemeData get darkTheme => tbDarkTheme();
+  static ThemeData get defaultTheme => tbLightTheme();
 
   static MaterialColor _mergeColors(
     MaterialColor color,

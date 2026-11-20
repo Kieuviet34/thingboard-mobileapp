@@ -1,491 +1,568 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:thingsboard_democloud_app/config/routes/router.dart';
 import 'package:thingsboard_democloud_app/config/themes/design_tokens.dart';
+import 'package:thingsboard_democloud_app/config/themes/tb_status_colors.dart';
 import 'package:thingsboard_democloud_app/config/themes/tb_text_styles.dart';
-import 'package:thingsboard_democloud_app/core/mock/mock_data.dart';
+import 'package:thingsboard_democloud_app/core/api/controllers/alarm_controller.dart';
+import 'package:thingsboard_democloud_app/core/models/alarm_models.dart';
+import 'package:thingsboard_democloud_app/core/models/entity_id.dart';
+import 'package:thingsboard_democloud_app/core/models/tb_failure.dart';
+import 'package:thingsboard_democloud_app/modules/alarm/alarm_details_page.dart';
+import 'package:thingsboard_democloud_app/modules/alarm/widgets/user_info_avatar_widget.dart';
+import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_search_bar.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_motion.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_shimmer.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_status_badge.dart';
 
+/// Material 3 Alarms list with debounced search, status/severity FilterChips,
+/// quick Ack/Clear actions, pagination, and adaptive 2-pane master-detail (>=840dp).
 class AlarmsPage extends ConsumerStatefulWidget {
-  const AlarmsPage({super.key, this.searchMode = false});
+  const AlarmsPage({
+    super.key,
+    this.searchMode = false,
+    this.originatorId,
+    this.initialSelectedAlarmId,
+  });
 
   final bool searchMode;
+  final EntityId? originatorId;
+  final String? initialSelectedAlarmId;
 
   @override
   ConsumerState<AlarmsPage> createState() => _AlarmsPageState();
 }
 
 class _AlarmsPageState extends ConsumerState<AlarmsPage> {
-  final PageController _pageController = PageController();
-  String _searchText = '';
-  Set<AlarmStatusFilter> _committedStatuses = {AlarmStatusFilter.active};
-  Set<AlarmSeverityType> _committedSeverities = {};
-  Set<AlarmStatusFilter> _draftStatuses = {AlarmStatusFilter.active};
-  Set<AlarmSeverityType> _draftSeverities = {};
-  bool _filtersChanged = false;
+  final ScrollController _scrollController = ScrollController();
+  late bool _isSearching;
+  String? _selectedAlarmId;
 
-  bool get _hasActiveFilters =>
-      _committedSeverities.isNotEmpty ||
-      !(_committedStatuses.length == 1 &&
-          _committedStatuses.contains(AlarmStatusFilter.active));
-
-  List<MockAlarm> _filterAlarms(List<MockAlarm> all) {
-    return all.where((alarm) {
-      if (_searchText.isNotEmpty) {
-        final q = _searchText.toLowerCase();
-        final matches =
-            alarm.type.toLowerCase().contains(q) ||
-            alarm.originatorName.toLowerCase().contains(q) ||
-            alarm.severity.label.toLowerCase().contains(q);
-        if (!matches) return false;
-      }
-      if (!widget.searchMode) {
-        if (_committedStatuses.isNotEmpty) {
-          bool statusMatch = false;
-          if (_committedStatuses.contains(AlarmStatusFilter.active) &&
-              alarm.isActive) {
-            statusMatch = true;
-          }
-          if (_committedStatuses.contains(AlarmStatusFilter.cleared) &&
-              !alarm.isActive) {
-            statusMatch = true;
-          }
-          if (_committedStatuses.contains(AlarmStatusFilter.acknowledged) &&
-              alarm.isAcknowledged) {
-            statusMatch = true;
-          }
-          if (_committedStatuses.contains(AlarmStatusFilter.unacknowledged) &&
-              !alarm.isAcknowledged) {
-            statusMatch = true;
-          }
-          if (!statusMatch) return false;
-        }
-        if (_committedSeverities.isNotEmpty &&
-            !_committedSeverities.contains(alarm.severity)) {
-          return false;
-        }
-      }
-      return true;
-    }).toList();
+  @override
+  void initState() {
+    super.initState();
+    _isSearching = widget.searchMode;
+    _selectedAlarmId = widget.initialSelectedAlarmId;
+    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
-    _pageController.dispose();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 240) {
+      ref.read(alarmsListProvider(widget.originatorId).notifier).loadNextPage();
+    }
+  }
+
+  void _updateFilter(TbAlarmFilter Function(TbAlarmFilter current) transform) {
+    final current = ref.read(alarmFilterProvider);
+    ref.read(alarmFilterProvider.notifier).state = transform(current);
+  }
+
+  void _toggleStatus(AlarmSearchStatus status) {
+    _updateFilter((current) {
+      final next = Set<AlarmSearchStatus>.from(current.statusList);
+      if (!next.remove(status)) {
+        next.add(status);
+      }
+      return current.copyWith(statusList: next);
+    });
+  }
+
+  void _toggleSeverity(AlarmSeverity severity) {
+    _updateFilter((current) {
+      final next = Set<AlarmSeverity>.from(current.severityList);
+      if (!next.remove(severity)) {
+        next.add(severity);
+      }
+      return current.copyWith(severityList: next);
+    });
+  }
+
+  void _clearAllFilters() {
+    ref.read(alarmFilterProvider.notifier).state = const TbAlarmFilter();
+  }
+
+  Future<void> _quickAck(String alarmId) async {
+    try {
+      await ref
+          .read(alarmsListProvider(widget.originatorId).notifier)
+          .acknowledge(alarmId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('Alarm acknowledged')));
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e is TbFailure ? e.message : e.toString();
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(msg)));
+    }
+  }
+
+  Future<void> _quickClear(String alarmId) async {
+    try {
+      await ref
+          .read(alarmsListProvider(widget.originatorId).notifier)
+          .clear(alarmId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('Alarm cleared')));
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e is TbFailure ? e.message : e.toString();
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(msg)));
+    }
+  }
+
+  void _openAlarm(TbAlarmInfo alarm, {required bool useTwoPane}) {
+    if (useTwoPane) {
+      setState(() => _selectedAlarmId = alarm.id);
+      return;
+    }
+    final router = GoRouter.maybeOf(context);
+    router?.push(AppRoutes.alarmDetailsPath(alarm.id));
   }
 
   @override
   Widget build(BuildContext context) {
-    final alarms = _filterAlarms(ref.watch(alarmsProvider));
+    final filter = ref.watch(alarmFilterProvider);
+    final alarmsAsync = ref.watch(alarmsListProvider(widget.originatorId));
+    final width = MediaQuery.sizeOf(context).width;
+    final useTwoPane = width >= DesignTokens.mediumMaxWidth;
+    final scheme = Theme.of(context).colorScheme;
 
-    if (widget.searchMode) {
-      return Scaffold(
-        appBar: TbAppSearchBar(
-          searchHint: 'Search alarms',
-          onSearch: (text) => setState(() => _searchText = text),
-        ),
-        body: _buildAlarmsList(alarms),
-      );
-    }
+    final hasFilters =
+        filter.statusList.isNotEmpty ||
+        filter.severityList.isNotEmpty ||
+        (filter.textSearch != null && filter.textSearch!.isNotEmpty);
 
-    return PageView(
-      controller: _pageController,
-      physics: const NeverScrollableScrollPhysics(),
-      children: [
-        Scaffold(
-          appBar: TbAppBar(
-            canGoBack: false,
-            title: Text('Alarms', style: TbTextStyles.titleXs),
-            actions: [
-              Stack(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.filter_list),
-                    onPressed: () {
-                      setState(() {
-                        _draftStatuses = Set.of(_committedStatuses);
-                        _draftSeverities = Set.of(_committedSeverities);
-                        _filtersChanged = false;
-                      });
-                      _pageController.animateToPage(
-                        1,
-                        duration: const Duration(milliseconds: 350),
-                        curve: Curves.easeInOut,
-                      );
-                    },
-                  ),
-                  if (_hasActiveFilters)
-                    Positioned(
-                      right: 13,
-                      top: 13,
-                      child: Container(
-                        height: 8,
-                        width: 8,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.white),
-                          borderRadius: BorderRadius.circular(16),
-                          color: Theme.of(context).primaryColor,
-                        ),
-                      ),
-                    ),
-                ],
+    final PreferredSizeWidget appBar = _isSearching
+        ? TbAppSearchBar(
+            searchHint: 'Search alarms',
+            leading: IconButton(
+              key: const Key('alarms-search-close-button'),
+              tooltip: 'Close search',
+              constraints: const BoxConstraints(
+                minWidth: DesignTokens.minTouchTarget,
+                minHeight: DesignTokens.minTouchTarget,
               ),
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () {
+                _updateFilter((f) => f.copyWith(clearTextSearch: true));
+                if (widget.searchMode) {
+                  GoRouter.maybeOf(context)?.pop();
+                } else {
+                  setState(() => _isSearching = false);
+                }
+              },
+            ),
+            onSearch: (q) {
+              final trimmed = q.trim();
+              _updateFilter(
+                (f) => trimmed.isEmpty
+                    ? f.copyWith(clearTextSearch: true)
+                    : f.copyWith(textSearch: trimmed),
+              );
+            },
+          )
+        : TbAppBar(
+            canGoBack: widget.originatorId != null,
+            title: const Text('Alarms'),
+            actions: [
               IconButton(
+                key: const Key('alarms-search-toggle-button'),
+                tooltip: 'Search alarms',
+                constraints: const BoxConstraints(
+                  minWidth: DesignTokens.minTouchTarget,
+                  minHeight: DesignTokens.minTouchTarget,
+                ),
                 icon: const Icon(Icons.search),
-                onPressed: () => context.push('/alarms/search'),
+                onPressed: () => setState(() => _isSearching = true),
               ),
             ],
-          ),
-          body: _buildAlarmsList(alarms),
-        ),
-        _buildFilterPage(context),
-      ],
-    );
-  }
+          );
 
-  Widget _buildAlarmsList(List<MockAlarm> alarms) {
-    if (alarms.isEmpty) {
-      return Center(
-        child: Text(
-          'No alarms found',
-          style: TbTextStyles.bodyLarge.copyWith(
-            color: Colors.black.withValues(alpha: 0.54),
-          ),
-        ),
-      );
-    }
-    return RefreshIndicator(
-      onRefresh: () async {
-        await Future<void>.delayed(const Duration(milliseconds: 300));
-      },
-      child: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: alarms.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          final alarm = alarms[index];
-          return Card(
-            margin: EdgeInsets.zero,
-            elevation: 1,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(4),
+    final filterStrip = widget.originatorId != null
+        ? const SizedBox.shrink()
+        : SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(
+              horizontal: DesignTokens.spacing16,
+              vertical: DesignTokens.spacing8,
             ),
-            child: InkWell(
-              onTap: () => context.push('/alarms/alarmDetails/${alarm.id}'),
-              child: AlarmCard(alarm: alarm),
+            child: Row(
+              spacing: DesignTokens.spacing8,
+              children: [
+                for (final status in const [
+                  AlarmSearchStatus.active,
+                  AlarmSearchStatus.unack,
+                  AlarmSearchStatus.ack,
+                  AlarmSearchStatus.cleared,
+                ])
+                  FilterChip(
+                    key: Key('alarm-status-chip-${status.wireValue}'),
+                    label: Text(status.label),
+                    selected: filter.statusList.contains(status),
+                    onSelected: (_) => _toggleStatus(status),
+                  ),
+                for (final severity in AlarmSeverity.values)
+                  FilterChip(
+                    key: Key('alarm-severity-chip-${severity.wireValue}'),
+                    avatar: TbIcon(
+                      TbIcons.kindForSeverity(severity),
+                      size: DesignTokens.iconXs,
+                    ),
+                    label: Text(severity.label),
+                    selected: filter.severityList.contains(severity),
+                    onSelected: (_) => _toggleSeverity(severity),
+                  ),
+                if (hasFilters)
+                  ActionChip(
+                    key: const Key('alarm-clear-filters-chip'),
+                    label: const Text('Reset'),
+                    onPressed: _clearAllFilters,
+                  ),
+              ],
             ),
           );
-        },
-      ),
-    );
-  }
 
-  Widget _buildFilterPage(BuildContext context) {
-    return Scaffold(
-      appBar: TbAppBar(
-        title: const Text('Filters'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            _pageController.animateToPage(
-              0,
-              duration: const Duration(milliseconds: 350),
-              curve: Curves.easeInOut,
-            );
-          },
-        ),
+    final listContent = alarmsAsync.when(
+      loading: () => const SingleChildScrollView(
+        padding: DesignTokens.paddingMedium,
+        child: TbShimmerList(itemCount: 5),
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    spacing: 16,
-                    children: [
-                      _buildFilterBlock<AlarmStatusFilter>(
-                        title: 'Alarm status list',
-                        items: AlarmStatusFilter.values,
-                        selected: _draftStatuses,
-                        labelBuilder: (item) => item.label,
-                        onToggle: (item) {
-                          setState(() {
-                            if (_draftStatuses.contains(item)) {
-                              _draftStatuses.remove(item);
-                            } else {
-                              _draftStatuses.add(item);
-                            }
-                            _filtersChanged = true;
-                          });
-                        },
-                      ),
-                      _buildFilterBlock<AlarmSeverityType>(
-                        title: 'Alarm severity list',
-                        items: AlarmSeverityType.values,
-                        selected: _draftSeverities,
-                        labelBuilder: (item) => item.label,
-                        onToggle: (item) {
-                          setState(() {
-                            if (_draftSeverities.contains(item)) {
-                              _draftSeverities.remove(item);
-                            } else {
-                              _draftSeverities.add(item);
-                            }
-                            _filtersChanged = true;
-                          });
-                        },
-                      ),
-                    ],
+      error: (err, _) => TbEmptyState(
+        icon: TbIconKind.severityCritical,
+        title: 'Failed to load alarms',
+        subtitle: err is TbFailure ? err.message : err.toString(),
+        isError: true,
+        actionLabel: 'Retry',
+        onAction: () => ref
+            .read(alarmsListProvider(widget.originatorId).notifier)
+            .refresh(),
+      ),
+      data: (paged) {
+        if (paged.items.isEmpty) {
+          return TbEmptyState(
+            icon: TbIconKind.statusCleared,
+            title: 'No alarms',
+            subtitle: hasFilters
+                ? 'Adjust filters to see alarms'
+                : 'All systems nominal',
+            actionLabel: hasFilters ? 'Clear filters' : 'Refresh',
+            onAction: hasFilters
+                ? _clearAllFilters
+                : () => ref
+                      .read(alarmsListProvider(widget.originatorId).notifier)
+                      .refresh(),
+          );
+        }
+
+        final effectiveSelectedId = useTwoPane
+            ? (_selectedAlarmId != null &&
+                      paged.items.any((a) => a.id == _selectedAlarmId)
+                  ? _selectedAlarmId
+                  : paged.items.first.id)
+            : _selectedAlarmId;
+
+        final listView = RefreshIndicator(
+          onRefresh: () => ref
+              .read(alarmsListProvider(widget.originatorId).notifier)
+              .refresh(),
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.fromLTRB(
+              DesignTokens.spacing16,
+              DesignTokens.spacing4,
+              DesignTokens.spacing16,
+              DesignTokens.spacing20,
+            ),
+            itemCount: paged.items.length + (paged.hasNext ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index >= paged.items.length) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: DesignTokens.spacing12,
+                  ),
+                  child: Center(
+                    child: paged.loadMoreError != null
+                        ? TextButton(
+                            onPressed: () => ref
+                                .read(
+                                  alarmsListProvider(
+                                    widget.originatorId,
+                                  ).notifier,
+                                )
+                                .loadNextPage(),
+                            child: const Text('Retry loading more'),
+                          )
+                        : const TbShimmer(width: 140, height: 18),
+                  ),
+                );
+              }
+              final alarm = paged.items[index];
+              final isSelected = useTwoPane && effectiveSelectedId == alarm.id;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: DesignTokens.spacing8),
+                child: TbStaggeredEntry(
+                  index: index,
+                  child: _AlarmRowCard(
+                    alarm: alarm,
+                    selected: isSelected,
+                    enableHero: !useTwoPane,
+                    onTap: () => _openAlarm(alarm, useTwoPane: useTwoPane),
+                    onAck: alarm.acknowledged
+                        ? null
+                        : () => _quickAck(alarm.id),
+                    onClear: alarm.cleared ? null : () => _quickClear(alarm.id),
                   ),
                 ),
-              ),
-              Row(
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _draftStatuses = {AlarmStatusFilter.active};
-                        _draftSeverities = {};
-                        _committedStatuses = {AlarmStatusFilter.active};
-                        _committedSeverities = {};
-                        _filtersChanged = false;
-                      });
-                    },
-                    child: const Text('Reset'),
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () {
-                      _pageController.animateToPage(
-                        0,
-                        duration: const Duration(milliseconds: 350),
-                        curve: Curves.easeInOut,
-                      );
-                    },
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed:
-                        _filtersChanged
-                            ? () {
-                              setState(() {
-                                _committedStatuses = Set.of(_draftStatuses);
-                                _committedSeverities = Set.of(_draftSeverities);
-                                _filtersChanged = false;
-                              });
-                              _pageController.animateToPage(
-                                0,
-                                duration: const Duration(milliseconds: 350),
-                                curve: Curves.easeInOut,
-                              );
-                            }
-                            : null,
-                    child: const Text('Update'),
-                  ),
-                ],
-              ),
-            ],
+              );
+            },
           ),
-        ),
-      ),
-    );
-  }
+        );
 
-  Widget _buildFilterBlock<T>({
-    required String title,
-    required List<T> items,
-    required Set<T> selected,
-    required String Function(T) labelBuilder,
-    required ValueChanged<T> onToggle,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.black.withValues(alpha: 0.12)),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: 12,
-        children: [
-          Text(
-            title,
-            style: TbTextStyles.labelLarge.copyWith(
-              color: Colors.black.withValues(alpha: 0.76),
+        if (!useTwoPane) return listView;
+
+        return Row(
+          children: [
+            Expanded(flex: 4, child: listView),
+            VerticalDivider(
+              width: 1,
+              thickness: 1,
+              color: scheme.outlineVariant,
             ),
-          ),
-          Wrap(
-            runSpacing: 8,
-            spacing: 8,
-            children:
-                items.map((item) {
-                  final isSelected = selected.contains(item);
-                  return FilledButton.icon(
-                    onPressed: () => onToggle(item),
-                    label: Text(
-                      labelBuilder(item),
-                      style:
-                          !isSelected
-                              ? TextStyle(
-                                color: Colors.black.withValues(alpha: 0.38),
-                                fontWeight: FontWeight.w400,
-                                fontSize: 13,
-                              )
-                              : const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w500,
-                                fontSize: 13,
-                              ),
+            Expanded(
+              flex: 6,
+              child: effectiveSelectedId != null
+                  ? AlarmDetailsPage(
+                      key: ValueKey<String>('pane-alarm-$effectiveSelectedId'),
+                      id: effectiveSelectedId,
+                      embedded: true,
+                    )
+                  : const TbEmptyState(
+                      icon: TbIconKind.navAlarms,
+                      title: 'Select an alarm',
                     ),
-                    icon:
-                        !isSelected
-                            ? const SizedBox.shrink()
-                            : const Icon(Icons.check, size: 18),
-                    style: FilledButton.styleFrom(
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      padding: const EdgeInsets.only(
-                        top: 6,
-                        bottom: 6,
-                        left: 12,
-                        right: 20,
-                      ),
-                      minimumSize: const Size(0, DesignTokens.buttonHeightSmall),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      backgroundColor:
-                          !isSelected
-                              ? Colors.black.withValues(alpha: 0.06)
-                              : null,
-                    ),
-                  );
-                }).toList(),
-          ),
+            ),
+          ],
+        );
+      },
+    );
+
+    return Scaffold(
+      appBar: appBar,
+      body: Column(
+        children: [
+          filterStrip,
+          Expanded(child: listContent),
         ],
       ),
     );
   }
 }
 
-class AlarmCard extends StatelessWidget {
-  const AlarmCard({super.key, required this.alarm});
-  final MockAlarm alarm;
+class _AlarmRowCard extends StatelessWidget {
+  const _AlarmRowCard({
+    required this.alarm,
+    required this.selected,
+    required this.enableHero,
+    required this.onTap,
+    this.onAck,
+    this.onClear,
+  });
 
-  static final _entityDateFormat = DateFormat('yyyy-MM-dd');
+  final TbAlarmInfo alarm;
+  final bool selected;
+  final bool enableHero;
+  final VoidCallback onTap;
+  final VoidCallback? onAck;
+  final VoidCallback? onClear;
+
+  Color _accentFor(TbStatusColors colors, AlarmSeverity severity) {
+    return switch (severity) {
+      AlarmSeverity.critical => colors.critical,
+      AlarmSeverity.major => colors.major,
+      AlarmSeverity.minor => colors.minor,
+      AlarmSeverity.warning => colors.warning,
+      AlarmSeverity.indeterminate => colors.indeterminate,
+    };
+  }
+
+  String _relativeTime(int epochMs) {
+    if (epochMs <= 0) return 'now';
+    final diff = DateTime.now().difference(
+      DateTime.fromMillisecondsSinceEpoch(epochMs),
+    );
+    if (diff.inSeconds < 60) return 'now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
+  }
+
+  String _initials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty || parts.first.isEmpty) return 'U';
+    if (parts.length == 1) return parts.first[0].toUpperCase();
+    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(4),
-          bottomLeft: Radius.circular(4),
-        ),
-        border: Border(
-          left: BorderSide(color: alarm.severity.color, width: 4),
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final statusColors = TbStatusColors.of(context);
+    final accent = alarm.cleared
+        ? statusColors.cleared
+        : _accentFor(statusColors, alarm.severity);
+
+    final iconWidget = TbIcon(
+      TbIcons.kindForSeverity(alarm.severity),
+      size: DesignTokens.iconMedium,
+      color: accent,
+      semanticLabel: '${alarm.severity.label} alarm',
+    );
+
+    final heroOrIcon = enableHero
+        ? Hero(tag: 'alarm-${alarm.id}', child: iconWidget)
+        : iconWidget;
+
+    return Material(
+      color: selected
+          ? scheme.primaryContainer.withValues(alpha: 0.45)
+          : scheme.surfaceContainerLow,
+      shape: RoundedRectangleBorder(
+        borderRadius: DesignTokens.borderRadiusLarge,
+        side: BorderSide(
+          color: selected ? scheme.primary : scheme.outlineVariant,
         ),
       ),
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+      clipBehavior: Clip.antiAlias,
+      child: TbPressScale(
+        onTap: onTap,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(left: BorderSide(color: accent, width: 4)),
+          ),
+          child: Padding(
+            padding: DesignTokens.cardPadding,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: DesignTokens.spacing8,
               children: [
+                // Line 1: Severity icon + Alarm type + 1-word badge
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Flexible(
-                      fit: FlexFit.tight,
+                    heroOrIcon,
+                    const SizedBox(width: DesignTokens.spacing8),
+                    Expanded(
                       child: Text(
                         alarm.type,
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TbTextStyles.labelLarge,
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      _entityDateFormat.format(alarm.createdTime),
-                      style: TbTextStyles.bodyMedium.copyWith(
-                        color: Colors.black.withValues(alpha: .54),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Flexible(
-                      fit: FlexFit.tight,
-                      child: Text(
-                        alarm.originatorName,
-                        style: TbTextStyles.bodyMedium.copyWith(
-                          color: Colors.black.withValues(alpha: .54),
+                        style: textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: scheme.onSurface,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 5),
-                    Text(
-                      alarm.severity.label,
-                      style: TbTextStyles.labelMedium.copyWith(
-                        color: alarm.severity.color,
-                      ),
-                    ),
+                    const SizedBox(width: DesignTokens.spacing8),
+                    alarm.cleared
+                        ? TbStatusBadge.cleared(compact: true)
+                        : TbStatusBadge.severity(alarm.severity, compact: true),
                   ],
                 ),
+                // Line 2: Originator + relative time + assignee avatar
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${alarm.displayOriginator} · ${alarm.acknowledged ? 'ACK' : 'UNACK'}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: DesignTokens.spacing8),
+                    Text(
+                      _relativeTime(alarm.createdTime),
+                      style: TbTextStyles.tabular(
+                        textTheme.labelSmall ?? TbTextStyles.labelSmall,
+                      ).copyWith(color: scheme.onSurfaceVariant),
+                    ),
+                    if (alarm.assigneeName != null &&
+                        alarm.assigneeName!.isNotEmpty) ...[
+                      const SizedBox(width: DesignTokens.spacing8),
+                      UserInfoAvatarWidget(
+                        shortName: _initials(alarm.assigneeName!),
+                        size: 24,
+                        semanticLabel: 'Assigned to ${alarm.assigneeName}',
+                      ),
+                    ],
+                  ],
+                ),
+                // Line 3: Quick Ack / Clear actions (>=48dp touch targets)
+                if (onAck != null || onClear != null)
+                  Wrap(
+                    spacing: DesignTokens.spacing8,
+                    runSpacing: DesignTokens.spacing4,
+                    children: [
+                      if (onAck != null)
+                        TextButton.icon(
+                          key: Key('quick-ack-${alarm.id}'),
+                          style: TextButton.styleFrom(
+                            minimumSize: const Size(
+                              DesignTokens.minTouchTarget,
+                              DesignTokens.minTouchTarget,
+                            ),
+                          ),
+                          onPressed: onAck,
+                          icon: const Icon(
+                            Icons.check,
+                            size: DesignTokens.iconSmall,
+                          ),
+                          label: const Text('Ack'),
+                        ),
+                      if (onClear != null)
+                        TextButton.icon(
+                          key: Key('quick-clear-${alarm.id}'),
+                          style: TextButton.styleFrom(
+                            minimumSize: const Size(
+                              DesignTokens.minTouchTarget,
+                              DesignTokens.minTouchTarget,
+                            ),
+                          ),
+                          onPressed: onClear,
+                          icon: const Icon(
+                            Icons.done_all,
+                            size: DesignTokens.iconSmall,
+                          ),
+                          label: const Text('Clear'),
+                        ),
+                    ],
+                  ),
               ],
             ),
           ),
-          Divider(
-            height: 24,
-            thickness: 1,
-            color: Colors.black.withValues(alpha: .05),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Flexible(
-                  fit: FlexFit.tight,
-                  child: Text(
-                    alarm.statusLabel,
-                    style: TbTextStyles.bodyMedium.copyWith(
-                      color: Colors.black.withValues(alpha: .76),
-                    ),
-                  ),
-                ),
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: Theme.of(
-                    context,
-                  ).primaryColor.withValues(alpha: .06),
-                  child: IconButton(
-                    icon: Icon(
-                      Icons.more_vert,
-                      size: 18,
-                      color: Theme.of(context).primaryColor,
-                    ),
-                    padding: const EdgeInsets.all(7.0),
-                    onPressed:
-                        () => context.push('/alarms/alarmDetails/${alarm.id}'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

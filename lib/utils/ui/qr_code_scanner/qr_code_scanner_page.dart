@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -298,6 +299,27 @@ class _QrCodeScannerPageState extends ConsumerState<QrCodeScannerPage>
                       runSpacing: DesignTokens.spacing8,
                       alignment: WrapAlignment.center,
                       children: [
+                        OutlinedButton.icon(
+                          key: const Key('qr-paste-code-button'),
+                          onPressed: _processing
+                              ? null
+                              : () async {
+                                  final clip = await Clipboard.getData(
+                                    Clipboard.kTextPlain,
+                                  );
+                                  final text = clip?.text?.trim() ?? '';
+                                  if (text.isNotEmpty) {
+                                    handleScannedPayload(text);
+                                  } else {
+                                    setState(() {
+                                      _statusMessage = 'Clipboard is empty';
+                                      _isError = true;
+                                    });
+                                  }
+                                },
+                          icon: const Icon(Icons.paste_rounded, size: 16),
+                          label: const Text('Paste link / code'),
+                        ),
                         FilledButton.tonalIcon(
                           key: const Key('qr-simulate-login-button'),
                           onPressed: _processing

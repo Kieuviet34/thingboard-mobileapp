@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -283,9 +284,22 @@ class LoginWidget extends HookConsumerWidget {
                 key: const Key('server-url-input'),
                 controller: controller,
                 keyboardType: TextInputType.url,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Server URL',
                   hintText: 'https://thingsboard.democloud.xyz/',
+                  suffixIcon: IconButton(
+                    tooltip: 'Paste from clipboard',
+                    icon: const Icon(Icons.content_paste_rounded),
+                    onPressed: () async {
+                      final clip = await Clipboard.getData(
+                        Clipboard.kTextPlain,
+                      );
+                      final text = clip?.text?.trim() ?? '';
+                      if (text.isNotEmpty) {
+                        controller.text = text;
+                      }
+                    },
+                  ),
                 ),
               ),
               Wrap(
@@ -293,6 +307,19 @@ class LoginWidget extends HookConsumerWidget {
                 spacing: DesignTokens.spacing8,
                 runSpacing: DesignTokens.spacing8,
                 children: [
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.paste_rounded, size: 16),
+                    label: const Text('Paste link'),
+                    onPressed: () async {
+                      final clip = await Clipboard.getData(
+                        Clipboard.kTextPlain,
+                      );
+                      final text = clip?.text?.trim() ?? '';
+                      if (text.isNotEmpty) {
+                        controller.text = text;
+                      }
+                    },
+                  ),
                   TextButton(
                     onPressed: () {
                       controller.text =

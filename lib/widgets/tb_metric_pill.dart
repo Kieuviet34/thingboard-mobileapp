@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:thingsboard_democloud_app/config/themes/app_colors.dart';
 import 'package:thingsboard_democloud_app/config/themes/design_tokens.dart';
 import 'package:thingsboard_democloud_app/config/themes/tb_text_styles.dart';
 import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
@@ -25,7 +26,8 @@ class TbMetricPill extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final disableAnimations = MediaQuery.disableAnimationsOf(context);
-    final resolvedAccent = accentColor ?? scheme.primary;
+    final resolvedAccent =
+        accentColor ?? _resolveMetricAccent(unit, icon, scheme);
     final formattedValue = (unit != null && unit!.isNotEmpty)
         ? '$value $unit'
         : value;
@@ -93,5 +95,38 @@ class TbMetricPill extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  static Color _resolveMetricAccent(
+    String? unit,
+    TbIconKind icon,
+    ColorScheme scheme,
+  ) {
+    final u = (unit ?? '').toLowerCase();
+    if (u.contains('v') ||
+        u.contains('volt') ||
+        u.contains('w') ||
+        u.contains('kw') ||
+        icon == TbIconKind.voltagePower) {
+      return AppColors.metricVoltage;
+    }
+    if (u.contains('°c') ||
+        u.contains('°f') ||
+        icon == TbIconKind.temperature) {
+      return AppColors.metricTemperature;
+    }
+    if (u.contains('%') || icon == TbIconKind.humidity) {
+      return AppColors.metricHumidity;
+    }
+    if (u.contains('l/min') ||
+        u.contains('m3') ||
+        icon == TbIconKind.flowRate ||
+        icon == TbIconKind.waterSensor) {
+      return AppColors.metricFlow;
+    }
+    if (u.contains('dbm') || icon == TbIconKind.signalRssi) {
+      return AppColors.metricRssi;
+    }
+    return scheme.primary;
   }
 }

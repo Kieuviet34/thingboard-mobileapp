@@ -144,7 +144,7 @@ class DevicesMainPage extends ConsumerWidget {
                     DesignTokens.spacing16,
                     0,
                     DesignTokens.spacing16,
-                    DesignTokens.spacing24,
+                    84.0,
                   ),
                   sliver: SliverGrid.builder(
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(

@@ -215,7 +215,14 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
                 child: ListView.separated(
                   controller: _scrollController,
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: DesignTokens.paddingMedium,
+                  padding: isTwoPane
+                      ? DesignTokens.paddingMedium
+                      : const EdgeInsets.fromLTRB(
+                          DesignTokens.spacing16,
+                          DesignTokens.spacing16,
+                          DesignTokens.spacing16,
+                          84.0,
+                        ),
                   itemCount:
                       pagedState.items.length +
                       (pagedState.isLoadingMore ? 1 : 0),

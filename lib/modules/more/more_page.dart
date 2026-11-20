@@ -176,6 +176,7 @@ class MorePage extends ConsumerWidget {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 84),
                 ],
               ),
             ),

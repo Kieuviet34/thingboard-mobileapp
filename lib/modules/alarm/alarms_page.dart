@@ -291,7 +291,7 @@ class _AlarmsPageState extends ConsumerState<AlarmsPage> {
               DesignTokens.spacing16,
               DesignTokens.spacing4,
               DesignTokens.spacing16,
-              DesignTokens.spacing20,
+              84.0,
             ),
             itemCount: paged.items.length + (paged.hasNext ? 1 : 0),
             itemBuilder: (context, index) {

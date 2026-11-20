@@ -196,6 +196,7 @@ class HomePage extends ConsumerWidget {
                             ),
                           ],
                         ],
+                        const SizedBox(height: 84),
                       ]),
                     ),
                   ),

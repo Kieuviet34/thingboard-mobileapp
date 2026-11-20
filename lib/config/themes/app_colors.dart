@@ -49,6 +49,16 @@ class AppColors {
   static const selectionColor = Color(0x33305680);
   static const focusColor = primaryBlue;
 
+  // Dedicated IoT Metric Colors for Telemetry Data Visualization
+  static const metricVoltage = Color(0xFFF59E0B); // Amber 500
+  static const metricCurrent = Color(0xFFEAB308); // Yellow 500
+  static const metricTemperature = Color(0xFFEF4444); // Coral Red 500
+  static const metricHumidity = Color(0xFF06B6D4); // Cyan 500
+  static const metricPressure = Color(0xFF3B82F6); // Blue 500
+  static const metricPower = Color(0xFF8B5CF6); // Purple 500
+  static const metricFlow = Color(0xFF10B981); // Emerald 500
+  static const metricRssi = Color(0xFF6366F1); // Indigo 500
+
   // Material Color Swatch for Primary Blue
   static const MaterialColor primarySwatch =
       MaterialColor(0xFF305680, <int, Color>{

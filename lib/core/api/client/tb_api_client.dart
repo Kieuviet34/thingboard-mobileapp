@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:thingsboard_democloud_app/core/api/client/tb_auth_interceptor.dart';
 import 'package:thingsboard_democloud_app/core/api/client/tb_error_mapper.dart';
+import 'package:thingsboard_democloud_app/core/api/client/tb_network_inspector.dart';
 import 'package:thingsboard_democloud_app/core/api/client/tb_secure_storage.dart';
 import 'package:thingsboard_democloud_app/core/models/tb_failure.dart';
 
@@ -31,6 +32,7 @@ class TbApiClient {
       onSessionInvalidated: onSessionInvalidated,
     );
     _dio.interceptors.add(TbAuthInterceptor(coordinator: _coordinator));
+    _dio.interceptors.add(TbNetworkLogInterceptor());
   }
 
   late final Dio _dio;

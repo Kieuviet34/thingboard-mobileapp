@@ -14,6 +14,7 @@ import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_motion.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_network_inspector_dialog.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_shimmer.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_status_badge.dart';
 
@@ -218,6 +219,14 @@ class ProfileSettingsPage extends ConsumerWidget {
                                 serverConfig.mode,
                               ),
                             ),
+                          ),
+                          _SettingsTile(
+                            icon: Icons.data_usage_rounded,
+                            title: 'Network & Data Inspector',
+                            subtitle:
+                                'Inspect outgoing & incoming REST / WS payloads',
+                            trailing: const Icon(Icons.chevron_right_rounded),
+                            onTap: () => TbNetworkInspectorDialog.show(context),
                           ),
                         ],
                       ),

@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -133,6 +135,7 @@ class NavigationPage extends ConsumerWidget {
         }
       },
       child: Scaffold(
+        extendBody: !useRail,
         body: useRail
             ? Row(
                 children: [
@@ -179,31 +182,67 @@ class NavigationPage extends ConsumerWidget {
             : bodyWidget,
         bottomNavigationBar: useRail
             ? null
-            : NavigationBar(
-                selectedIndex: currentIndex,
-                onDestinationSelected: (idx) =>
-                    _selectIndex(context, idx, currentIndex),
-                destinations: [
-                  for (var i = 0; i < destinations.length; i++)
-                    NavigationDestination(
-                      tooltip: destinations[i].title,
-                      icon: _badgedIcon(
-                        context,
-                        kind: destinations[i].tbIconKind!,
-                        filled: false,
-                        badgeCount: badgeCounts[i],
-                        semanticLabel: destinations[i].title,
+            : SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(32),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: scheme.surface.withValues(alpha: 0.82),
+                          borderRadius: BorderRadius.circular(32),
+                          border: Border.all(
+                            color: scheme.outlineVariant.withValues(
+                              alpha: 0.45,
+                            ),
+                            width: 1.0,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.12),
+                              blurRadius: 20,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: NavigationBar(
+                          backgroundColor: Colors.transparent,
+                          elevation: 0,
+                          height: 64,
+                          labelBehavior: NavigationDestinationLabelBehavior
+                              .onlyShowSelected,
+                          selectedIndex: currentIndex,
+                          onDestinationSelected: (idx) =>
+                              _selectIndex(context, idx, currentIndex),
+                          destinations: [
+                            for (var i = 0; i < destinations.length; i++)
+                              NavigationDestination(
+                                tooltip: destinations[i].title,
+                                icon: _badgedIcon(
+                                  context,
+                                  kind: destinations[i].tbIconKind!,
+                                  filled: false,
+                                  badgeCount: badgeCounts[i],
+                                  semanticLabel: destinations[i].title,
+                                ),
+                                selectedIcon: _badgedIcon(
+                                  context,
+                                  kind: destinations[i].tbIconKind!,
+                                  filled: true,
+                                  badgeCount: badgeCounts[i],
+                                  semanticLabel: destinations[i].title,
+                                ),
+                                label: destinations[i].title,
+                              ),
+                          ],
+                        ),
                       ),
-                      selectedIcon: _badgedIcon(
-                        context,
-                        kind: destinations[i].tbIconKind!,
-                        filled: true,
-                        badgeCount: badgeCounts[i],
-                        semanticLabel: destinations[i].title,
-                      ),
-                      label: destinations[i].title,
                     ),
-                ],
+                  ),
+                ),
               ),
       ),
     );

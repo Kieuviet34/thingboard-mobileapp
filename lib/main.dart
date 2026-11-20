@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_democloud_app/config/routes/router.dart';
 import 'package:thingsboard_democloud_app/config/themes/tb_theme.dart';
 import 'package:thingsboard_democloud_app/config/themes/tb_theme_utils.dart';
+import 'package:thingsboard_democloud_app/core/api/client/tb_network_inspector.dart';
 import 'package:toastification/toastification.dart';
 
 void main() {
@@ -17,6 +18,11 @@ class ThingsboardDemoCloudApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    TbNetworkLog.registerSink((entry) {
+      if (context.mounted) {
+        ref.read(tbNetworkLogProvider.notifier).record(entry);
+      }
+    });
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
 

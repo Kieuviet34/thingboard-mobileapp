@@ -229,7 +229,14 @@ class _DashboardsPageState extends ConsumerState<DashboardsPage> {
       child: ListView.builder(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: DesignTokens.paddingMedium,
+        padding: isTwoPane
+            ? DesignTokens.paddingMedium
+            : const EdgeInsets.fromLTRB(
+                DesignTokens.spacing16,
+                DesignTokens.spacing16,
+                DesignTokens.spacing16,
+                84.0,
+              ),
         itemCount: rowCount + (hasFooter ? 1 : 0),
         itemBuilder: (context, rowIndex) {
           if (rowIndex >= rowCount) {

@@ -239,11 +239,11 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
               ref.read(devicesListProvider(query).notifier).refresh(),
           child: ListView.builder(
             controller: _scrollController,
-            padding: const EdgeInsets.fromLTRB(
+            padding: EdgeInsets.fromLTRB(
               DesignTokens.spacing16,
               DesignTokens.spacing4,
               DesignTokens.spacing16,
-              DesignTokens.spacing20,
+              useTwoPane ? DesignTokens.spacing20 : 84.0,
             ),
             itemCount: paged.items.length + (paged.hasNext ? 1 : 0),
             itemBuilder: (context, index) {

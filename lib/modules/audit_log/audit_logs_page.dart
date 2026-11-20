@@ -378,7 +378,12 @@ class _AuditLogsPageState extends ConsumerState<AuditLogsPage> {
                         child: ListView.separated(
                           controller: _scrollController,
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: DesignTokens.paddingMedium,
+                          padding: const EdgeInsets.fromLTRB(
+                            DesignTokens.spacing16,
+                            DesignTokens.spacing16,
+                            DesignTokens.spacing16,
+                            84.0,
+                          ),
                           itemCount:
                               pagedState.items.length +
                               (pagedState.isLoadingMore ? 1 : 0),

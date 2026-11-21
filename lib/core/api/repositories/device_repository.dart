@@ -178,7 +178,8 @@ final class RestDeviceRepository implements DeviceRepository {
     String? secretKey,
   }) async {
     final response = await _client.post<Map<String, dynamic>>(
-      '/api/customer/device/$deviceName/claim',
+      // Device names are user-typed: encode so `/`, `?`, `#` cannot change the route.
+      '/api/customer/device/${Uri.encodeComponent(deviceName)}/claim',
       data: <String, dynamic>{
         if (secretKey != null && secretKey.isNotEmpty) 'secretKey': secretKey,
       },

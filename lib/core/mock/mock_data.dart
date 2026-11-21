@@ -765,7 +765,7 @@ final auditLogsProvider = Provider<List<MockAuditLog>>((ref) {
       id: 'log-1',
       entityName: 'Thermostat-Floor-3',
       entityType: 'Device',
-      actionType: 'Attributes updated',
+      actionType: 'ATTRIBUTES_UPDATED',
       isSuccess: true,
       createdTime: DateTime(2026, 11, 17, 14, 30),
       actionData: {
@@ -781,7 +781,7 @@ final auditLogsProvider = Provider<List<MockAuditLog>>((ref) {
       id: 'log-2',
       entityName: 'High Temperature',
       entityType: 'Alarm',
-      actionType: 'Alarm acknowledged',
+      actionType: 'ALARM_ACK',
       isSuccess: true,
       createdTime: DateTime(2026, 11, 17, 12, 5),
       actionData: {
@@ -794,7 +794,7 @@ final auditLogsProvider = Provider<List<MockAuditLog>>((ref) {
       id: 'log-3',
       entityName: 'Water-Pump-Station-2',
       entityType: 'Device',
-      actionType: 'RPC call',
+      actionType: 'RPC_CALL',
       isSuccess: false,
       createdTime: DateTime(2026, 11, 16, 19, 32),
       actionData: {
@@ -808,7 +808,7 @@ final auditLogsProvider = Provider<List<MockAuditLog>>((ref) {
       id: 'log-4',
       entityName: 'Smart Office Monitoring',
       entityType: 'Dashboard',
-      actionType: 'Updated',
+      actionType: 'UPDATED',
       isSuccess: true,
       createdTime: DateTime(2026, 11, 15, 10, 20),
       actionData: {

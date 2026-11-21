@@ -186,14 +186,16 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
                   subtitle: isFiltered
                       ? 'Try adjusting your search or profile filter.'
                       : 'Configured assets will appear here.',
-                  actionLabel: isFiltered ? 'Clear filters' : null,
+                  actionLabel: isFiltered ? 'Clear filters' : 'Refresh',
                   onAction: isFiltered
                       ? () => setState(() {
                           _searchQuery = null;
                           _selectedProfileId = null;
                           _isSearching = false;
                         })
-                      : null,
+                      : () => ref
+                            .read(assetsListProvider(_query).notifier)
+                            .refresh(),
                 );
               }
 
@@ -399,20 +401,24 @@ class _AssetListCard extends StatelessWidget {
                       const SizedBox(height: DesignTokens.spacing4),
                       Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: DesignTokens.spacing8,
-                              vertical: DesignTokens.spacing2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: scheme.surfaceContainerHigh,
-                              borderRadius: DesignTokens.borderRadiusRound,
-                            ),
-                            child: Text(
-                              asset.type,
-                              style: textTheme.labelSmall?.copyWith(
-                                color: scheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w600,
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: DesignTokens.spacing8,
+                                vertical: DesignTokens.spacing2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: scheme.surfaceContainerHigh,
+                                borderRadius: DesignTokens.borderRadiusRound,
+                              ),
+                              child: Text(
+                                asset.type,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: textTheme.labelSmall?.copyWith(
+                                  color: scheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ),

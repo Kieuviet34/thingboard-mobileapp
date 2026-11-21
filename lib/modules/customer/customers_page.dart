@@ -140,8 +140,12 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
             subtitle: isFilterActive
                 ? 'Try adjusting your search terms.'
                 : 'Customer organizations will appear here.',
-            actionLabel: isFilterActive ? 'Clear search' : null,
-            onAction: isFilterActive ? _closeSearch : null,
+            actionLabel: isFilterActive ? 'Clear search' : 'Refresh',
+            onAction: isFilterActive
+                ? _closeSearch
+                : () => ref
+                      .read(customersListProvider(_searchQuery).notifier)
+                      .refresh(),
           );
         }
 

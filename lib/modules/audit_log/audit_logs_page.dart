@@ -95,6 +95,7 @@ class _AuditLogsPageState extends ConsumerState<AuditLogsPage> {
 
     showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (bottomSheetContext) {
@@ -360,14 +361,18 @@ class _AuditLogsPageState extends ConsumerState<AuditLogsPage> {
                           subtitle: isFiltered
                               ? 'Try clearing the search or action filter.'
                               : 'System and user events will appear here.',
-                          actionLabel: isFiltered ? 'Clear filters' : null,
+                          actionLabel: isFiltered ? 'Clear filters' : 'Refresh',
                           onAction: isFiltered
                               ? () => setState(() {
                                   _searchQuery = null;
                                   _selectedAction = null;
                                   _isSearching = false;
                                 })
-                              : null,
+                              : () => ref
+                                    .read(
+                                      auditLogsListProvider(_query).notifier,
+                                    )
+                                    .refresh(),
                         );
                       }
 

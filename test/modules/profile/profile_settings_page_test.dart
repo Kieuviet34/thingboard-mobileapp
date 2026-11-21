@@ -12,6 +12,7 @@ import 'package:thingsboard_democloud_app/core/api/repositories/user_profile_rep
 import 'package:thingsboard_democloud_app/core/models/auth_models.dart';
 import 'package:thingsboard_democloud_app/core/models/entity_id.dart';
 import 'package:thingsboard_democloud_app/core/models/notification_models.dart';
+import 'package:thingsboard_democloud_app/core/models/tb_failure.dart';
 import 'package:thingsboard_democloud_app/core/models/pagination.dart';
 import 'package:thingsboard_democloud_app/core/models/user_models.dart';
 import 'package:thingsboard_democloud_app/modules/profile/profile_settings_page.dart';
@@ -38,12 +39,16 @@ class _FakeUserProfileRepo implements UserProfileRepository {
   int updateCalls = 0;
   int changePasswordCalls = 0;
 
+  /// When set, `updateUserProfile` fails with it (to test error feedback).
+  Object? updateError;
+
   @override
   Future<TbUserProfile> getUserProfile() async => profile;
 
   @override
   Future<TbUserProfile> updateUserProfile(TbUserProfile updated) async {
     updateCalls++;
+    if (updateError != null) throw updateError!;
     profile = updated;
     return profile;
   }
@@ -225,6 +230,39 @@ void main() {
 
       expect(userRepo.updateCalls, 1);
       expect(userRepo.profile.firstName, 'Jane');
+    });
+
+    testWidgets('a failed profile save is reported inside the open sheet', (
+      tester,
+    ) async {
+      final userRepo = _FakeUserProfileRepo()
+        ..updateError = const TbFailure(
+          type: TbFailureType.serverError,
+          message: 'Server unavailable',
+        );
+      await tester.pumpWidget(
+        buildApp(
+          userRepo: userRepo,
+          notifRepo: _FakeNotificationRepo(),
+          authCtrl: _StubAuthController(),
+          disableAnimations: true,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Edit profile'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save Profile'));
+      await tester.pumpAndSettle();
+
+      // The sheet stays open and the user can actually read why. (A snackbar
+      // would be painted on the root Scaffold, underneath the sheet.)
+      expect(find.text('Edit Profile'), findsOneWidget);
+      expect(
+        find.textContaining('Server unavailable').hitTestable(),
+        findsOneWidget,
+      );
+      expect(find.widgetWithText(FilledButton, 'Save Profile'), findsOneWidget);
     });
 
     testWidgets('Change Password sheet validates password policy and submits', (

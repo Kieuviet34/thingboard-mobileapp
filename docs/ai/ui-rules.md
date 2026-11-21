@@ -64,9 +64,10 @@ Motion must clarify spatial hierarchy, live updates, and user feedback at 60/120
 
 ## 5. Adaptive Layout, Navigation & Accessibility (Release Gate)
 - **Adaptive Breakpoints:**
-  - Compact (`width < 600`): bottom `NavigationBar` (`NavigationPage`).
+  - Compact (`width < 600`): floating glass pill `TbFloatingNavBar` (`NavigationPage`): label slides in to the **right** of the selected icon; labels are dropped (tooltip + `Semantics` stay) when 4 x 48dp cells + a label do not fit; opaque and blur-free under high contrast; motion is paint/transform only and instant under reduced motion.
   - Medium (`600 <= width < 840`): `NavigationRail`.
   - Expanded (`width >= 840`): `NavigationRail` / persistent drawer + 2-pane master-detail for `Devices`, `Alarms`, `Dashboards`, `Assets`, and `Customers` (never stretch a single-column phone card across a tablet screen).
+- **Modals and the floating nav:** open bottom sheets from tab screens with `useRootNavigator: true` so they cover the floating nav instead of sitting under it (`showDialog` already does). Consequence: a `SnackBar` raised from inside such a sheet is painted on the root Scaffold, underneath the sheet. Show feedback inside the sheet (inline error text, a check icon on the button), not with `ScaffoldMessenger`.
 - **Navigation Integrity:** Use `GoRouter` (`context.go` / `context.push`), `StatefulShellRoute.indexedStack` (or equivalent shell) so tab scroll/filter state persists, and `PopScope` (never deprecated `WillPopScope`).
 - **Accessibility Checklist:**
   - Minimum `48dp x 48dp` hit target on every tappable control (pad smaller `20dp`/`24dp` icons with `constraints: BoxConstraints(minWidth: 48, minHeight: 48)` or `MaterialTapTargetSize.padded`).

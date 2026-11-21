@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/server_config_controller.dart';
@@ -125,14 +127,14 @@ final liveEntityTelemetryProvider = StreamProvider.autoDispose
     .family<Map<String, TbTsPoint>, ({EntityId id, List<String> keys})>((
       ref,
       params,
-    ) async* {
+    ) {
       final mode = ref.watch(serverConfigProvider.select((s) => s.mode));
       if (mode == SessionMode.demo) {
-        final initial = await ref
-            .read(telemetryRepositoryProvider)
-            .getLatestTimeseries(params.id, keys: params.keys);
-        yield initial;
-        return;
+        return Stream.fromFuture(
+          ref
+              .read(telemetryRepositoryProvider)
+              .getLatestTimeseries(params.id, keys: params.keys),
+        );
       }
 
       final ws = ref.watch(telemetryWsServiceProvider);
@@ -159,9 +161,29 @@ final liveEntityTelemetryProvider = StreamProvider.autoDispose
         },
       );
 
+      // Not an `async*` generator on purpose: when the provider is disposed
+      // while parked on the socket stream, a generator only notices at its
+      // next `yield`, so the WS subscription (and its *_UNSUBSCRIBE frame)
+      // would leak. Cancel the socket subscription explicitly instead.
+      final output = StreamController<Map<String, TbTsPoint>>();
       var merged = <String, Map<String, TbTsPoint>>{};
-      await for (final frame in stream) {
-        merged = mergeEntityDataUpdates(current: merged, frame: frame);
-        yield merged[params.id.id] ?? const <String, TbTsPoint>{};
-      }
+      final subscription = stream.listen(
+        (frame) {
+          // A malformed server frame must surface as a stream error (so the
+          // UI shows its error state), not escape as an uncaught zone error.
+          try {
+            merged = mergeEntityDataUpdates(current: merged, frame: frame);
+            output.add(merged[params.id.id] ?? const <String, TbTsPoint>{});
+          } catch (error, stackTrace) {
+            output.addError(error, stackTrace);
+          }
+        },
+        onError: output.addError,
+        onDone: output.close,
+      );
+      ref.onDispose(() {
+        unawaited(subscription.cancel());
+        unawaited(output.close());
+      });
+      return output.stream;
     });

@@ -1,0 +1,67 @@
+name: API contract drift
+
+# Compares the app with the live ThingsBoard OpenAPI. The offline contract tests
+# (flutter test) guard every PR against the committed snapshot; this workflow
+# detects when ThingsBoard itself changes. It runs weekly, on demand, and on PRs
+# that touch the API layer, models, or the contract tooling.
+on:
+  schedule:
+    - cron: "0 3 * * 1" # Mondays 03:00 UTC
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "lib/core/api/**"
+      - "lib/core/models/**"
+      - "tools/api_contract/**"
+      - "test/fixtures/contract/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-contract-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SPEC_URL: https://demo.thingsboard.io/v3/api-docs
+
+jobs:
+  contract:
+    name: Endpoints, models, snapshot
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download ThingsBoard OpenAPI (public, treated as data)
+        run: >
+          curl --fail --silent --show-error --location
+          --retry 3 --retry-delay 5 --max-time 120
+          -o "$RUNNER_TEMP/tb-openapi.json" "$SPEC_URL"
+
+      - name: Report spec version
+        run: >
+          python -I -c
+          "import json,sys; d=json.load(open(sys.argv[1], encoding='utf-8')); print('ThingsBoard', d['info']['version'], '-', len(d['paths']), 'paths')"
+          "$RUNNER_TEMP/tb-openapi.json"
+
+      - name: Every endpoint the app calls exists in the spec
+        run: >
+          python -I tools/api_contract/audit_endpoints.py
+          --spec "$RUNNER_TEMP/tb-openapi.json"
+          --allow tools/api_contract/known_deviations.json
+
+      - name: Every JSON key the models read/write exists in the spec
+        run: >
+          python -I tools/api_contract/audit_models.py
+          --spec "$RUNNER_TEMP/tb-openapi.json"
+          --allow tools/api_contract/known_deviations.json
+
+      - name: Committed snapshot is up to date
+        run: |
+          python -I tools/api_contract/build_subset.py --spec "$RUNNER_TEMP/tb-openapi.json"
+          git diff --exit-code -- test/fixtures/contract

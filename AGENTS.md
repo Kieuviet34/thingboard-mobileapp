@@ -1,14 +1,16 @@
 # AGENTS.md
 
 ## Project
-ThingsBoard PE / DemoCloud Flutter mobile app (`thingsboard_democloud_app`, Dart ^3.7.0, `hooks_riverpod`, `go_router`, `dio`).
+ThingsBoard PE / DemoCloud Flutter mobile app (`thingsboard_democloud_app`, Dart ^3.11.0, `hooks_riverpod`, `go_router`, `dio`).
 Supports Android & iOS with Material Design 3 UI/UX and ThingsBoard PE 4.4.x REST/WebSocket + Demo/Offline mode.
 
 ## Commands
-- Analyze: `flutter analyze`
-- Test: `flutter test`
+- Analyze: `flutter analyze --fatal-infos`
+- Test: `flutter test` (includes the offline ThingsBoard API contract tests)
 - Format: `dart format .`
 - Build Android debug APK: `flutter build apk --debug`
+- All CI gates locally: `powershell -ExecutionPolicy Bypass -File tools/qa/run_checks.ps1` (add `-Spec <openapi.json>` for the contract audits)
+- API contract / QA: `docs/qa/API_CONTRACT.md`, `docs/qa/QA_CHECKLIST.md`
 
 ## Map & Docs
 - `lib/config/` — M3 themes, `DesignTokens`, `go_router` routes + auth guard
@@ -20,7 +22,7 @@ Supports Android & iOS with Material Design 3 UI/UX and ThingsBoard PE 4.4.x RES
 - `docs/ai/api-rules.md` — REST/WS rules, `X-Authorization` refresh, Demo mode, error mapping, TDD/QA
 
 ## Core Project Standards (Summary — full rules in `docs/ai/`)
-- **Material Design 3 & Accessibility:** `useMaterial3: true`, semantic `ColorScheme` + status `ThemeExtension`, light & dark themes, adaptive breakpoints (`NavigationBar` -> `NavigationRail`/2-pane), `>= 48dp` touch targets, `Semantics`, never color-only status.
+- **Material Design 3 & Accessibility:** `useMaterial3: true`, semantic `ColorScheme` + status `ThemeExtension`, light & dark themes, adaptive breakpoints (floating `TbFloatingNavBar` -> `NavigationRail`/2-pane), `>= 48dp` touch targets, `Semantics`, never color-only status.
 - **Minimal-Text IoT UI ("gọn gàng ít chữ nhất"):** Metric pills (`tabularFigures`), 1-word status badges, icon+value pairs, progressive disclosure; ban prose paragraphs and nested card-per-row clutter.
 - **Custom Icon Identity ("bộ nhận diện icon riêng"):** Use `TbIcons` custom SVG/`CustomPainter` IoT kit (nav, device types, telemetry, alarm severity glyphs, assets) themed via `ColorScheme`; `RepaintBoundary` on painters.
 - **GPU-Safe Motion:** Animate only `Transform`/`Opacity`/`Hero`/stagger/shimmer; dispose all `AnimationController`s; honor `MediaQuery.disableAnimationsOf(context)`.

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_democloud_app/core/api/client/tb_network_redactor.dart';
 
 /// Recorded HTTP/REST or WebSocket network transaction for data audit.
 @immutable
@@ -96,17 +97,22 @@ abstract final class TbNetworkLog {
     bool isError = false,
   }) {
     try {
+      // Single choke point: nothing sensitive is ever stored or displayed.
       final entry = TbNetworkLogEntry(
         id: '${method}_${DateTime.now().microsecondsSinceEpoch}',
         timestamp: DateTime.now(),
         method: method,
-        url: url,
+        url: TbNetworkRedactor.redactUrl(url),
         statusCode: statusCode,
         durationMs: durationMs,
-        requestHeaders: requestHeaders ?? const {},
-        requestBody: requestBody,
-        responseBody: responseBody,
-        errorMessage: errorMessage,
+        requestHeaders: TbNetworkRedactor.redactHeaders(
+          requestHeaders ?? const {},
+        ),
+        requestBody: TbNetworkRedactor.redactBody(requestBody),
+        responseBody: TbNetworkRedactor.redactBody(responseBody),
+        errorMessage: errorMessage == null
+            ? null
+            : TbNetworkRedactor.redactText(errorMessage),
         isError: isError,
       );
       _onLog?.call(entry);

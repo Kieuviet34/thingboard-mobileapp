@@ -247,16 +247,24 @@ class _AlarmsPageState extends ConsumerState<AlarmsPage> {
         padding: DesignTokens.paddingMedium,
         child: TbShimmerList(itemCount: 5),
       ),
-      error: (err, _) => TbEmptyState(
-        icon: TbIconKind.severityCritical,
-        title: 'Failed to load alarms',
-        subtitle: err is TbFailure ? err.message : err.toString(),
-        isError: true,
-        actionLabel: 'Retry',
-        onAction: () => ref
-            .read(alarmsListProvider(widget.originatorId).notifier)
-            .refresh(),
-      ),
+      error: (err, _) {
+        final failure = err is TbFailure ? err : null;
+        final is403 = failure?.type == TbFailureType.permissionDenied;
+        return TbEmptyState(
+          icon: TbIconKind.severityCritical,
+          title: is403 ? 'Access Restricted' : 'Failed to load alarms',
+          subtitle: is403
+              ? 'You do not have permission to view alarms.'
+              : (err is TbFailure ? err.message : err.toString()),
+          isError: true,
+          actionLabel: is403 ? null : 'Retry',
+          onAction: is403
+              ? null
+              : () => ref
+                    .read(alarmsListProvider(widget.originatorId).notifier)
+                    .refresh(),
+        );
+      },
       data: (paged) {
         if (paged.items.isEmpty) {
           return TbEmptyState(
@@ -467,26 +475,42 @@ class _AlarmRowCard extends StatelessWidget {
               spacing: DesignTokens.spacing8,
               children: [
                 // Line 1: Severity icon + Alarm type + 1-word badge
-                Row(
-                  children: [
-                    heroOrIcon,
-                    const SizedBox(width: DesignTokens.spacing8),
-                    Expanded(
-                      child: Text(
-                        alarm.type,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: scheme.onSurface,
+                LayoutBuilder(
+                  builder: (context, constraints) => Row(
+                    children: [
+                      heroOrIcon,
+                      const SizedBox(width: DesignTokens.spacing8),
+                      Expanded(
+                        child: Text(
+                          alarm.type,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurface,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: DesignTokens.spacing8),
-                    alarm.cleared
-                        ? TbStatusBadge.cleared(compact: true)
-                        : TbStatusBadge.severity(alarm.severity, compact: true),
-                  ],
+                      const SizedBox(width: DesignTokens.spacing8),
+                      // Non-flex children are laid out against the full row
+                      // width, so cap the badge at what the icon and gaps leave.
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth:
+                              (constraints.maxWidth -
+                                      DesignTokens.iconMedium -
+                                      DesignTokens.spacing8 * 2)
+                                  .clamp(0.0, double.infinity),
+                        ),
+                        child: alarm.cleared
+                            ? TbStatusBadge.cleared(compact: true)
+                            : TbStatusBadge.severity(
+                                alarm.severity,
+                                compact: true,
+                              ),
+                      ),
+                    ],
+                  ),
                 ),
                 // Line 2: Originator + relative time + assignee avatar
                 Row(
@@ -513,7 +537,7 @@ class _AlarmRowCard extends StatelessWidget {
                       const SizedBox(width: DesignTokens.spacing8),
                       UserInfoAvatarWidget(
                         shortName: _initials(alarm.assigneeName!),
-                        size: 24,
+                        size: DesignTokens.iconMedium,
                         semanticLabel: 'Assigned to ${alarm.assigneeName}',
                       ),
                     ],

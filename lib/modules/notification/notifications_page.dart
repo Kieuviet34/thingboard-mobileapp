@@ -185,16 +185,26 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                   child: notificationsAsync.when(
                     error: (error, _) {
                       final failure = error is TbFailure ? error : null;
+                      final is403 =
+                          failure?.type == TbFailureType.permissionDenied;
                       return TbEmptyState(
                         icon: TbIconKind.notificationInbox,
-                        title: 'Failed to load notifications',
-                        subtitle: failure?.message ?? error.toString(),
-                        actionLabel: 'Retry',
-                        onAction: () => ref
-                            .read(
-                              notificationsListProvider(_unreadOnly).notifier,
-                            )
-                            .refresh(),
+                        title: is403
+                            ? 'Access Restricted'
+                            : 'Failed to load notifications',
+                        subtitle: is403
+                            ? 'You do not have permission to view notifications.'
+                            : (failure?.message ?? error.toString()),
+                        actionLabel: is403 ? null : 'Retry',
+                        onAction: is403
+                            ? null
+                            : () => ref
+                                  .read(
+                                    notificationsListProvider(
+                                      _unreadOnly,
+                                    ).notifier,
+                                  )
+                                  .refresh(),
                         isError: true,
                       );
                     },
@@ -212,6 +222,17 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                           subtitle: _unreadOnly
                               ? 'All caught up! Check back later.'
                               : 'System alerts and messages will arrive here.',
+                          // Every empty state offers exactly one action.
+                          actionLabel: _unreadOnly ? 'Show all' : 'Refresh',
+                          onAction: _unreadOnly
+                              ? () => setState(() => _unreadOnly = false)
+                              : () => ref
+                                    .read(
+                                      notificationsListProvider(
+                                        _unreadOnly,
+                                      ).notifier,
+                                    )
+                                    .refresh(),
                         );
                       }
 

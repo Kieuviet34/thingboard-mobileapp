@@ -61,6 +61,14 @@ final class RestTelemetryRepository implements TelemetryRepository {
     TbAttributeScope scope,
     Map<String, dynamic> attributes,
   ) async {
+    // The API only accepts SERVER_SCOPE|SHARED_SCOPE; client attributes are
+    // owned by the device. Fail fast like the Demo repository does.
+    if (!scope.isWritableViaRest) {
+      throw const TbFailure(
+        type: TbFailureType.validation,
+        message: 'Client scope attributes are read-only',
+      );
+    }
     await _client.post<void>(
       '/api/plugins/telemetry/${entityId.entityType.wireValue}/${entityId.id}/attributes/${scope.wireValue}',
       data: attributes,

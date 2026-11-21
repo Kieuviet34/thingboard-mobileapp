@@ -421,27 +421,33 @@ class _DeviceProfileCard extends StatelessWidget {
                   color: scheme.onSurface,
                 ),
               ),
-              Wrap(
-                spacing: DesignTokens.spacing8,
-                runSpacing: DesignTokens.spacing4,
-                children: [
-                  _MiniStatusCount(
-                    icon: TbIconKind.livePulse,
-                    count: profile.activeCount,
-                    color: statusColors.online,
-                    bg: statusColors.onlineContainer,
-                    fg: statusColors.onOnlineContainer,
-                    semanticPrefix: 'online',
-                  ),
-                  _MiniStatusCount(
-                    icon: TbIconKind.offlineNode,
-                    count: profile.inactiveCount,
-                    color: statusColors.offline,
-                    bg: statusColors.offlineContainer,
-                    fg: statusColors.onOfflineContainer,
-                    semanticPrefix: 'offline',
-                  ),
-                ],
+              // Keep both counts on one line (a wrap adds a row that overflows
+              // the fixed-height tile at narrow widths); scale down only if needed.
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: AlignmentDirectional.centerStart,
+                child: Wrap(
+                  spacing: DesignTokens.spacing8,
+                  runSpacing: DesignTokens.spacing4,
+                  children: [
+                    _MiniStatusCount(
+                      icon: TbIconKind.livePulse,
+                      count: profile.activeCount,
+                      color: statusColors.online,
+                      bg: statusColors.onlineContainer,
+                      fg: statusColors.onOnlineContainer,
+                      semanticPrefix: 'online',
+                    ),
+                    _MiniStatusCount(
+                      icon: TbIconKind.offlineNode,
+                      count: profile.inactiveCount,
+                      color: statusColors.offline,
+                      bg: statusColors.offlineContainer,
+                      fg: statusColors.onOfflineContainer,
+                      semanticPrefix: 'offline',
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

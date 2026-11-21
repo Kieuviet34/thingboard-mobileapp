@@ -28,11 +28,11 @@
 ## 1. Điểm Nhấn Giao Diện & Tính Năng Vượt Trội
 
 ### 1.1. Thanh Điều Hướng Xuyên Thấu (Glassmorphism Floating Bar)
-- **Thiết kế dạng phao nổi (Floating Bar):** Bo góc tròn `32dp`, viền siêu mảnh `0.45` và đổ bóng mềm mại `BoxShadow`.
-- **Hiệu ứng Kính Mờ Đục Hiện Đại:** Tích hợp `BackdropFilter(filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20))` kết hợp nền bán trong suốt `surface.withValues(alpha: 0.82)`.
-- **Cuộn Xuyên Thấu Bên Dưới:** Kích hoạt `Scaffold(extendBody: true)`, cho phép nội dung danh sách, đồ thị telemetry và thẻ thiết bị lướt mờ ảo bên dưới thanh bar khi cuộn.
-- **Tập Trung Vào Icon ("Ít chữ nhất có thể"):** Chế độ `labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected`. Các tab không chọn chỉ hiển thị icon đồ họa, giúp màn hình luôn thoáng đãng và không bị rối mắt.
-- **Khoảng Đệm Đáy An Toàn:** Đồng bộ khoảng đệm cuộn đáy `84dp` trên toàn bộ 10 trang phân hệ, đảm bảo thẻ dữ liệu cuối cùng luôn hiển thị trọn vẹn và không bị che khuất.
+- **Thiết kế dạng viên thuốc nổi (`TbFloatingNavBar`):** Bo tròn hoàn toàn hai đầu (`StadiumBorder`, đúng ở mọi chiều cao), viền `outlineVariant`, tối đa `480dp` và căn giữa trên máy lớn/gập; lề `8dp` khi màn `< 360dp`.
+- **Kính mờ vẫn đọc rõ:** `BackdropFilter` blur `16` + nền `surfaceContainerHigh` alpha `0.85` (token `navGlassOpacity`). Bật "độ tương phản cao" thì thanh chuyển sang đặc và tắt blur.
+- **Nhãn trượt sang phải icon:** chạm icon → viên indicator (`primaryContainer`) trượt tới, nhãn trượt hiện **bên phải icon** và mờ dần ở tab cũ. Chuyển động chỉ dùng paint/transform (không relayout), tắt khi bật "giảm chuyển động", không lóe nhãn tab trung gian khi nhảy xa.
+- **Màn hẹp:** khi không đủ chỗ cho 4 vùng chạm `48dp` + nhãn (ví dụ màn ngoài máy gập 280dp) nhãn được lược đi, vẫn còn tooltip và `Semantics`.
+- **Cuộn bên dưới:** `Scaffold(extendBody: true)`, nội dung lướt dưới thanh; đệm đáy `DesignTokens.bottomNavClearance` (= chiều cao nav + khoảng hở + đệm) đảm bảo hàng cuối không bị che.
 
 ### 1.2. Hệ Thống Nhận Diện Icon Riêng Biệt (`TbIcons`)
 - Bộ icon IoT vector chuyên biệt được xây dựng bằng `CustomPainter` và SVG nhị phân tối ưu GPU:
@@ -64,17 +64,17 @@
 
 ## 2. Bộ Thư Viện Ảnh Thực Tế (Screenshots Gallery)
 
-Toàn bộ ảnh chụp thực tế từ môi trường Android đã được kiểm tra tính hợp lệ nhị phân (PNG valid 100%) và lưu trữ tại thư mục [docs/screenshots/](docs/screenshots/):
+Toàn bộ ảnh chụp thực tế từ emulator Android (Pixel, API 35, 1080×2400), chụp lại ngày 2026-11-21 bằng `python -I scripts/capture_clean_screenshots.py` (tìm nút theo nhãn accessibility, kiểm PNG hợp lệ), lưu tại [docs/screenshots/](docs/screenshots/):
 
 | 01. Đăng Nhập & Dán Link | 02. Trang Chủ & Navigation Bar Nổi | 03. Quản Lý Cảnh Báo IoT |
 |:---:|:---:|:---:|
 | [![Login Page](docs/screenshots/01_login_page.png)](docs/screenshots/01_login_page.png) | [![Home Dashboard](docs/screenshots/02_home_page.png)](docs/screenshots/02_home_page.png) | [![Alarms Page](docs/screenshots/03_alarms_page.png)](docs/screenshots/03_alarms_page.png) |
-| *Đăng nhập, dán link & Demo mode* | *Navigation Bar kính mờ & Metric pills* | *Cảnh báo phân cấp màu & icon severity* |
+| *Đăng nhập, dán link & Demo mode* | *Nav viên thuốc kính mờ, nhãn trượt sang phải icon & Metric pills* | *Cảnh báo phân cấp màu & icon severity* |
 
 | 04. Chi Tiết Cảnh Báo & 1-Tap | 05. Danh Mục Thiết Bị Profile | 06. Chi Tiết Thiết Bị & Telemetry |
 |:---:|:---:|:---:|
 | [![Alarm Details](docs/screenshots/04_alarm_details_page.png)](docs/screenshots/04_alarm_details_page.png) | [![Devices Page](docs/screenshots/05_devices_page.png)](docs/screenshots/05_devices_page.png) | [![Device Details](docs/screenshots/06_device_details_page.png)](docs/screenshots/06_device_details_page.png) |
-| *Xác nhận cảnh báo & phân công 1 chạm* | *Thống kê Active/Inactive & Đệm đáy 84dp* | *Đồ thị Telemetry & Điều khiển RPC* |
+| *Xác nhận cảnh báo & phân công 1 chạm* | *Thống kê Active/Inactive theo profile* | *Đồ thị Telemetry & Điều khiển RPC* |
 
 | 07. Menu Mở Rộng Phân Hệ | 08. Cài Đặt Tài Khoản & Mạng | 11. Trình Giám Sát Gói Tin Mạng |
 |:---:|:---:|:---:|
@@ -228,14 +228,17 @@ Toàn bộ 13 nhóm API chính thức theo [ThingsBoard PE Documentation](https:
 # 1. Cài đặt các thư viện phụ thuộc
 flutter pub get
 
-# 2. Kiểm tra chất lượng mã nguồn (Yêu cầu: 0 warnings, 0 errors)
-flutter analyze
+# 2. Kiểm tra chất lượng mã nguồn (Yêu cầu: 0 issue, kể cả mức info)
+flutter analyze --fatal-infos
 
-# 3. Chạy toàn bộ 194 automated test suites
-flutter test -j 1
+# 3. Chạy toàn bộ test (khoảng 1150 test, ~2 phút) kèm coverage
+flutter test --coverage
 
 # 4. Định dạng toàn bộ mã nguồn theo chuẩn Dart
-dart format lib test
+dart format .
+
+# 4b. Chạy tất cả cổng CI ở máy (format, analyze, test, ngưỡng coverage)
+powershell -ExecutionPolicy Bypass -File tools/qa/run_checks.ps1
 
 # 5. Khởi chạy ứng dụng trên thiết bị đang kết nối
 flutter run
@@ -280,20 +283,23 @@ python scripts/smart_capture.py
 
 ## 9. Kiểm Thử Chất Lượng & QA (Automated Testing)
 
-Dự án áp dụng phương pháp kiểm thử Test-Driven Development (TDD) với độ phủ toàn diện trên 32 file kiểm thử:
+Dự án áp dụng Test-Driven Development (test đỏ → sửa → xanh) và chặn lỗi tự động bằng CI (`.github/workflows/ci.yml`).
 
 ```bash
-flutter test -j 1
+flutter test --coverage
 ```
 
-### Kết Quả Kiểm Thử Thực Tế:
+### Kết Quả Kiểm Thử Thực Tế (2026-11-21):
 ```text
-01:19 +194: All tests passed!
+01:25 +1156: All tests passed!
+lib/ 87.6% · lib/core/api 89.1% · lib/widgets 98.3%   (ngưỡng CI: 80%)
 ```
-- **Router & Guard Tests:** Kiểm tra chuyển hướng đăng nhập, điều hướng 2FA, chuẩn hóa OAuth2 callback.
-- **API & Controller Tests:** Kiểm tra single-flight token refresh, xử lý lỗi ThingsBoardErrorCode, cách ly state giữa các phiên.
-- **WebSocket Tests:** Kiểm tra tự động kết nối lại, multiplex subscriptions, chống rò rỉ bộ nhớ khi tắt app.
-- **UI & Widget Tests:** Kiểm tra hiển thị M3 status badges, metric pills với số liệu tabular, độ nhạy nút bấm tối thiểu `>= 48dp`, khả năng tương thích Dark Theme và hỗ trợ chế độ chữ phóng to `2.0x`.
+- **Hợp đồng API (offline):** mọi request của 12 repository được xác thực với ThingsBoard REST API 4.4.1PAAS (path, method, tham số bắt buộc/enum, body). Xem [docs/qa/API_CONTRACT.md](docs/qa/API_CONTRACT.md) và [báo cáo kiểm toán](docs/qa/audit-2026-11-21-api.md).
+- **Router, Controller, WebSocket:** single-flight token refresh, ánh xạ `ThingsboardErrorCode`, phân trang, loại bỏ phản hồi cũ (stale), hủy đăng ký WS khi đóng màn hình.
+- **Độ bền UI:** 12 màn × payload thưa/rỗng/null/Unicode/403/500/mất mạng × sáng/tối × chữ 1.0x/2.0x; ma trận 15 màn × 10 cỡ máy (từ màn gập 280dp đến tablet, có màn ngang).
+- **Thanh điều hướng:** toán bố cục, chuyển động, giảm chuyển động, độ tương phản cao, vùng chạm `>= 48dp`, 13 cỡ máy × 2 cỡ chữ.
+- **Bảo mật:** Network Inspector che mật khẩu, token, OTP, secret QR (xem `TbNetworkRedactor`).
+- **QA thủ công:** [docs/qa/QA_CHECKLIST.md](docs/qa/QA_CHECKLIST.md) cho thiết bị thật trước mỗi release.
 
 ---
 

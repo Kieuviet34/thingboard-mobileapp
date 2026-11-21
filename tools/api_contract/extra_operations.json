@@ -1,0 +1,9 @@
+{
+  "_comment": "Operations the app calls but whose path is assembled at runtime (not a '/api/...' literal), so the scanner cannot see them. They are added to the snapshot and verified to exist in the spec.",
+  "operations": [
+    {
+      "op": "GET /api/plugins/telemetry/{entityType}/{entityId}/values/timeseries/history",
+      "reason": "telemetry_repository builds it as '$entityPath/history' for chart ranges (4.4+)."
+    }
+  ]
+}

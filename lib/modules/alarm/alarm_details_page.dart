@@ -93,6 +93,7 @@ class _AlarmDetailsPageState extends ConsumerState<AlarmDetailsPage> {
     final picked =
         await showModalBottomSheet<({bool unassign, TbUserEmailInfo? user})>(
           context: context,
+          useRootNavigator: true,
           isScrollControlled: true,
           builder: (sheetCtx) => _AssigneePickerSheet(
             alarmId: alarm.id,
@@ -211,14 +212,20 @@ class _AlarmDetailsPageState extends ConsumerState<AlarmDetailsPage> {
           padding: DesignTokens.paddingMedium,
           child: TbShimmerList(itemCount: 3),
         ),
-        error: (err, _) => TbEmptyState(
-          icon: TbIconKind.severityCritical,
-          title: 'Failed to load alarm',
-          subtitle: err is TbFailure ? err.message : err.toString(),
-          isError: true,
-          actionLabel: 'Retry',
-          onAction: _refreshAll,
-        ),
+        error: (err, _) {
+          final failure = err is TbFailure ? err : null;
+          final is403 = failure?.type == TbFailureType.permissionDenied;
+          return TbEmptyState(
+            icon: TbIconKind.severityCritical,
+            title: is403 ? 'Access Restricted' : 'Failed to load alarm',
+            subtitle: is403
+                ? 'You do not have permission to view this alarm.'
+                : (err is TbFailure ? err.message : err.toString()),
+            isError: true,
+            actionLabel: is403 ? null : 'Retry',
+            onAction: is403 ? null : _refreshAll,
+          );
+        },
         data: (alarm) {
           final accent = _severityAccent(statusColors, alarm.severity);
           final containerBg = _severityContainer(statusColors, alarm.severity);

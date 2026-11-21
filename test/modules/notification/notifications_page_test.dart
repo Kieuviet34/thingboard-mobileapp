@@ -225,6 +225,25 @@ void main() {
       expect(find.text('Inbox is empty'), findsOneWidget);
     });
 
+    testWidgets('empty Unread tab offers exactly one action: Show all', (
+      tester,
+    ) async {
+      final repo = _FakeNotificationRepo(initial: []);
+      await tester.pumpWidget(buildApp(repo: repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Unread'));
+      await tester.pumpAndSettle();
+      expect(find.text('No unread notifications'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Show all'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Show all'));
+      await tester.pumpAndSettle();
+      // Back on the All tab: its own empty state with its own action.
+      expect(find.text('Inbox is empty'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Refresh'), findsOneWidget);
+    });
+
     testWidgets('renders in Dark theme at 2.0x text scale without overflow', (
       tester,
     ) async {

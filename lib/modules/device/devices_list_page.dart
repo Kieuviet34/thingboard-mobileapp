@@ -206,14 +206,22 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
         padding: DesignTokens.paddingMedium,
         child: TbShimmerList(itemCount: 5),
       ),
-      error: (err, _) => TbEmptyState(
-        icon: TbIconKind.severityCritical,
-        title: 'Failed to load devices',
-        subtitle: err is TbFailure ? err.message : err.toString(),
-        isError: true,
-        actionLabel: 'Retry',
-        onAction: () => ref.read(devicesListProvider(query).notifier).refresh(),
-      ),
+      error: (err, _) {
+        final failure = err is TbFailure ? err : null;
+        final is403 = failure?.type == TbFailureType.permissionDenied;
+        return TbEmptyState(
+          icon: TbIconKind.severityCritical,
+          title: is403 ? 'Access Restricted' : 'Failed to load devices',
+          subtitle: is403
+              ? 'You do not have permission to view devices.'
+              : (err is TbFailure ? err.message : err.toString()),
+          isError: true,
+          actionLabel: is403 ? null : 'Retry',
+          onAction: is403
+              ? null
+              : () => ref.read(devicesListProvider(query).notifier).refresh(),
+        );
+      },
       data: (paged) {
         if (paged.items.isEmpty) {
           return TbEmptyState(

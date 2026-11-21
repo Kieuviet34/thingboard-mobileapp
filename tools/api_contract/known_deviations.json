@@ -1,0 +1,19 @@
+{
+  "_comment": "Reviewed differences between the app and the ThingsBoard 4.4.1PAAS OpenAPI. Anything not listed here fails the audit. Every entry needs a reason.",
+  "endpoints": {
+    "/api/tenant/assetInfos": "404-only fallback to the Community Edition endpoint when /api/assetInfos/all is missing; absent from the PaaS spec on purpose (covered by repositories_fallback_test).",
+    "/api/tenant/deviceInfos": "404-only fallback to the Community Edition endpoint when /api/deviceInfos/all is missing; absent from the PaaS spec on purpose (covered by repositories_fallback_test)."
+  },
+  "query_params": {
+    "GET /api/plugins/telemetry/{entityType}/{entityId}/values/timeseries": {
+      "allow": ["startTs", "endTs", "interval", "limit", "agg", "orderBy"],
+      "reason": "Pre-4.4 fallback taken only on HTTP 404 from .../values/timeseries/history. Older servers serve ranges from this path; the 4.4 spec documents this GET as 'latest values' only."
+    }
+  },
+  "responses": {
+    "POST /api/rpc/twoway/{deviceId}": "The spec documents the reply as `string`, but ThingsBoard returns the device's own JSON reply (any shape); the generic DeferredResult is lost by springdoc."
+  },
+  "model_keys": {
+    "TbNotification.read": "Legacy/demo boolean flag; the 4.4.1 contract is `status` (SENT|READ). fromJson falls back to status when `read` is absent."
+  }
+}

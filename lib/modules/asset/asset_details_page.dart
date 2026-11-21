@@ -150,21 +150,25 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
                               const SizedBox(height: DesignTokens.spacing4),
                               Row(
                                 children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: DesignTokens.spacing8,
-                                      vertical: DesignTokens.spacing2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: scheme.surfaceContainerHigh,
-                                      borderRadius:
-                                          DesignTokens.borderRadiusRound,
-                                    ),
-                                    child: Text(
-                                      asset.type,
-                                      style: textTheme.labelSmall?.copyWith(
-                                        color: scheme.onSurfaceVariant,
-                                        fontWeight: FontWeight.w600,
+                                  Flexible(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: DesignTokens.spacing8,
+                                        vertical: DesignTokens.spacing2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: scheme.surfaceContainerHigh,
+                                        borderRadius:
+                                            DesignTokens.borderRadiusRound,
+                                      ),
+                                      child: Text(
+                                        asset.type,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: textTheme.labelSmall?.copyWith(
+                                          color: scheme.onSurfaceVariant,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ),
                                   ),

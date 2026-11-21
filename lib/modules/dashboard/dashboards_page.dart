@@ -130,16 +130,27 @@ class _DashboardsPageState extends ConsumerState<DashboardsPage> {
                   padding: DesignTokens.paddingMedium,
                   child: TbShimmerList(itemCount: 4),
                 ),
-                error: (error, _) => TbEmptyState(
-                  icon: TbIconKind.dashboardTile,
-                  title: 'Failed to load',
-                  subtitle: error is TbFailure ? error.message : null,
-                  actionLabel: 'Retry',
-                  isError: true,
-                  onAction: () => ref
-                      .read(dashboardsListProvider(_searchQuery).notifier)
-                      .refresh(),
-                ),
+                error: (error, _) {
+                  final is403 =
+                      error is TbFailure &&
+                      error.type == TbFailureType.permissionDenied;
+                  return TbEmptyState(
+                    icon: TbIconKind.dashboardTile,
+                    title: is403 ? 'Access Restricted' : 'Failed to load',
+                    subtitle: is403
+                        ? 'You do not have permission to view dashboards.'
+                        : (error is TbFailure ? error.message : null),
+                    actionLabel: is403 ? null : 'Retry',
+                    isError: true,
+                    onAction: is403
+                        ? null
+                        : () => ref
+                              .read(
+                                dashboardsListProvider(_searchQuery).notifier,
+                              )
+                              .refresh(),
+                  );
+                },
                 data: (paged) {
                   final items = _starredOnly
                       ? paged.items
@@ -341,7 +352,9 @@ class _FilterChipBar extends StatelessWidget {
         DesignTokens.spacing16,
         DesignTokens.spacing4,
       ),
-      child: Row(
+      child: Wrap(
+        spacing: DesignTokens.spacing8,
+        runSpacing: DesignTokens.spacing8,
         children: [
           FilterChip(
             materialTapTargetSize: MaterialTapTargetSize.padded,
@@ -349,7 +362,6 @@ class _FilterChipBar extends StatelessWidget {
             selected: !starredOnly,
             onSelected: (_) => onChanged(false),
           ),
-          const SizedBox(width: DesignTokens.spacing8),
           FilterChip(
             materialTapTargetSize: MaterialTapTargetSize.padded,
             label: const Text('Starred'),

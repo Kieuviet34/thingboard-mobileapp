@@ -1,0 +1,5402 @@
+{
+ "operations": {
+  "DELETE /api/alarm/{alarmId}/assign": {
+   "body": null,
+   "operationId": "unassignAlarm",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "alarmId",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": "AlarmInfo",
+   "responseNode": {
+    "ref": "AlarmInfo"
+   }
+  },
+  "DELETE /api/customer/device/{deviceName}/claim": {
+   "body": null,
+   "operationId": "reClaimDevice",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "deviceName",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": "string",
+   "responseNode": {
+    "type": "string"
+   }
+  },
+  "DELETE /api/customer/{customerId}": {
+   "body": null,
+   "operationId": "deleteCustomer",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "customerId",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": null,
+   "responseNode": {
+    "free": true
+   }
+  },
+  "DELETE /api/dashboard/{dashboardId}": {
+   "body": null,
+   "operationId": "deleteDashboard",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "dashboardId",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": null,
+   "responseNode": {
+    "free": true
+   }
+  },
+  "DELETE /api/notification/{id}": {
+   "body": null,
+   "operationId": "deleteNotification",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "id",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": null,
+   "responseNode": {
+    "free": true
+   }
+  },
+  "DELETE /api/plugins/telemetry/{entityType}/{entityId}/{scope}": {
+   "body": null,
+   "operationId": "deleteEntityAttributes",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "entityId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "path",
+     "name": "entityType",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "SERVER_SCOPE",
+      "SHARED_SCOPE",
+      "CLIENT_SCOPE"
+     ],
+     "in": "path",
+     "name": "scope",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "items": {
+      "type": "string"
+     },
+     "name": "key",
+     "required": false,
+     "type": "array"
+    },
+    {
+     "in": "query",
+     "name": "keys",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "string",
+   "responseNode": {
+    "type": "string"
+   }
+  },
+  "DELETE /api/rpc/persistent/{rpcId}": {
+   "body": null,
+   "operationId": "deleteRpc",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "rpcId",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": null,
+   "responseNode": {
+    "free": true
+   }
+  },
+  "DELETE /api/user/mobile/session": {
+   "body": null,
+   "operationId": "removeMobileSession",
+   "parameters": [
+    {
+     "in": "header",
+     "name": "X-Mobile-Token",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": null,
+   "responseNode": {
+    "free": true
+   }
+  },
+  "GET /api/alarm/info/{alarmId}": {
+   "body": null,
+   "operationId": "getAlarmInfoById",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "alarmId",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": "AlarmInfo",
+   "responseNode": {
+    "ref": "AlarmInfo"
+   }
+  },
+  "GET /api/alarm/{alarmId}/comment": {
+   "body": null,
+   "operationId": "getAlarmComments",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "alarmId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "page",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "pageSize",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "enum": [
+      "ASC",
+      "DESC"
+     ],
+     "in": "query",
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "createdTime",
+      "id"
+     ],
+     "in": "query",
+     "name": "sortProperty",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "PageDataAlarmCommentInfo",
+   "responseNode": {
+    "ref": "PageDataAlarmCommentInfo"
+   }
+  },
+  "GET /api/asset/info/{assetId}": {
+   "body": null,
+   "operationId": "getAssetInfoById",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "assetId",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": "AssetInfo",
+   "responseNode": {
+    "ref": "AssetInfo"
+   }
+  },
+  "GET /api/assetInfos/all": {
+   "body": null,
+   "operationId": "getAllAssetInfos",
+   "parameters": [
+    {
+     "in": "query",
+     "name": "assetProfileId",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "includeCustomers",
+     "required": false,
+     "type": "boolean"
+    },
+    {
+     "in": "query",
+     "name": "page",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "pageSize",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "enum": [
+      "ASC",
+      "DESC"
+     ],
+     "in": "query",
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "createdTime",
+      "name",
+      "type",
+      "label",
+      "customerTitle"
+     ],
+     "in": "query",
+     "name": "sortProperty",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "textSearch",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "PageDataAssetInfo",
+   "responseNode": {
+    "ref": "PageDataAssetInfo"
+   }
+  },
+  "GET /api/assetProfileInfos": {
+   "body": null,
+   "operationId": "getAssetProfileInfos",
+   "parameters": [
+    {
+     "in": "query",
+     "name": "page",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "pageSize",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "enum": [
+      "ASC",
+      "DESC"
+     ],
+     "in": "query",
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "createdTime",
+      "name",
+      "description",
+      "isDefault"
+     ],
+     "in": "query",
+     "name": "sortProperty",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "textSearch",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "PageDataAssetProfileInfo",
+   "responseNode": {
+    "ref": "PageDataAssetProfileInfo"
+   }
+  },
+  "GET /api/audit/logs": {
+   "body": null,
+   "operationId": "getAuditLogs",
+   "parameters": [
+    {
+     "in": "query",
+     "name": "actionTypes",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "endTime",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "page",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "pageSize",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "enum": [
+      "ASC",
+      "DESC"
+     ],
+     "in": "query",
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "createdTime",
+      "entityType",
+      "entityName",
+      "userName",
+      "actionType",
+      "actionStatus"
+     ],
+     "in": "query",
+     "name": "sortProperty",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "startTime",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "textSearch",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "PageDataAuditLog",
+   "responseNode": {
+    "ref": "PageDataAuditLog"
+   }
+  },
+  "GET /api/audit/logs/customer/{customerId}": {
+   "body": null,
+   "operationId": "getAuditLogsByCustomerId",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "customerId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "actionTypes",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "endTime",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "page",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "pageSize",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "enum": [
+      "ASC",
+      "DESC"
+     ],
+     "in": "query",
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "createdTime",
+      "entityType",
+      "entityName",
+      "userName",
+      "actionType",
+      "actionStatus"
+     ],
+     "in": "query",
+     "name": "sortProperty",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "startTime",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "textSearch",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "PageDataAuditLog",
+   "responseNode": {
+    "ref": "PageDataAuditLog"
+   }
+  },
+  "GET /api/audit/logs/entity/{entityType}/{entityId}": {
+   "body": null,
+   "operationId": "getAuditLogsByEntityId",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "entityId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "path",
+     "name": "entityType",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "actionTypes",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "endTime",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "page",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "pageSize",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "enum": [
+      "ASC",
+      "DESC"
+     ],
+     "in": "query",
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "createdTime",
+      "entityType",
+      "entityName",
+      "userName",
+      "actionType",
+      "actionStatus"
+     ],
+     "in": "query",
+     "name": "sortProperty",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "startTime",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "textSearch",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "PageDataAuditLog",
+   "responseNode": {
+    "ref": "PageDataAuditLog"
+   }
+  },
+  "GET /api/audit/logs/user/{userId}": {
+   "body": null,
+   "operationId": "getAuditLogsByUserId",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "userId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "actionTypes",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "endTime",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "page",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "pageSize",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "enum": [
+      "ASC",
+      "DESC"
+     ],
+     "in": "query",
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "createdTime",
+      "entityType",
+      "entityName",
+      "userName",
+      "actionType",
+      "actionStatus"
+     ],
+     "in": "query",
+     "name": "sortProperty",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "startTime",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "textSearch",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "PageDataAuditLog",
+   "responseNode": {
+    "ref": "PageDataAuditLog"
+   }
+  },
+  "GET /api/auth/2fa/providers": {
+   "body": null,
+   "operationId": "getAvailableTwoFaProviderInfos",
+   "parameters": [],
+   "response": "array<TwoFaProviderInfo>",
+   "responseNode": {
+    "items": {
+     "ref": "TwoFaProviderInfo"
+    },
+    "type": "array"
+   }
+  },
+  "GET /api/auth/user": {
+   "body": null,
+   "operationId": "getUser",
+   "parameters": [],
+   "response": "User",
+   "responseNode": {
+    "ref": "User"
+   }
+  },
+  "GET /api/customer/info/{customerId}": {
+   "body": null,
+   "operationId": "getCustomerInfoById",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "customerId",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": "CustomerInfo",
+   "responseNode": {
+    "ref": "CustomerInfo"
+   }
+  },
+  "GET /api/customer/{customerId}": {
+   "body": null,
+   "operationId": "getCustomerById",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "customerId",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": "Customer",
+   "responseNode": {
+    "ref": "Customer"
+   }
+  },
+  "GET /api/customer/{customerId}/dashboards": {
+   "body": null,
+   "operationId": "getCustomerDashboards",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "customerId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "includeCustomers",
+     "required": false,
+     "type": "boolean"
+    },
+    {
+     "in": "query",
+     "name": "page",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "pageSize",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "enum": [
+      "ASC",
+      "DESC"
+     ],
+     "in": "query",
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "createdTime",
+      "title"
+     ],
+     "in": "query",
+     "name": "sortProperty",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "textSearch",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "PageDataDashboardInfo",
+   "responseNode": {
+    "ref": "PageDataDashboardInfo"
+   }
+  },
+  "GET /api/customerInfos/all": {
+   "body": null,
+   "operationId": "getAllCustomerInfos",
+   "parameters": [
+    {
+     "in": "query",
+     "name": "includeCustomers",
+     "required": false,
+     "type": "boolean"
+    },
+    {
+     "in": "query",
+     "name": "page",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "pageSize",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "enum": [
+      "ASC",
+      "DESC"
+     ],
+     "in": "query",
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "createdTime",
+      "title",
+      "email",
+      "country",
+      "city"
+     ],
+     "in": "query",
+     "name": "sortProperty",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "textSearch",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "PageDataCustomerInfo",
+   "responseNode": {
+    "ref": "PageDataCustomerInfo"
+   }
+  },
+  "GET /api/customers": {
+   "body": null,
+   "operationId": "getCustomers",
+   "parameters": [
+    {
+     "in": "query",
+     "name": "page",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "pageSize",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "enum": [
+      "ASC",
+      "DESC"
+     ],
+     "in": "query",
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "createdTime",
+      "title",
+      "email",
+      "country",
+      "city"
+     ],
+     "in": "query",
+     "name": "sortProperty",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "textSearch",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "PageDataCustomer",
+   "responseNode": {
+    "ref": "PageDataCustomer"
+   }
+  },
+  "GET /api/dashboard/home/info": {
+   "body": null,
+   "operationId": "getHomeDashboardInfo",
+   "parameters": [],
+   "response": "HomeDashboardInfo",
+   "responseNode": {
+    "ref": "HomeDashboardInfo"
+   }
+  },
+  "GET /api/dashboard/{dashboardId}": {
+   "body": null,
+   "operationId": "getDashboardById",
+   "parameters": [
+    {
+     "in": "header",
+     "name": "Accept-Encoding",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "path",
+     "name": "dashboardId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "includeResources",
+     "required": false,
+     "type": "boolean"
+    }
+   ],
+   "response": "Dashboard",
+   "responseNode": {
+    "ref": "Dashboard"
+   }
+  },
+  "GET /api/device/info/{deviceId}": {
+   "body": null,
+   "operationId": "getDeviceInfoById",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "deviceId",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": "DeviceInfo",
+   "responseNode": {
+    "ref": "DeviceInfo"
+   }
+  },
+  "GET /api/device/{deviceId}/credentials": {
+   "body": null,
+   "operationId": "getDeviceCredentialsByDeviceId",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "deviceId",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": "DeviceCredentials",
+   "responseNode": {
+    "ref": "DeviceCredentials"
+   }
+  },
+  "GET /api/deviceInfos/all": {
+   "body": null,
+   "operationId": "getAllDeviceInfos",
+   "parameters": [
+    {
+     "in": "query",
+     "name": "active",
+     "required": false,
+     "type": "boolean"
+    },
+    {
+     "in": "query",
+     "name": "deviceProfileId",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "includeCustomers",
+     "required": false,
+     "type": "boolean"
+    },
+    {
+     "in": "query",
+     "name": "page",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "pageSize",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "enum": [
+      "ASC",
+      "DESC"
+     ],
+     "in": "query",
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "createdTime",
+      "name",
+      "deviceProfileName",
+      "label",
+      "customerTitle"
+     ],
+     "in": "query",
+     "name": "sortProperty",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "textSearch",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "PageDataDeviceInfo",
+   "responseNode": {
+    "ref": "PageDataDeviceInfo"
+   }
+  },
+  "GET /api/deviceProfileInfos": {
+   "body": null,
+   "operationId": "getDeviceProfileInfos",
+   "parameters": [
+    {
+     "in": "query",
+     "name": "page",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "pageSize",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "enum": [
+      "ASC",
+      "DESC"
+     ],
+     "in": "query",
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "createdTime",
+      "name",
+      "type",
+      "transportType",
+      "description",
+      "isDefault"
+     ],
+     "in": "query",
+     "name": "sortProperty",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "textSearch",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "DEFAULT",
+      "MQTT",
+      "COAP",
+      "LWM2M",
+      "SNMP"
+     ],
+     "in": "query",
+     "name": "transportType",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "PageDataDeviceProfileInfo",
+   "responseNode": {
+    "ref": "PageDataDeviceProfileInfo"
+   }
+  },
+  "GET /api/noauth/mobile": {
+   "body": null,
+   "operationId": "getLoginMobileInfo",
+   "parameters": [
+    {
+     "in": "query",
+     "name": "pkgName",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "ANDROID",
+      "IOS"
+     ],
+     "in": "query",
+     "name": "platform",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": "LoginMobileInfo",
+   "responseNode": {
+    "ref": "LoginMobileInfo"
+   }
+  },
+  "GET /api/noauth/qr/{secret}": {
+   "body": null,
+   "operationId": "getUserTokenByMobileSecret",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "secret",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": "JwtPair",
+   "responseNode": {
+    "ref": "JwtPair"
+   }
+  },
+  "GET /api/noauth/userPasswordPolicy": {
+   "body": null,
+   "operationId": "getUserPasswordPolicy",
+   "parameters": [],
+   "response": "UserPasswordPolicy",
+   "responseNode": {
+    "ref": "UserPasswordPolicy"
+   }
+  },
+  "GET /api/noauth/whiteLabel/loginWhiteLabelParams": {
+   "body": null,
+   "operationId": "getLoginWhiteLabelParams",
+   "parameters": [],
+   "response": "LoginWhiteLabelingParams",
+   "responseNode": {
+    "ref": "LoginWhiteLabelingParams"
+   }
+  },
+  "GET /api/notification/settings/user": {
+   "body": null,
+   "operationId": "getUserNotificationSettings",
+   "parameters": [],
+   "response": "UserNotificationSettings",
+   "responseNode": {
+    "ref": "UserNotificationSettings"
+   }
+  },
+  "GET /api/notifications": {
+   "body": null,
+   "operationId": "getNotifications",
+   "parameters": [
+    {
+     "enum": [
+      "WEB",
+      "MOBILE_APP"
+     ],
+     "in": "query",
+     "name": "deliveryMethod",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "page",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "pageSize",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "sortProperty",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "textSearch",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "unreadOnly",
+     "required": false,
+     "type": "boolean"
+    }
+   ],
+   "response": "PageDataNotification",
+   "responseNode": {
+    "ref": "PageDataNotification"
+   }
+  },
+  "GET /api/notifications/unread/count": {
+   "body": null,
+   "operationId": "getUnreadNotificationsCount",
+   "parameters": [
+    {
+     "enum": [
+      "WEB",
+      "MOBILE_APP"
+     ],
+     "in": "query",
+     "name": "deliveryMethod",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "integer",
+   "responseNode": {
+    "type": "integer"
+   }
+  },
+  "GET /api/plugins/telemetry/{entityType}/{entityId}/values/attributes/{scope}": {
+   "body": null,
+   "operationId": "getAttributesByScope",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "entityId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "path",
+     "name": "entityType",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "SERVER_SCOPE",
+      "SHARED_SCOPE",
+      "CLIENT_SCOPE"
+     ],
+     "in": "path",
+     "name": "scope",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "items": {
+      "type": "string"
+     },
+     "name": "key",
+     "required": false,
+     "type": "array"
+    },
+    {
+     "in": "query",
+     "name": "keys",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "array<AttributeData>",
+   "responseNode": {
+    "items": {
+     "ref": "AttributeData"
+    },
+    "type": "array"
+   }
+  },
+  "GET /api/plugins/telemetry/{entityType}/{entityId}/values/timeseries": {
+   "body": null,
+   "operationId": "getLatestTimeseries",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "entityId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "path",
+     "name": "entityType",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "items": {
+      "type": "string"
+     },
+     "name": "key",
+     "required": false,
+     "type": "array"
+    },
+    {
+     "in": "query",
+     "name": "keys",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "useStrictDataTypes",
+     "required": false,
+     "type": "boolean"
+    }
+   ],
+   "response": "object",
+   "responseNode": {
+    "additional": {
+     "items": {
+      "ref": "TsData"
+     },
+     "type": "array"
+    },
+    "type": "object"
+   }
+  },
+  "GET /api/plugins/telemetry/{entityType}/{entityId}/values/timeseries/history": {
+   "body": null,
+   "operationId": "getTimeseriesHistory",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "entityId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "path",
+     "name": "entityType",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "MIN",
+      "MAX",
+      "AVG",
+      "SUM",
+      "COUNT",
+      "NONE"
+     ],
+     "in": "query",
+     "name": "agg",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "endTs",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "interval",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "enum": [
+      "MILLISECONDS",
+      "WEEK",
+      "WEEK_ISO",
+      "MONTH",
+      "QUARTER"
+     ],
+     "in": "query",
+     "name": "intervalType",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "items": {
+      "type": "string"
+     },
+     "name": "key",
+     "required": false,
+     "type": "array"
+    },
+    {
+     "in": "query",
+     "name": "keys",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "limit",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "enum": [
+      "ASC",
+      "DESC"
+     ],
+     "in": "query",
+     "name": "orderBy",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "startTs",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "timeZone",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "useStrictDataTypes",
+     "required": false,
+     "type": "boolean"
+    }
+   ],
+   "response": "object",
+   "responseNode": {
+    "additional": {
+     "items": {
+      "ref": "TsData"
+     },
+     "type": "array"
+    },
+    "type": "object"
+   }
+  },
+  "GET /api/relations/info/from/{fromType}/{fromId}": {
+   "body": null,
+   "operationId": "findEntityRelationInfosByFrom",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "fromId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "path",
+     "name": "fromType",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "relationTypeGroup",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "array<EntityRelationInfo>",
+   "responseNode": {
+    "items": {
+     "ref": "EntityRelationInfo"
+    },
+    "type": "array"
+   }
+  },
+  "GET /api/relations/info/to/{toType}/{toId}": {
+   "body": null,
+   "operationId": "findEntityRelationInfosByTo",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "toId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "path",
+     "name": "toType",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "relationTypeGroup",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "array<EntityRelationInfo>",
+   "responseNode": {
+    "items": {
+     "ref": "EntityRelationInfo"
+    },
+    "type": "array"
+   }
+  },
+  "GET /api/rpc/persistent/device/{deviceId}": {
+   "body": null,
+   "operationId": "getPersistedRpcByDevice",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "deviceId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "page",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "pageSize",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "enum": [
+      "QUEUED",
+      "SENT",
+      "DELIVERED",
+      "SUCCESSFUL",
+      "TIMEOUT",
+      "EXPIRED",
+      "FAILED"
+     ],
+     "in": "query",
+     "name": "rpcStatus",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "ASC",
+      "DESC"
+     ],
+     "in": "query",
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "createdTime",
+      "expirationTime",
+      "request",
+      "response"
+     ],
+     "in": "query",
+     "name": "sortProperty",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "textSearch",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "PageDataRpc",
+   "responseNode": {
+    "ref": "PageDataRpc"
+   }
+  },
+  "GET /api/rpc/persistent/{rpcId}": {
+   "body": null,
+   "operationId": "getPersistedRpc",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "rpcId",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": "Rpc",
+   "responseNode": {
+    "ref": "Rpc"
+   }
+  },
+  "GET /api/system/info": {
+   "body": null,
+   "operationId": "getSystemVersionInfo",
+   "parameters": [],
+   "response": "SystemVersionInfo",
+   "responseNode": {
+    "ref": "SystemVersionInfo"
+   }
+  },
+  "GET /api/tenant/dashboards": {
+   "body": null,
+   "operationId": "getTenantDashboards",
+   "parameters": [
+    {
+     "in": "query",
+     "name": "mobile",
+     "required": false,
+     "type": "boolean"
+    },
+    {
+     "in": "query",
+     "name": "page",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "pageSize",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "enum": [
+      "ASC",
+      "DESC"
+     ],
+     "in": "query",
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "createdTime",
+      "title"
+     ],
+     "in": "query",
+     "name": "sortProperty",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "textSearch",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "PageDataDashboardInfo",
+   "responseNode": {
+    "ref": "PageDataDashboardInfo"
+   }
+  },
+  "GET /api/user/dashboards": {
+   "body": null,
+   "operationId": "getUserDashboards",
+   "parameters": [
+    {
+     "in": "query",
+     "name": "mobile",
+     "required": false,
+     "type": "boolean"
+    },
+    {
+     "in": "query",
+     "name": "operation",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "page",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "pageSize",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "enum": [
+      "ASC",
+      "DESC"
+     ],
+     "in": "query",
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "createdTime",
+      "title"
+     ],
+     "in": "query",
+     "name": "sortProperty",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "textSearch",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "userId",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "PageDataDashboardInfo",
+   "responseNode": {
+    "ref": "PageDataDashboardInfo"
+   }
+  },
+  "GET /api/user/dashboards/{dashboardId}/{action}": {
+   "body": null,
+   "operationId": "reportUserDashboardAction",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "action",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "path",
+     "name": "dashboardId",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": "UserDashboardsInfo",
+   "responseNode": {
+    "ref": "UserDashboardsInfo"
+   }
+  },
+  "GET /api/user/lastVisitedDashboards": {
+   "body": null,
+   "operationId": "getLastVisitedDashboards",
+   "parameters": [],
+   "response": "UserDashboardsInfo",
+   "responseNode": {
+    "ref": "UserDashboardsInfo"
+   }
+  },
+  "GET /api/user/mobile/session": {
+   "body": null,
+   "operationId": "getMobileSession",
+   "parameters": [
+    {
+     "in": "header",
+     "name": "X-Mobile-Token",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": "MobileSessionInfo",
+   "responseNode": {
+    "ref": "MobileSessionInfo"
+   }
+  },
+  "GET /api/user/settings/general": {
+   "body": null,
+   "operationId": "getGeneralUserSettings",
+   "parameters": [],
+   "response": "JsonNode",
+   "responseNode": {
+    "ref": "JsonNode"
+   }
+  },
+  "GET /api/users/assign/{alarmId}": {
+   "body": null,
+   "operationId": "getUsersForAssign",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "alarmId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "page",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "pageSize",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "enum": [
+      "ASC",
+      "DESC"
+     ],
+     "in": "query",
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "createdTime",
+      "firstName",
+      "lastName",
+      "email"
+     ],
+     "in": "query",
+     "name": "sortProperty",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "textSearch",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "PageDataUserEmailInfo",
+   "responseNode": {
+    "ref": "PageDataUserEmailInfo"
+   }
+  },
+  "GET /api/v2/alarm/{entityType}/{entityId}": {
+   "body": null,
+   "operationId": "getAlarmsV2",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "entityId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "path",
+     "name": "entityType",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "assigneeId",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "endTime",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "page",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "pageSize",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "items": {
+      "enum": [
+       "CRITICAL",
+       "MAJOR",
+       "MINOR",
+       "WARNING",
+       "INDETERMINATE"
+      ],
+      "type": "string"
+     },
+     "name": "severityList",
+     "required": false,
+     "type": "array"
+    },
+    {
+     "enum": [
+      "ASC",
+      "DESC"
+     ],
+     "in": "query",
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "createdTime",
+      "startTs",
+      "endTs",
+      "type",
+      "ackTs",
+      "clearTs",
+      "severity",
+      "status"
+     ],
+     "in": "query",
+     "name": "sortProperty",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "startTime",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "items": {
+      "enum": [
+       "ANY",
+       "ACTIVE",
+       "CLEARED",
+       "ACK",
+       "UNACK"
+      ],
+      "type": "string"
+     },
+     "name": "statusList",
+     "required": false,
+     "type": "array"
+    },
+    {
+     "in": "query",
+     "name": "textSearch",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "items": {
+      "type": "string"
+     },
+     "name": "typeList",
+     "required": false,
+     "type": "array"
+    }
+   ],
+   "response": "PageDataAlarmInfo",
+   "responseNode": {
+    "ref": "PageDataAlarmInfo"
+   }
+  },
+  "GET /api/v2/alarms": {
+   "body": null,
+   "operationId": "getAllAlarmsV2",
+   "parameters": [
+    {
+     "in": "query",
+     "name": "assigneeId",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "endTime",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "page",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "name": "pageSize",
+     "required": true,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "items": {
+      "enum": [
+       "CRITICAL",
+       "MAJOR",
+       "MINOR",
+       "WARNING",
+       "INDETERMINATE"
+      ],
+      "type": "string"
+     },
+     "name": "severityList",
+     "required": false,
+     "type": "array"
+    },
+    {
+     "enum": [
+      "ASC",
+      "DESC"
+     ],
+     "in": "query",
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "createdTime",
+      "startTs",
+      "endTs",
+      "type",
+      "ackTs",
+      "clearTs",
+      "severity",
+      "status"
+     ],
+     "in": "query",
+     "name": "sortProperty",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "startTime",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "in": "query",
+     "items": {
+      "enum": [
+       "ANY",
+       "ACTIVE",
+       "CLEARED",
+       "ACK",
+       "UNACK"
+      ],
+      "type": "string"
+     },
+     "name": "statusList",
+     "required": false,
+     "type": "array"
+    },
+    {
+     "in": "query",
+     "name": "textSearch",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "items": {
+      "type": "string"
+     },
+     "name": "typeList",
+     "required": false,
+     "type": "array"
+    }
+   ],
+   "response": "PageDataAlarmInfo",
+   "responseNode": {
+    "ref": "PageDataAlarmInfo"
+   }
+  },
+  "POST /api/alarm/{alarmId}/ack": {
+   "body": null,
+   "operationId": "ackAlarm",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "alarmId",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": "AlarmInfo",
+   "responseNode": {
+    "ref": "AlarmInfo"
+   }
+  },
+  "POST /api/alarm/{alarmId}/assign/{assigneeId}": {
+   "body": null,
+   "operationId": "assignAlarm",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "alarmId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "path",
+     "name": "assigneeId",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": "AlarmInfo",
+   "responseNode": {
+    "ref": "AlarmInfo"
+   }
+  },
+  "POST /api/alarm/{alarmId}/clear": {
+   "body": null,
+   "operationId": "clearAlarm",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "alarmId",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": "AlarmInfo",
+   "responseNode": {
+    "ref": "AlarmInfo"
+   }
+  },
+  "POST /api/alarm/{alarmId}/comment": {
+   "body": {
+    "array": false,
+    "free": false,
+    "itemsRef": null,
+    "node": {
+     "ref": "AlarmComment"
+    },
+    "props": {
+     "alarmId": {
+      "type": "object"
+     },
+     "comment": {},
+     "createdTime": {
+      "type": "integer"
+     },
+     "id": {
+      "type": "object"
+     },
+     "name": {
+      "type": "string"
+     },
+     "type": {
+      "enum": [
+       "SYSTEM",
+       "OTHER"
+      ],
+      "type": "string"
+     },
+     "userId": {
+      "type": "object"
+     }
+    },
+    "ref": "AlarmComment",
+    "required": true,
+    "requiredProps": []
+   },
+   "operationId": "saveAlarmComment",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "alarmId",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": "AlarmComment",
+   "responseNode": {
+    "ref": "AlarmComment"
+   }
+  },
+  "POST /api/auth/2fa/login": {
+   "body": null,
+   "operationId": "authenticateByTwoFaConfigurationToken",
+   "parameters": [],
+   "response": "JwtPair",
+   "responseNode": {
+    "ref": "JwtPair"
+   }
+  },
+  "POST /api/auth/2fa/verification/check": {
+   "body": null,
+   "operationId": "checkTwoFaVerificationCode",
+   "parameters": [
+    {
+     "enum": [
+      "TOTP",
+      "SMS",
+      "EMAIL",
+      "BACKUP_CODE"
+     ],
+     "in": "query",
+     "name": "providerType",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "verificationCode",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": "JwtPair",
+   "responseNode": {
+    "ref": "JwtPair"
+   }
+  },
+  "POST /api/auth/2fa/verification/send": {
+   "body": null,
+   "operationId": "requestTwoFaVerificationCode",
+   "parameters": [
+    {
+     "enum": [
+      "TOTP",
+      "SMS",
+      "EMAIL",
+      "BACKUP_CODE"
+     ],
+     "in": "query",
+     "name": "providerType",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": null,
+   "responseNode": {
+    "free": true
+   }
+  },
+  "POST /api/auth/changePassword": {
+   "body": {
+    "array": false,
+    "free": false,
+    "itemsRef": null,
+    "node": {
+     "ref": "ChangePasswordRequest"
+    },
+    "props": {
+     "currentPassword": {
+      "type": "string"
+     },
+     "newPassword": {
+      "type": "string"
+     }
+    },
+    "ref": "ChangePasswordRequest",
+    "required": true,
+    "requiredProps": []
+   },
+   "operationId": "changePassword",
+   "parameters": [],
+   "response": "JwtPair",
+   "responseNode": {
+    "ref": "JwtPair"
+   }
+  },
+  "POST /api/auth/login": {
+   "body": {
+    "array": false,
+    "free": false,
+    "itemsRef": null,
+    "node": {
+     "ref": "LoginRequest"
+    },
+    "props": {
+     "password": {
+      "type": "string"
+     },
+     "username": {
+      "type": "string"
+     }
+    },
+    "ref": "LoginRequest",
+    "required": false,
+    "requiredProps": [
+     "password",
+     "username"
+    ]
+   },
+   "operationId": "login",
+   "parameters": [],
+   "response": "LoginResponse",
+   "responseNode": {
+    "ref": "LoginResponse"
+   }
+  },
+  "POST /api/auth/logout": {
+   "body": null,
+   "operationId": "logout",
+   "parameters": [],
+   "response": null,
+   "responseNode": {
+    "free": true
+   }
+  },
+  "POST /api/auth/token": {
+   "body": {
+    "array": false,
+    "free": false,
+    "itemsRef": null,
+    "node": {
+     "props": {
+      "refreshToken": {
+       "type": "string"
+      }
+     },
+     "required": [],
+     "type": "object"
+    },
+    "props": {
+     "refreshToken": {
+      "type": "string"
+     }
+    },
+    "ref": null,
+    "required": false,
+    "requiredProps": []
+   },
+   "operationId": "refreshToken",
+   "parameters": [],
+   "response": "LoginResponse",
+   "responseNode": {
+    "ref": "LoginResponse"
+   }
+  },
+  "POST /api/customer/device/{deviceName}/claim": {
+   "body": {
+    "array": false,
+    "free": false,
+    "itemsRef": null,
+    "node": {
+     "ref": "ClaimRequest"
+    },
+    "props": {
+     "secretKey": {
+      "type": "string"
+     }
+    },
+    "ref": "ClaimRequest",
+    "required": false,
+    "requiredProps": []
+   },
+   "operationId": "claimDevice",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "deviceName",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "name": "subCustomerId",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "ClaimResult",
+   "responseNode": {
+    "ref": "ClaimResult"
+   }
+  },
+  "POST /api/entitiesQuery/count": {
+   "body": {
+    "array": false,
+    "free": false,
+    "itemsRef": null,
+    "node": {
+     "ref": "EntityCountQuery"
+    },
+    "props": {
+     "entityFilter": {},
+     "keyFilters": {
+      "items": {
+       "type": "object"
+      },
+      "type": "array"
+     },
+     "keyFiltersOperation": {
+      "enum": [
+       "AND",
+       "OR"
+      ],
+      "type": "string"
+     },
+     "keyFiltersOperationOrDefault": {
+      "enum": [
+       "AND",
+       "OR"
+      ],
+      "type": "string"
+     }
+    },
+    "ref": "EntityCountQuery",
+    "required": true,
+    "requiredProps": []
+   },
+   "operationId": "countEntitiesByQuery",
+   "parameters": [],
+   "response": "integer",
+   "responseNode": {
+    "type": "integer"
+   }
+  },
+  "POST /api/noauth/oauth2Clients": {
+   "body": null,
+   "operationId": "getOAuth2Clients",
+   "parameters": [
+    {
+     "in": "query",
+     "name": "pkgName",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "WEB",
+      "ANDROID",
+      "IOS"
+     ],
+     "in": "query",
+     "name": "platform",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "array<OAuth2ClientLoginInfo>",
+   "responseNode": {
+    "items": {
+     "ref": "OAuth2ClientLoginInfo"
+    },
+    "type": "array"
+   }
+  },
+  "POST /api/noauth/resetPasswordByEmail": {
+   "body": {
+    "array": false,
+    "free": false,
+    "itemsRef": null,
+    "node": {
+     "ref": "ResetPasswordEmailRequest"
+    },
+    "props": {
+     "email": {
+      "type": "string"
+     }
+    },
+    "ref": "ResetPasswordEmailRequest",
+    "required": true,
+    "requiredProps": []
+   },
+   "operationId": "requestResetPasswordByEmail",
+   "parameters": [],
+   "response": null,
+   "responseNode": {
+    "free": true
+   }
+  },
+  "POST /api/notification/settings/user": {
+   "body": {
+    "array": false,
+    "free": false,
+    "itemsRef": null,
+    "node": {
+     "ref": "UserNotificationSettings"
+    },
+    "props": {
+     "prefs": {
+      "type": "object"
+     }
+    },
+    "ref": "UserNotificationSettings",
+    "required": true,
+    "requiredProps": [
+     "prefs"
+    ]
+   },
+   "operationId": "saveUserNotificationSettings",
+   "parameters": [],
+   "response": "UserNotificationSettings",
+   "responseNode": {
+    "ref": "UserNotificationSettings"
+   }
+  },
+  "POST /api/plugins/telemetry/{entityType}/{entityId}/attributes/{scope}": {
+   "body": {
+    "array": false,
+    "free": true,
+    "itemsRef": null,
+    "node": {
+     "type": "string"
+    },
+    "props": {},
+    "ref": null,
+    "required": true,
+    "requiredProps": []
+   },
+   "operationId": "saveEntityAttributesV2",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "entityId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "path",
+     "name": "entityType",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "SERVER_SCOPE",
+      "SHARED_SCOPE"
+     ],
+     "in": "path",
+     "name": "scope",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": "string",
+   "responseNode": {
+    "type": "string"
+   }
+  },
+  "POST /api/plugins/telemetry/{entityType}/{entityId}/values/timeseries": {
+   "body": {
+    "array": true,
+    "free": true,
+    "itemsRef": "BaseReadTsKvQuery",
+    "node": {
+     "items": {
+      "ref": "BaseReadTsKvQuery"
+     },
+     "type": "array"
+    },
+    "props": {},
+    "ref": "BaseReadTsKvQuery",
+    "required": true,
+    "requiredProps": []
+   },
+   "operationId": "getTimeseriesByReadTsKvQueries",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "entityId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "path",
+     "name": "entityType",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": "array<ReadTsKvQueryResult>",
+   "responseNode": {
+    "items": {
+     "ref": "ReadTsKvQueryResult"
+    },
+    "type": "array"
+   }
+  },
+  "POST /api/plugins/telemetry/{entityType}/{entityId}/{scope}": {
+   "body": {
+    "array": false,
+    "free": true,
+    "itemsRef": null,
+    "node": {
+     "type": "string"
+    },
+    "props": {},
+    "ref": null,
+    "required": true,
+    "requiredProps": []
+   },
+   "operationId": "saveEntityAttributesV1",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "entityId",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "in": "path",
+     "name": "entityType",
+     "required": true,
+     "type": "string"
+    },
+    {
+     "enum": [
+      "SERVER_SCOPE",
+      "SHARED_SCOPE"
+     ],
+     "in": "path",
+     "name": "scope",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": "string",
+   "responseNode": {
+    "type": "string"
+   }
+  },
+  "POST /api/rpc/oneway/{deviceId}": {
+   "body": {
+    "array": false,
+    "free": true,
+    "itemsRef": null,
+    "node": {
+     "type": "string"
+    },
+    "props": {},
+    "ref": null,
+    "required": true,
+    "requiredProps": []
+   },
+   "operationId": "handleOneWayDeviceRPCRequestV2",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "deviceId",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": "string",
+   "responseNode": {
+    "type": "string"
+   }
+  },
+  "POST /api/rpc/twoway/{deviceId}": {
+   "body": {
+    "array": false,
+    "free": true,
+    "itemsRef": null,
+    "node": {
+     "type": "string"
+    },
+    "props": {},
+    "ref": null,
+    "required": true,
+    "requiredProps": []
+   },
+   "operationId": "handleTwoWayDeviceRPCRequestV2",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "deviceId",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": "string",
+   "responseNode": {
+    "type": "string"
+   }
+  },
+  "POST /api/user": {
+   "body": {
+    "array": false,
+    "free": false,
+    "itemsRef": null,
+    "node": {
+     "ref": "User"
+    },
+    "props": {
+     "additionalInfo": {},
+     "authority": {
+      "enum": [
+       "SYS_ADMIN",
+       "TENANT_ADMIN",
+       "CUSTOMER_USER",
+       "BILLING_ADMIN",
+       "BILLING_SERVICE",
+       "REFRESH_TOKEN",
+       "PRE_VERIFICATION_TOKEN",
+       "MFA_CONFIGURATION_TOKEN"
+      ],
+      "type": "string"
+     },
+     "createdTime": {
+      "type": "integer"
+     },
+     "customMenuId": {
+      "type": "object"
+     },
+     "customerId": {
+      "type": "object"
+     },
+     "email": {
+      "type": "string"
+     },
+     "firstName": {
+      "type": "string"
+     },
+     "id": {
+      "type": "object"
+     },
+     "lastName": {
+      "type": "string"
+     },
+     "name": {
+      "type": "string"
+     },
+     "ownerId": {},
+     "phone": {
+      "type": "string"
+     },
+     "tenantId": {
+      "type": "object"
+     },
+     "version": {
+      "type": "integer"
+     }
+    },
+    "ref": "User",
+    "required": true,
+    "requiredProps": [
+     "authority",
+     "email"
+    ]
+   },
+   "operationId": "saveUser",
+   "parameters": [
+    {
+     "in": "query",
+     "name": "entityGroupId",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "in": "query",
+     "items": {
+      "type": "string"
+     },
+     "name": "entityGroupIds",
+     "required": false,
+     "type": "array"
+    },
+    {
+     "in": "query",
+     "name": "sendActivationMail",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": "User",
+   "responseNode": {
+    "ref": "User"
+   }
+  },
+  "POST /api/user/mobile/session": {
+   "body": {
+    "array": false,
+    "free": false,
+    "itemsRef": null,
+    "node": {
+     "ref": "MobileSessionInfo"
+    },
+    "props": {
+     "fcmTokenTimestamp": {
+      "type": "integer"
+     }
+    },
+    "ref": "MobileSessionInfo",
+    "required": true,
+    "requiredProps": []
+   },
+   "operationId": "saveMobileSession",
+   "parameters": [
+    {
+     "in": "header",
+     "name": "X-Mobile-Token",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": null,
+   "responseNode": {
+    "free": true
+   }
+  },
+  "PUT /api/notification/{id}/read": {
+   "body": null,
+   "operationId": "markNotificationAsRead",
+   "parameters": [
+    {
+     "in": "path",
+     "name": "id",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "response": null,
+   "responseNode": {
+    "free": true
+   }
+  },
+  "PUT /api/notifications/read": {
+   "body": null,
+   "operationId": "markAllNotificationsAsRead",
+   "parameters": [
+    {
+     "enum": [
+      "WEB",
+      "MOBILE_APP"
+     ],
+     "in": "query",
+     "name": "deliveryMethod",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "response": null,
+   "responseNode": {
+    "free": true
+   }
+  },
+  "PUT /api/user/settings/general": {
+   "body": {
+    "array": false,
+    "free": true,
+    "itemsRef": null,
+    "node": {
+     "ref": "JsonNode"
+    },
+    "props": {},
+    "ref": "JsonNode",
+    "required": true,
+    "requiredProps": []
+   },
+   "operationId": "putGeneralUserSettings",
+   "parameters": [],
+   "response": null,
+   "responseNode": {
+    "free": true
+   }
+  }
+ },
+ "schemas": {
+  "ActionStatus": {
+   "enum": [
+    "SUCCESS",
+    "FAILURE"
+   ],
+   "type": "string"
+  },
+  "ActionType": {
+   "enum": [
+    "ADDED",
+    "DELETED",
+    "UPDATED",
+    "ATTRIBUTES_UPDATED",
+    "ATTRIBUTES_DELETED",
+    "TIMESERIES_UPDATED",
+    "TIMESERIES_DELETED",
+    "RPC_CALL",
+    "CREDENTIALS_UPDATED",
+    "ASSIGNED_TO_CUSTOMER",
+    "UNASSIGNED_FROM_CUSTOMER",
+    "CHANGE_OWNER",
+    "ACTIVATED",
+    "SUSPENDED",
+    "CREDENTIALS_READ",
+    "ATTRIBUTES_READ",
+    "RELATION_ADD_OR_UPDATE",
+    "RELATION_DELETED",
+    "RELATIONS_DELETED",
+    "ALARM_ACK",
+    "ALARM_CLEAR",
+    "ALARM_DELETE",
+    "ALARM_ASSIGNED",
+    "ALARM_UNASSIGNED",
+    "ADDED_TO_ENTITY_GROUP",
+    "REMOVED_FROM_ENTITY_GROUP",
+    "REST_API_RULE_ENGINE_CALL",
+    "MADE_PUBLIC",
+    "MADE_PRIVATE",
+    "LOGIN",
+    "LOGOUT",
+    "LOCKOUT",
+    "ASSIGNED_FROM_TENANT",
+    "ASSIGNED_TO_TENANT",
+    "PROVISION_SUCCESS",
+    "PROVISION_FAILURE",
+    "ASSIGNED_TO_EDGE",
+    "UNASSIGNED_FROM_EDGE",
+    "ADDED_COMMENT",
+    "UPDATED_COMMENT",
+    "DELETED_COMMENT",
+    "SMS_SENT",
+    "SUBSCRIPTION_CREATED",
+    "SUBSCRIPTION_UPDATED",
+    "SUBSCRIPTION_CANCELED",
+    "SUBSCRIPTION_PLAN_UPDATED",
+    "SUBSCRIPTION_COUPON_APPLIED"
+   ],
+   "type": "string"
+  },
+  "Aggregation": {
+   "enum": [
+    "MIN",
+    "MAX",
+    "AVG",
+    "SUM",
+    "COUNT",
+    "NONE"
+   ],
+   "type": "string"
+  },
+  "AggregationParams": {
+   "props": {
+    "aggregation": {
+     "ref": "Aggregation"
+    },
+    "interval": {
+     "type": "integer"
+    },
+    "intervalType": {
+     "ref": "IntervalType"
+    },
+    "tzId": {
+     "type": "string"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "AlarmAssignee": {
+   "props": {
+    "email": {
+     "type": "string"
+    },
+    "firstName": {
+     "type": "string"
+    },
+    "id": {
+     "ref": "UserId"
+    },
+    "lastName": {
+     "type": "string"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "AlarmComment": {
+   "props": {
+    "alarmId": {
+     "ref": "AlarmId"
+    },
+    "comment": {
+     "ref": "JsonNode"
+    },
+    "createdTime": {
+     "type": "integer"
+    },
+    "id": {
+     "ref": "AlarmCommentId"
+    },
+    "name": {
+     "type": "string"
+    },
+    "type": {
+     "ref": "AlarmCommentType"
+    },
+    "userId": {
+     "ref": "UserId"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "AlarmCommentId": {
+   "props": {
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "AlarmCommentInfo": {
+   "props": {
+    "alarmId": {
+     "ref": "AlarmId"
+    },
+    "comment": {
+     "ref": "JsonNode"
+    },
+    "createdTime": {
+     "type": "integer"
+    },
+    "email": {
+     "type": "string"
+    },
+    "firstName": {
+     "type": "string"
+    },
+    "id": {
+     "ref": "AlarmCommentId"
+    },
+    "lastName": {
+     "type": "string"
+    },
+    "name": {
+     "type": "string"
+    },
+    "type": {
+     "ref": "AlarmCommentType"
+    },
+    "userId": {
+     "ref": "UserId"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "AlarmCommentType": {
+   "enum": [
+    "SYSTEM",
+    "OTHER"
+   ],
+   "type": "string"
+  },
+  "AlarmId": {
+   "props": {
+    "entityType": {
+     "ref": "EntityType"
+    },
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "entityType",
+    "id"
+   ],
+   "type": "object"
+  },
+  "AlarmInfo": {
+   "props": {
+    "ackTs": {
+     "type": "integer"
+    },
+    "acknowledged": {
+     "type": "boolean"
+    },
+    "assignTs": {
+     "type": "integer"
+    },
+    "assignee": {
+     "ref": "AlarmAssignee"
+    },
+    "assigneeId": {
+     "ref": "UserId"
+    },
+    "clearTs": {
+     "type": "integer"
+    },
+    "cleared": {
+     "type": "boolean"
+    },
+    "createdTime": {
+     "type": "integer"
+    },
+    "customerId": {
+     "ref": "CustomerId"
+    },
+    "details": {
+     "ref": "JsonNode"
+    },
+    "endTs": {
+     "type": "integer"
+    },
+    "id": {
+     "ref": "AlarmId"
+    },
+    "name": {
+     "type": "string"
+    },
+    "originator": {
+     "free": true
+    },
+    "originatorDisplayName": {
+     "type": "string"
+    },
+    "originatorLabel": {
+     "type": "string"
+    },
+    "originatorName": {
+     "type": "string"
+    },
+    "propagate": {
+     "type": "boolean"
+    },
+    "propagateRelationTypes": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "propagateToOwner": {
+     "type": "boolean"
+    },
+    "propagateToOwnerHierarchy": {
+     "type": "boolean"
+    },
+    "propagateToTenant": {
+     "type": "boolean"
+    },
+    "severity": {
+     "ref": "AlarmSeverity"
+    },
+    "startTs": {
+     "type": "integer"
+    },
+    "status": {
+     "ref": "AlarmStatus"
+    },
+    "tenantId": {
+     "ref": "TenantId"
+    },
+    "type": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "acknowledged",
+    "cleared",
+    "name",
+    "originator",
+    "severity",
+    "status",
+    "type"
+   ],
+   "type": "object"
+  },
+  "AlarmRuleComplexOperation": {
+   "enum": [
+    "AND",
+    "OR"
+   ],
+   "type": "string"
+  },
+  "AlarmSeverity": {
+   "enum": [
+    "CRITICAL",
+    "MAJOR",
+    "MINOR",
+    "WARNING",
+    "INDETERMINATE"
+   ],
+   "type": "string"
+  },
+  "AlarmStatus": {
+   "enum": [
+    "ACTIVE_UNACK",
+    "ACTIVE_ACK",
+    "CLEARED_UNACK",
+    "CLEARED_ACK"
+   ],
+   "type": "string"
+  },
+  "AssetId": {
+   "props": {
+    "entityType": {
+     "ref": "EntityType"
+    },
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "entityType",
+    "id"
+   ],
+   "type": "object"
+  },
+  "AssetInfo": {
+   "props": {
+    "additionalInfo": {
+     "ref": "JsonNode"
+    },
+    "assetProfileId": {
+     "ref": "AssetProfileId"
+    },
+    "createdTime": {
+     "type": "integer"
+    },
+    "customerId": {
+     "ref": "CustomerId"
+    },
+    "groups": {
+     "items": {
+      "ref": "EntityInfo"
+     },
+     "type": "array"
+    },
+    "id": {
+     "ref": "AssetId"
+    },
+    "label": {
+     "type": "string"
+    },
+    "name": {
+     "type": "string"
+    },
+    "ownerId": {
+     "free": true
+    },
+    "ownerName": {
+     "type": "string"
+    },
+    "tenantId": {
+     "ref": "TenantId"
+    },
+    "type": {
+     "type": "string"
+    },
+    "version": {
+     "type": "integer"
+    }
+   },
+   "required": [
+    "name"
+   ],
+   "type": "object"
+  },
+  "AssetProfileId": {
+   "props": {
+    "entityType": {
+     "ref": "EntityType"
+    },
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "entityType",
+    "id"
+   ],
+   "type": "object"
+  },
+  "AssetProfileInfo": {
+   "props": {
+    "defaultDashboardId": {
+     "ref": "DashboardId"
+    },
+    "id": {
+     "ref": "AssetProfileId"
+    },
+    "image": {
+     "type": "string"
+    },
+    "name": {
+     "type": "string"
+    },
+    "tenantId": {
+     "ref": "TenantId"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "AttributeData": {
+   "props": {
+    "key": {
+     "type": "string"
+    },
+    "lastUpdateTs": {
+     "type": "integer"
+    },
+    "value": {}
+   },
+   "required": [],
+   "type": "object"
+  },
+  "AuditLog": {
+   "props": {
+    "actionData": {
+     "ref": "JsonNode"
+    },
+    "actionFailureDetails": {
+     "type": "string"
+    },
+    "actionStatus": {
+     "ref": "ActionStatus"
+    },
+    "actionType": {
+     "ref": "ActionType"
+    },
+    "createdTime": {
+     "type": "integer"
+    },
+    "customerId": {
+     "ref": "CustomerId"
+    },
+    "entityId": {
+     "free": true
+    },
+    "entityName": {
+     "type": "string"
+    },
+    "id": {
+     "ref": "AuditLogId"
+    },
+    "tenantId": {
+     "ref": "TenantId"
+    },
+    "userId": {
+     "ref": "UserId"
+    },
+    "userName": {
+     "type": "string"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "AuditLogId": {
+   "props": {
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "Authority": {
+   "enum": [
+    "SYS_ADMIN",
+    "TENANT_ADMIN",
+    "CUSTOMER_USER",
+    "BILLING_ADMIN",
+    "BILLING_SERVICE",
+    "REFRESH_TOKEN",
+    "PRE_VERIFICATION_TOKEN",
+    "MFA_CONFIGURATION_TOKEN"
+   ],
+   "type": "string"
+  },
+  "BaseReadTsKvQuery": {
+   "props": {
+    "aggParameters": {
+     "ref": "AggregationParams"
+    },
+    "aggregation": {
+     "ref": "Aggregation"
+    },
+    "endTs": {
+     "type": "integer"
+    },
+    "id": {
+     "type": "integer"
+    },
+    "interval": {
+     "type": "integer"
+    },
+    "key": {
+     "type": "string"
+    },
+    "limit": {
+     "type": "integer"
+    },
+    "order": {
+     "type": "string"
+    },
+    "startTs": {
+     "type": "integer"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "ChangePasswordRequest": {
+   "props": {
+    "currentPassword": {
+     "type": "string"
+    },
+    "newPassword": {
+     "type": "string"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "ClaimRequest": {
+   "props": {
+    "secretKey": {
+     "type": "string"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "ClaimResponse": {
+   "enum": [
+    "SUCCESS",
+    "FAILURE",
+    "CLAIMED"
+   ],
+   "type": "string"
+  },
+  "ClaimResult": {
+   "props": {
+    "device": {
+     "ref": "Device"
+    },
+    "response": {
+     "ref": "ClaimResponse"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "CustomMenuId": {
+   "props": {
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "Customer": {
+   "props": {
+    "additionalInfo": {
+     "ref": "JsonNode"
+    },
+    "address": {
+     "type": "string"
+    },
+    "address2": {
+     "type": "string"
+    },
+    "city": {
+     "type": "string"
+    },
+    "country": {
+     "type": "string"
+    },
+    "createdTime": {
+     "type": "integer"
+    },
+    "customMenuId": {
+     "ref": "CustomMenuId"
+    },
+    "customerId": {
+     "ref": "CustomerId"
+    },
+    "email": {
+     "type": "string"
+    },
+    "id": {
+     "ref": "CustomerId"
+    },
+    "name": {
+     "type": "string"
+    },
+    "ownerId": {
+     "free": true
+    },
+    "parentCustomerId": {
+     "ref": "CustomerId"
+    },
+    "phone": {
+     "type": "string"
+    },
+    "state": {
+     "type": "string"
+    },
+    "tenantId": {
+     "ref": "TenantId"
+    },
+    "title": {
+     "type": "string"
+    },
+    "version": {
+     "type": "integer"
+    },
+    "zip": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "title"
+   ],
+   "type": "object"
+  },
+  "CustomerId": {
+   "props": {
+    "entityType": {
+     "ref": "EntityType"
+    },
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "entityType",
+    "id"
+   ],
+   "type": "object"
+  },
+  "CustomerInfo": {
+   "props": {
+    "additionalInfo": {
+     "ref": "JsonNode"
+    },
+    "address": {
+     "type": "string"
+    },
+    "address2": {
+     "type": "string"
+    },
+    "city": {
+     "type": "string"
+    },
+    "country": {
+     "type": "string"
+    },
+    "createdTime": {
+     "type": "integer"
+    },
+    "customMenuId": {
+     "ref": "CustomMenuId"
+    },
+    "customerId": {
+     "ref": "CustomerId"
+    },
+    "email": {
+     "type": "string"
+    },
+    "groups": {
+     "items": {
+      "ref": "EntityInfo"
+     },
+     "type": "array"
+    },
+    "id": {
+     "ref": "CustomerId"
+    },
+    "name": {
+     "type": "string"
+    },
+    "ownerId": {
+     "free": true
+    },
+    "ownerName": {
+     "type": "string"
+    },
+    "parentCustomerId": {
+     "ref": "CustomerId"
+    },
+    "phone": {
+     "type": "string"
+    },
+    "state": {
+     "type": "string"
+    },
+    "tenantId": {
+     "ref": "TenantId"
+    },
+    "title": {
+     "type": "string"
+    },
+    "version": {
+     "type": "integer"
+    },
+    "zip": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "title"
+   ],
+   "type": "object"
+  },
+  "Dashboard": {
+   "props": {
+    "assignedCustomers": {
+     "items": {
+      "ref": "ShortCustomerInfo"
+     },
+     "type": "array"
+    },
+    "configuration": {
+     "ref": "JsonNode"
+    },
+    "createdTime": {
+     "type": "integer"
+    },
+    "customerId": {
+     "ref": "CustomerId"
+    },
+    "id": {
+     "ref": "DashboardId"
+    },
+    "image": {
+     "type": "string"
+    },
+    "mobileHide": {
+     "type": "boolean"
+    },
+    "mobileOrder": {
+     "type": "integer"
+    },
+    "name": {
+     "type": "string"
+    },
+    "ownerId": {
+     "free": true
+    },
+    "resources": {
+     "items": {
+      "ref": "ResourceExportData"
+     },
+     "type": "array"
+    },
+    "tenantId": {
+     "ref": "TenantId"
+    },
+    "title": {
+     "type": "string"
+    },
+    "version": {
+     "type": "integer"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "DashboardId": {
+   "props": {
+    "entityType": {
+     "ref": "EntityType"
+    },
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "entityType",
+    "id"
+   ],
+   "type": "object"
+  },
+  "DashboardInfo": {
+   "props": {
+    "assignedCustomers": {
+     "items": {
+      "ref": "ShortCustomerInfo"
+     },
+     "type": "array"
+    },
+    "configuration": {
+     "ref": "JsonNode"
+    },
+    "createdTime": {
+     "type": "integer"
+    },
+    "customerId": {
+     "ref": "CustomerId"
+    },
+    "groups": {
+     "items": {
+      "ref": "EntityInfo"
+     },
+     "type": "array"
+    },
+    "id": {
+     "ref": "DashboardId"
+    },
+    "image": {
+     "type": "string"
+    },
+    "mobileHide": {
+     "type": "boolean"
+    },
+    "mobileOrder": {
+     "type": "integer"
+    },
+    "name": {
+     "type": "string"
+    },
+    "ownerId": {
+     "free": true
+    },
+    "ownerName": {
+     "type": "string"
+    },
+    "resources": {
+     "items": {
+      "ref": "ResourceExportData"
+     },
+     "type": "array"
+    },
+    "tenantId": {
+     "ref": "TenantId"
+    },
+    "title": {
+     "type": "string"
+    },
+    "version": {
+     "type": "integer"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "DataType": {
+   "enum": [
+    "BOOLEAN",
+    "LONG",
+    "DOUBLE",
+    "STRING",
+    "JSON"
+   ],
+   "type": "string"
+  },
+  "Device": {
+   "props": {
+    "additionalInfo": {
+     "ref": "JsonNode"
+    },
+    "createdTime": {
+     "type": "integer"
+    },
+    "customerId": {
+     "ref": "CustomerId"
+    },
+    "deviceData": {
+     "ref": "DeviceData"
+    },
+    "deviceProfileId": {
+     "ref": "DeviceProfileId"
+    },
+    "firmwareId": {
+     "ref": "OtaPackageId"
+    },
+    "id": {
+     "ref": "DeviceId"
+    },
+    "label": {
+     "type": "string"
+    },
+    "name": {
+     "type": "string"
+    },
+    "ownerId": {
+     "free": true
+    },
+    "softwareId": {
+     "ref": "OtaPackageId"
+    },
+    "tenantId": {
+     "ref": "TenantId"
+    },
+    "type": {
+     "type": "string"
+    },
+    "version": {
+     "type": "integer"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "DeviceCredentials": {
+   "props": {
+    "createdTime": {
+     "type": "integer"
+    },
+    "credentialsId": {
+     "type": "string"
+    },
+    "credentialsType": {
+     "ref": "DeviceCredentialsType"
+    },
+    "credentialsValue": {
+     "type": "string"
+    },
+    "deviceId": {
+     "ref": "DeviceId"
+    },
+    "id": {
+     "ref": "DeviceCredentialsId"
+    },
+    "version": {
+     "type": "integer"
+    }
+   },
+   "required": [
+    "credentialsId",
+    "deviceId",
+    "id"
+   ],
+   "type": "object"
+  },
+  "DeviceCredentialsId": {
+   "props": {
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "type": "object"
+  },
+  "DeviceCredentialsType": {
+   "enum": [
+    "ACCESS_TOKEN",
+    "X509_CERTIFICATE",
+    "MQTT_BASIC",
+    "LWM2M_CREDENTIALS"
+   ],
+   "type": "string"
+  },
+  "DeviceData": {
+   "props": {
+    "configuration": {
+     "free": true
+    },
+    "transportConfiguration": {
+     "free": true
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "DeviceId": {
+   "props": {
+    "entityType": {
+     "ref": "EntityType"
+    },
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "entityType",
+    "id"
+   ],
+   "type": "object"
+  },
+  "DeviceInfo": {
+   "props": {
+    "active": {
+     "type": "boolean"
+    },
+    "additionalInfo": {
+     "ref": "JsonNode"
+    },
+    "createdTime": {
+     "type": "integer"
+    },
+    "customerId": {
+     "ref": "CustomerId"
+    },
+    "deviceData": {
+     "ref": "DeviceData"
+    },
+    "deviceProfileId": {
+     "ref": "DeviceProfileId"
+    },
+    "firmwareId": {
+     "ref": "OtaPackageId"
+    },
+    "groups": {
+     "items": {
+      "ref": "EntityInfo"
+     },
+     "type": "array"
+    },
+    "id": {
+     "ref": "DeviceId"
+    },
+    "label": {
+     "type": "string"
+    },
+    "name": {
+     "type": "string"
+    },
+    "ownerId": {
+     "free": true
+    },
+    "ownerName": {
+     "type": "string"
+    },
+    "softwareId": {
+     "ref": "OtaPackageId"
+    },
+    "tenantId": {
+     "ref": "TenantId"
+    },
+    "type": {
+     "type": "string"
+    },
+    "version": {
+     "type": "integer"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "DeviceProfileId": {
+   "props": {
+    "entityType": {
+     "ref": "EntityType"
+    },
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "entityType",
+    "id"
+   ],
+   "type": "object"
+  },
+  "DeviceProfileInfo": {
+   "props": {
+    "defaultDashboardId": {
+     "ref": "DashboardId"
+    },
+    "id": {
+     "ref": "DeviceProfileId"
+    },
+    "image": {
+     "type": "string"
+    },
+    "name": {
+     "type": "string"
+    },
+    "tenantId": {
+     "ref": "TenantId"
+    },
+    "transportType": {
+     "ref": "DeviceTransportType"
+    },
+    "type": {
+     "ref": "DeviceProfileType"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "DeviceProfileType": {
+   "enum": [
+    "DEFAULT"
+   ],
+   "type": "string"
+  },
+  "DeviceTransportType": {
+   "enum": [
+    "DEFAULT",
+    "MQTT",
+    "COAP",
+    "LWM2M",
+    "SNMP"
+   ],
+   "type": "string"
+  },
+  "DomainId": {
+   "props": {
+    "entityType": {
+     "ref": "EntityType"
+    },
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "entityType",
+    "id"
+   ],
+   "type": "object"
+  },
+  "EntityCountQuery": {
+   "props": {
+    "entityFilter": {
+     "free": true
+    },
+    "keyFilters": {
+     "items": {
+      "ref": "KeyFilter"
+     },
+     "type": "array"
+    },
+    "keyFiltersOperation": {
+     "ref": "AlarmRuleComplexOperation"
+    },
+    "keyFiltersOperationOrDefault": {
+     "ref": "AlarmRuleComplexOperation"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "EntityInfo": {
+   "props": {
+    "id": {
+     "free": true
+    },
+    "name": {
+     "type": "string"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "EntityKey": {
+   "props": {
+    "key": {
+     "type": "string"
+    },
+    "type": {
+     "ref": "EntityKeyType"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "EntityKeyType": {
+   "enum": [
+    "ATTRIBUTE",
+    "CLIENT_ATTRIBUTE",
+    "SHARED_ATTRIBUTE",
+    "SERVER_ATTRIBUTE",
+    "TIME_SERIES",
+    "ENTITY_FIELD",
+    "ALARM_FIELD"
+   ],
+   "type": "string"
+  },
+  "EntityKeyValueType": {
+   "enum": [
+    "STRING",
+    "NUMERIC",
+    "BOOLEAN",
+    "DATE_TIME"
+   ],
+   "type": "string"
+  },
+  "EntityRelationInfo": {
+   "props": {
+    "additionalInfo": {
+     "ref": "JsonNode"
+    },
+    "from": {
+     "free": true
+    },
+    "fromName": {
+     "type": "string"
+    },
+    "to": {
+     "free": true
+    },
+    "toName": {
+     "type": "string"
+    },
+    "type": {
+     "type": "string"
+    },
+    "typeGroup": {
+     "ref": "RelationTypeGroup"
+    },
+    "version": {
+     "type": "integer"
+    }
+   },
+   "required": [
+    "from",
+    "to",
+    "type",
+    "typeGroup"
+   ],
+   "type": "object"
+  },
+  "EntityType": {
+   "enum": [
+    "TENANT",
+    "CUSTOMER",
+    "USER",
+    "DASHBOARD",
+    "ASSET",
+    "DEVICE",
+    "ALARM",
+    "ENTITY_GROUP",
+    "CONVERTER",
+    "INTEGRATION",
+    "RULE_CHAIN",
+    "RULE_NODE",
+    "SCHEDULER_EVENT",
+    "BLOB_ENTITY",
+    "REPORT_TEMPLATE",
+    "REPORT",
+    "ENTITY_VIEW",
+    "WIDGETS_BUNDLE",
+    "WIDGET_TYPE",
+    "ROLE",
+    "GROUP_PERMISSION",
+    "TENANT_PROFILE",
+    "DEVICE_PROFILE",
+    "ASSET_PROFILE",
+    "API_USAGE_STATE",
+    "TB_RESOURCE",
+    "OTA_PACKAGE",
+    "EDGE",
+    "RPC",
+    "QUEUE",
+    "NOTIFICATION_TARGET",
+    "NOTIFICATION_TEMPLATE",
+    "NOTIFICATION_REQUEST",
+    "NOTIFICATION",
+    "NOTIFICATION_RULE",
+    "QUEUE_STATS",
+    "OAUTH2_CLIENT",
+    "DOMAIN",
+    "MOBILE_APP",
+    "MOBILE_APP_BUNDLE",
+    "CALCULATED_FIELD",
+    "JOB",
+    "SECRET",
+    "ADMIN_SETTINGS",
+    "AI_MODEL",
+    "API_KEY",
+    "AGENT",
+    "AGENT_APPLICATION",
+    "AGENT_APP_EVENT",
+    "AGENT_APP_UNIT",
+    "AGENT_APP_PROFILE",
+    "AGENT_PROFILE",
+    "AGENT_BULK_ACTION",
+    "BILLING_CUSTOMER",
+    "SUBSCRIPTION_PLAN",
+    "SUBSCRIPTION",
+    "COUPON",
+    "PRODUCT",
+    "SUBSCRIPTION_ADDON"
+   ],
+   "type": "string"
+  },
+  "Favicon": {
+   "props": {
+    "url": {
+     "type": "string"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "HomeDashboardInfo": {
+   "props": {
+    "dashboardId": {
+     "ref": "DashboardId"
+    },
+    "hideDashboardToolbar": {
+     "type": "boolean"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "IntervalType": {
+   "enum": [
+    "MILLISECONDS",
+    "WEEK",
+    "WEEK_ISO",
+    "MONTH",
+    "QUARTER"
+   ],
+   "type": "string"
+  },
+  "JsonNode": {},
+  "JwtPair": {
+   "props": {
+    "refreshToken": {
+     "type": "string"
+    },
+    "scope": {
+     "ref": "Authority"
+    },
+    "token": {
+     "type": "string"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "KeyFilter": {
+   "props": {
+    "key": {
+     "ref": "EntityKey"
+    },
+    "predicate": {
+     "free": true
+    },
+    "valueType": {
+     "ref": "EntityKeyValueType"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "LastVisitedDashboardInfo": {
+   "props": {
+    "id": {
+     "type": "string"
+    },
+    "lastVisited": {
+     "type": "integer"
+    },
+    "starred": {
+     "type": "boolean"
+    },
+    "title": {
+     "type": "string"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "LoginMobileInfo": {
+   "props": {
+    "oAuth2ClientLoginInfos": {
+     "items": {
+      "ref": "OAuth2ClientLoginInfo"
+     },
+     "type": "array"
+    },
+    "selfRegistrationParams": {
+     "ref": "SignUpSelfRegistrationParams"
+    },
+    "storeInfo": {
+     "ref": "StoreInfo"
+    },
+    "versionInfo": {
+     "ref": "MobileAppVersionInfo"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "LoginRequest": {
+   "props": {
+    "password": {
+     "type": "string"
+    },
+    "username": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "password",
+    "username"
+   ],
+   "type": "object"
+  },
+  "LoginResponse": {
+   "props": {
+    "refreshToken": {
+     "type": "string"
+    },
+    "scope": {
+     "ref": "Authority"
+    },
+    "token": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "token"
+   ],
+   "type": "object"
+  },
+  "LoginWhiteLabelingParams": {
+   "props": {
+    "adminSettingsId": {
+     "type": "string"
+    },
+    "appTitle": {
+     "type": "string"
+    },
+    "baseUrl": {
+     "type": "string"
+    },
+    "collapsedLogoImageUrl": {
+     "type": "string"
+    },
+    "customCss": {
+     "type": "string"
+    },
+    "darkForeground": {
+     "type": "boolean"
+    },
+    "domainId": {
+     "ref": "DomainId"
+    },
+    "enableHelpLinks": {
+     "type": "boolean"
+    },
+    "favicon": {
+     "ref": "Favicon"
+    },
+    "helpLinkBaseUrl": {
+     "type": "string"
+    },
+    "hideChatBot": {
+     "type": "boolean"
+    },
+    "hideConnectivityDialog": {
+     "type": "boolean"
+    },
+    "logoImageHeight": {
+     "type": "integer"
+    },
+    "logoImageUrl": {
+     "type": "string"
+    },
+    "overrideTrendzName": {
+     "type": "boolean"
+    },
+    "pageBackgroundColor": {
+     "type": "string"
+    },
+    "paletteSettings": {
+     "ref": "PaletteSettings"
+    },
+    "platformName": {
+     "type": "string"
+    },
+    "platformVersion": {
+     "type": "string"
+    },
+    "primaryColorPanels": {
+     "type": "boolean"
+    },
+    "prohibitDifferentUrl": {
+     "type": "boolean"
+    },
+    "showNameBottom": {
+     "type": "boolean"
+    },
+    "showNameVersion": {
+     "type": "boolean"
+    },
+    "uiHelpBaseUrl": {
+     "type": "string"
+    },
+    "whiteLabelingEnabled": {
+     "type": "boolean"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "MobileAppVersionInfo": {
+   "props": {
+    "latestVersion": {
+     "type": "string"
+    },
+    "latestVersionReleaseNotes": {
+     "type": "string"
+    },
+    "minVersion": {
+     "type": "string"
+    },
+    "minVersionReleaseNotes": {
+     "type": "string"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "MobileSessionInfo": {
+   "props": {
+    "fcmTokenTimestamp": {
+     "type": "integer"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "Notification": {
+   "props": {
+    "additionalConfig": {
+     "ref": "JsonNode"
+    },
+    "createdTime": {
+     "type": "integer"
+    },
+    "deliveryMethod": {
+     "ref": "NotificationDeliveryMethod"
+    },
+    "id": {
+     "ref": "NotificationId"
+    },
+    "info": {
+     "free": true
+    },
+    "recipientId": {
+     "ref": "UserId"
+    },
+    "requestId": {
+     "ref": "NotificationRequestId"
+    },
+    "status": {
+     "ref": "NotificationStatus"
+    },
+    "subject": {
+     "type": "string"
+    },
+    "text": {
+     "type": "string"
+    },
+    "type": {
+     "ref": "NotificationType"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "NotificationDeliveryMethod": {
+   "enum": [
+    "WEB",
+    "EMAIL",
+    "SMS",
+    "SLACK",
+    "MICROSOFT_TEAMS",
+    "MOBILE_APP"
+   ],
+   "type": "string"
+  },
+  "NotificationId": {
+   "props": {
+    "entityType": {
+     "ref": "EntityType"
+    },
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "entityType",
+    "id"
+   ],
+   "type": "object"
+  },
+  "NotificationPref": {
+   "props": {
+    "enabled": {
+     "type": "boolean"
+    },
+    "enabledDeliveryMethods": {
+     "additional": {
+      "type": "boolean"
+     },
+     "type": "object"
+    }
+   },
+   "required": [
+    "enabledDeliveryMethods"
+   ],
+   "type": "object"
+  },
+  "NotificationRequestId": {
+   "props": {
+    "entityType": {
+     "ref": "EntityType"
+    },
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "entityType",
+    "id"
+   ],
+   "type": "object"
+  },
+  "NotificationStatus": {
+   "enum": [
+    "SENT",
+    "READ"
+   ],
+   "type": "string"
+  },
+  "NotificationType": {
+   "enum": [
+    "GENERAL",
+    "ALARM",
+    "DEVICE_ACTIVITY",
+    "ENTITY_ACTION",
+    "ALARM_COMMENT",
+    "RULE_ENGINE_COMPONENT_LIFECYCLE_EVENT",
+    "ALARM_ASSIGNMENT",
+    "NEW_PLATFORM_VERSION",
+    "ENTITIES_LIMIT",
+    "ENTITIES_LIMIT_INCREASE_REQUEST",
+    "ADDON_ACCESS_REQUEST",
+    "ADDON_ACCESS_ERROR",
+    "PLAN_UPGRADE_REQUEST",
+    "API_USAGE_LIMIT",
+    "RULE_NODE",
+    "INTEGRATION_LIFECYCLE_EVENT",
+    "RATE_LIMITS",
+    "EDGE_CONNECTION",
+    "EDGE_COMMUNICATION_FAILURE",
+    "TASK_PROCESSING_FAILURE",
+    "RESOURCES_SHORTAGE",
+    "USER_ACTIVATED",
+    "USER_REGISTERED",
+    "REPORT_GENERATED"
+   ],
+   "type": "string"
+  },
+  "OAuth2ClientLoginInfo": {
+   "props": {
+    "icon": {
+     "type": "string"
+    },
+    "name": {
+     "type": "string"
+    },
+    "url": {
+     "type": "string"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "OtaPackageId": {
+   "props": {
+    "entityType": {
+     "ref": "EntityType"
+    },
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "entityType",
+    "id"
+   ],
+   "type": "object"
+  },
+  "PageDataAlarmCommentInfo": {
+   "props": {
+    "data": {
+     "items": {
+      "ref": "AlarmCommentInfo"
+     },
+     "type": "array"
+    },
+    "hasNext": {
+     "type": "boolean"
+    },
+    "totalElements": {
+     "type": "integer"
+    },
+    "totalPages": {
+     "type": "integer"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "PageDataAlarmInfo": {
+   "props": {
+    "data": {
+     "items": {
+      "ref": "AlarmInfo"
+     },
+     "type": "array"
+    },
+    "hasNext": {
+     "type": "boolean"
+    },
+    "totalElements": {
+     "type": "integer"
+    },
+    "totalPages": {
+     "type": "integer"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "PageDataAssetInfo": {
+   "props": {
+    "data": {
+     "items": {
+      "ref": "AssetInfo"
+     },
+     "type": "array"
+    },
+    "hasNext": {
+     "type": "boolean"
+    },
+    "totalElements": {
+     "type": "integer"
+    },
+    "totalPages": {
+     "type": "integer"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "PageDataAssetProfileInfo": {
+   "props": {
+    "data": {
+     "items": {
+      "ref": "AssetProfileInfo"
+     },
+     "type": "array"
+    },
+    "hasNext": {
+     "type": "boolean"
+    },
+    "totalElements": {
+     "type": "integer"
+    },
+    "totalPages": {
+     "type": "integer"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "PageDataAuditLog": {
+   "props": {
+    "data": {
+     "items": {
+      "ref": "AuditLog"
+     },
+     "type": "array"
+    },
+    "hasNext": {
+     "type": "boolean"
+    },
+    "totalElements": {
+     "type": "integer"
+    },
+    "totalPages": {
+     "type": "integer"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "PageDataCustomer": {
+   "props": {
+    "data": {
+     "items": {
+      "ref": "Customer"
+     },
+     "type": "array"
+    },
+    "hasNext": {
+     "type": "boolean"
+    },
+    "totalElements": {
+     "type": "integer"
+    },
+    "totalPages": {
+     "type": "integer"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "PageDataCustomerInfo": {
+   "props": {
+    "data": {
+     "items": {
+      "ref": "CustomerInfo"
+     },
+     "type": "array"
+    },
+    "hasNext": {
+     "type": "boolean"
+    },
+    "totalElements": {
+     "type": "integer"
+    },
+    "totalPages": {
+     "type": "integer"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "PageDataDashboardInfo": {
+   "props": {
+    "data": {
+     "items": {
+      "ref": "DashboardInfo"
+     },
+     "type": "array"
+    },
+    "hasNext": {
+     "type": "boolean"
+    },
+    "totalElements": {
+     "type": "integer"
+    },
+    "totalPages": {
+     "type": "integer"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "PageDataDeviceInfo": {
+   "props": {
+    "data": {
+     "items": {
+      "ref": "DeviceInfo"
+     },
+     "type": "array"
+    },
+    "hasNext": {
+     "type": "boolean"
+    },
+    "totalElements": {
+     "type": "integer"
+    },
+    "totalPages": {
+     "type": "integer"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "PageDataDeviceProfileInfo": {
+   "props": {
+    "data": {
+     "items": {
+      "ref": "DeviceProfileInfo"
+     },
+     "type": "array"
+    },
+    "hasNext": {
+     "type": "boolean"
+    },
+    "totalElements": {
+     "type": "integer"
+    },
+    "totalPages": {
+     "type": "integer"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "PageDataNotification": {
+   "props": {
+    "data": {
+     "items": {
+      "ref": "Notification"
+     },
+     "type": "array"
+    },
+    "hasNext": {
+     "type": "boolean"
+    },
+    "totalElements": {
+     "type": "integer"
+    },
+    "totalPages": {
+     "type": "integer"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "PageDataRpc": {
+   "props": {
+    "data": {
+     "items": {
+      "ref": "Rpc"
+     },
+     "type": "array"
+    },
+    "hasNext": {
+     "type": "boolean"
+    },
+    "totalElements": {
+     "type": "integer"
+    },
+    "totalPages": {
+     "type": "integer"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "PageDataUserEmailInfo": {
+   "props": {
+    "data": {
+     "items": {
+      "ref": "UserEmailInfo"
+     },
+     "type": "array"
+    },
+    "hasNext": {
+     "type": "boolean"
+    },
+    "totalElements": {
+     "type": "integer"
+    },
+    "totalPages": {
+     "type": "integer"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "Palette": {
+   "props": {
+    "colors": {
+     "additional": {
+      "type": "string"
+     },
+     "type": "object"
+    },
+    "extends": {
+     "type": "string"
+    },
+    "type": {
+     "type": "string"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "PaletteSettings": {
+   "props": {
+    "accentPalette": {
+     "ref": "Palette"
+    },
+    "primaryPalette": {
+     "ref": "Palette"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "ReadTsKvQueryResult": {
+   "props": {
+    "data": {
+     "items": {
+      "ref": "TsKvEntry"
+     },
+     "type": "array"
+    },
+    "lastEntryTs": {
+     "type": "integer"
+    },
+    "queryId": {
+     "type": "integer"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "RelationTypeGroup": {
+   "enum": [
+    "COMMON",
+    "DASHBOARD",
+    "FROM_ENTITY_GROUP",
+    "RULE_CHAIN",
+    "RULE_NODE",
+    "EDGE",
+    "EDGE_AUTO_ASSIGN_RULE_CHAIN",
+    "AGENT"
+   ],
+   "type": "string"
+  },
+  "ResetPasswordEmailRequest": {
+   "props": {
+    "email": {
+     "type": "string"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "ResourceExportData": {
+   "props": {
+    "data": {
+     "type": "string"
+    },
+    "fileName": {
+     "type": "string"
+    },
+    "isPublic": {
+     "type": "boolean"
+    },
+    "link": {
+     "type": "string"
+    },
+    "mediaType": {
+     "type": "string"
+    },
+    "public": {
+     "type": "boolean"
+    },
+    "publicResourceKey": {
+     "type": "string"
+    },
+    "resourceKey": {
+     "type": "string"
+    },
+    "subType": {
+     "ref": "ResourceSubType"
+    },
+    "title": {
+     "type": "string"
+    },
+    "type": {
+     "ref": "ResourceType"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "ResourceSubType": {
+   "enum": [
+    "IMAGE",
+    "SCADA_SYMBOL",
+    "EXTENSION",
+    "MODULE"
+   ],
+   "type": "string"
+  },
+  "ResourceType": {
+   "enum": [
+    "LWM2M_MODEL",
+    "JKS",
+    "PKCS_12",
+    "JS_MODULE",
+    "IMAGE",
+    "DASHBOARD",
+    "GENERAL"
+   ],
+   "type": "string"
+  },
+  "Rpc": {
+   "props": {
+    "additionalInfo": {
+     "ref": "JsonNode"
+    },
+    "createdTime": {
+     "type": "integer"
+    },
+    "deviceId": {
+     "ref": "DeviceId"
+    },
+    "expirationTime": {
+     "type": "integer"
+    },
+    "id": {
+     "ref": "RpcId"
+    },
+    "request": {
+     "ref": "JsonNode"
+    },
+    "response": {
+     "ref": "JsonNode"
+    },
+    "status": {
+     "ref": "RpcStatus"
+    },
+    "tenantId": {
+     "ref": "TenantId"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "RpcId": {
+   "props": {
+    "entityType": {
+     "ref": "EntityType"
+    },
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "entityType",
+    "id"
+   ],
+   "type": "object"
+  },
+  "RpcStatus": {
+   "enum": [
+    "QUEUED",
+    "SENT",
+    "DELIVERED",
+    "SUCCESSFUL",
+    "TIMEOUT",
+    "EXPIRED",
+    "FAILED",
+    "DELETED"
+   ],
+   "type": "string"
+  },
+  "ShortCustomerInfo": {
+   "props": {
+    "customerId": {
+     "ref": "CustomerId"
+    },
+    "public": {
+     "type": "boolean"
+    },
+    "title": {
+     "type": "string"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "SignUpField": {
+   "props": {
+    "id": {
+     "ref": "SignUpFieldId"
+    },
+    "label": {
+     "type": "string"
+    },
+    "required": {
+     "type": "boolean"
+    }
+   },
+   "required": [
+    "id",
+    "label"
+   ],
+   "type": "object"
+  },
+  "SignUpFieldId": {
+   "enum": [
+    "EMAIL",
+    "PASSWORD",
+    "REPEAT_PASSWORD",
+    "FIRST_NAME",
+    "LAST_NAME",
+    "PHONE",
+    "COUNTRY",
+    "CITY",
+    "STATE",
+    "ZIP",
+    "ADDRESS",
+    "ADDRESS2"
+   ],
+   "type": "string"
+  },
+  "SignUpSelfRegistrationParams": {
+   "props": {
+    "captcha": {
+     "free": true
+    },
+    "fields": {
+     "items": {
+      "ref": "SignUpField"
+     },
+     "type": "array"
+    },
+    "showPrivacyPolicy": {
+     "type": "boolean"
+    },
+    "showTermsOfUse": {
+     "type": "boolean"
+    },
+    "title": {
+     "type": "string"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "StarredDashboardInfo": {
+   "props": {
+    "id": {
+     "type": "string"
+    },
+    "starredAt": {
+     "type": "integer"
+    },
+    "title": {
+     "type": "string"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "StoreInfo": {
+   "props": {
+    "appId": {
+     "type": "string"
+    },
+    "sha256CertFingerprints": {
+     "type": "string"
+    },
+    "storeLink": {
+     "type": "string"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "SystemVersionInfo": {
+   "props": {
+    "artifact": {
+     "type": "string"
+    },
+    "name": {
+     "type": "string"
+    },
+    "type": {
+     "type": "string"
+    },
+    "version": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "type",
+    "version"
+   ],
+   "type": "object"
+  },
+  "TenantId": {
+   "props": {
+    "entityType": {
+     "ref": "EntityType"
+    },
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "entityType",
+    "id"
+   ],
+   "type": "object"
+  },
+  "TsData": {
+   "props": {
+    "ts": {
+     "type": "integer"
+    },
+    "value": {}
+   },
+   "required": [],
+   "type": "object"
+  },
+  "TsKvEntry": {
+   "props": {
+    "booleanValue": {
+     "type": "boolean"
+    },
+    "dataType": {
+     "ref": "DataType"
+    },
+    "doubleValue": {
+     "type": "number"
+    },
+    "jsonValue": {
+     "type": "string"
+    },
+    "key": {
+     "type": "string"
+    },
+    "longValue": {
+     "type": "integer"
+    },
+    "strValue": {
+     "type": "string"
+    },
+    "ts": {
+     "type": "integer"
+    },
+    "value": {},
+    "valueAsString": {
+     "type": "string"
+    },
+    "version": {
+     "type": "integer"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "TwoFaProviderInfo": {
+   "props": {
+    "contact": {
+     "type": "string"
+    },
+    "default": {
+     "type": "boolean"
+    },
+    "minVerificationCodeSendPeriod": {
+     "type": "integer"
+    },
+    "type": {
+     "ref": "TwoFaProviderType"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "TwoFaProviderType": {
+   "enum": [
+    "TOTP",
+    "SMS",
+    "EMAIL",
+    "BACKUP_CODE"
+   ],
+   "type": "string"
+  },
+  "User": {
+   "props": {
+    "additionalInfo": {
+     "ref": "JsonNode"
+    },
+    "authority": {
+     "ref": "Authority"
+    },
+    "createdTime": {
+     "type": "integer"
+    },
+    "customMenuId": {
+     "ref": "CustomMenuId"
+    },
+    "customerId": {
+     "ref": "CustomerId"
+    },
+    "email": {
+     "type": "string"
+    },
+    "firstName": {
+     "type": "string"
+    },
+    "id": {
+     "ref": "UserId"
+    },
+    "lastName": {
+     "type": "string"
+    },
+    "name": {
+     "type": "string"
+    },
+    "ownerId": {
+     "free": true
+    },
+    "phone": {
+     "type": "string"
+    },
+    "tenantId": {
+     "ref": "TenantId"
+    },
+    "version": {
+     "type": "integer"
+    }
+   },
+   "required": [
+    "authority",
+    "email"
+   ],
+   "type": "object"
+  },
+  "UserDashboardsInfo": {
+   "props": {
+    "last": {
+     "items": {
+      "ref": "LastVisitedDashboardInfo"
+     },
+     "type": "array"
+    },
+    "starred": {
+     "items": {
+      "ref": "StarredDashboardInfo"
+     },
+     "type": "array"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "UserEmailInfo": {
+   "props": {
+    "email": {
+     "type": "string"
+    },
+    "firstName": {
+     "type": "string"
+    },
+    "id": {
+     "ref": "UserId"
+    },
+    "lastName": {
+     "type": "string"
+    }
+   },
+   "required": [],
+   "type": "object"
+  },
+  "UserId": {
+   "props": {
+    "entityType": {
+     "ref": "EntityType"
+    },
+    "id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "entityType",
+    "id"
+   ],
+   "type": "object"
+  },
+  "UserNotificationSettings": {
+   "props": {
+    "prefs": {
+     "additional": {
+      "ref": "NotificationPref"
+     },
+     "type": "object"
+    }
+   },
+   "required": [
+    "prefs"
+   ],
+   "type": "object"
+  },
+  "UserPasswordPolicy": {
+   "props": {
+    "allowWhitespaces": {
+     "type": "boolean"
+    },
+    "forceUserToResetPasswordIfNotValid": {
+     "type": "boolean"
+    },
+    "maximumLength": {
+     "type": "integer"
+    },
+    "minimumDigits": {
+     "type": "integer"
+    },
+    "minimumLength": {
+     "type": "integer"
+    },
+    "minimumLowercaseLetters": {
+     "type": "integer"
+    },
+    "minimumSpecialCharacters": {
+     "type": "integer"
+    },
+    "minimumUppercaseLetters": {
+     "type": "integer"
+    },
+    "passwordExpirationPeriodDays": {
+     "type": "integer"
+    },
+    "passwordReuseFrequencyDays": {
+     "type": "integer"
+    }
+   },
+   "required": [],
+   "type": "object"
+  }
+ },
+ "source": "https://demo.thingsboard.io/v3/api-docs",
+ "specVersion": "4.4.1PAAS"
+}

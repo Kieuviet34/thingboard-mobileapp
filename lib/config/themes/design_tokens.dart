@@ -45,6 +45,25 @@ class DesignTokens {
   static const double mediumMaxWidth = 840.0;
   static const double maxReadableWidth = 720.0;
 
+  // Shell & overlay layout tokens
+  static const double navBarHeight = 64.0;
+  static const double floatingNavMaxWidth = 480.0;
+  static const double smallPhoneMaxWidth = 360.0;
+  static const double compactMinHeight = 480.0;
+
+  // Floating nav bar (glass pill with sliding label)
+  static const double navGlassOpacity = 0.85;
+  static const double navBlurSigma = 16.0;
+  static const double navIndicatorSize = 40.0;
+  static const double navCellWidth = 56.0;
+  static const double navLabelPadEnd = 16.0;
+
+  /// Space a scrolling page reserves so its last row clears the floating nav
+  /// (bar height + bottom gap + breathing room).
+  static const double bottomNavClearance = navBarHeight + spacing12 + spacing8;
+  static const double emptyStateBadgeSize = 64.0;
+  static const double emptyStateMaxWidth = 320.0;
+
   // Motion durations
   static const Duration motionFast = Duration(milliseconds: 150);
   static const Duration motionMedium = Duration(milliseconds: 250);

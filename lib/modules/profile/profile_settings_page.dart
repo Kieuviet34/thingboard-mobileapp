@@ -289,6 +289,7 @@ class ProfileSettingsPage extends ConsumerWidget {
   ) {
     showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (ctx) => _EditProfileSheet(user: user),
@@ -302,6 +303,7 @@ class ProfileSettingsPage extends ConsumerWidget {
   ) {
     showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (ctx) => _ChangePasswordSheet(policy: policy),
@@ -753,6 +755,10 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
   late final TextEditingController _phoneCtrl;
   bool _saving = false;
 
+  /// Shown inside the sheet: a snackbar would be painted on the root Scaffold,
+  /// i.e. underneath this root-navigator sheet.
+  String? _errorText;
+
   @override
   void initState() {
     super.initState();
@@ -770,7 +776,10 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
   }
 
   Future<void> _save() async {
-    setState(() => _saving = true);
+    setState(() {
+      _errorText = null;
+      _saving = true;
+    });
     try {
       final updated = widget.user.copyWith(
         firstName: _firstCtrl.text.trim(),
@@ -783,9 +792,10 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to update: $e')));
+        setState(
+          () => _errorText =
+              'Failed to update: ${e is TbFailure ? e.message : e}',
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -841,6 +851,22 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
               border: OutlineInputBorder(),
             ),
           ),
+          if (_errorText != null) ...[
+            const SizedBox(height: DesignTokens.spacing12),
+            Container(
+              padding: DesignTokens.cardPadding,
+              decoration: BoxDecoration(
+                color: scheme.errorContainer,
+                borderRadius: DesignTokens.borderRadiusMedium,
+              ),
+              child: Text(
+                _errorText!,
+                style: textTheme.bodySmall?.copyWith(
+                  color: scheme.onErrorContainer,
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: DesignTokens.spacing20),
           FilledButton(
             style: FilledButton.styleFrom(

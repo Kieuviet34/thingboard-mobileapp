@@ -32,15 +32,17 @@ class TbEmptyState extends StatelessWidget {
 
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 320),
+        constraints: const BoxConstraints(
+          maxWidth: DesignTokens.emptyStateMaxWidth,
+        ),
         child: Padding(
           padding: DesignTokens.paddingLarge,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 64,
-                height: 64,
+                width: DesignTokens.emptyStateBadgeSize,
+                height: DesignTokens.emptyStateBadgeSize,
                 decoration: BoxDecoration(
                   color: badgeBg,
                   shape: BoxShape.circle,

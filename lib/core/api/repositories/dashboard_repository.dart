@@ -61,9 +61,14 @@ final class RestDashboardRepository implements DashboardRepository {
               customerId.isNotEmpty)
           ? '/api/customer/$customerId/dashboards'
           : '/api/tenant/dashboards';
+      // `mobile` exists on /api/user|tenant/dashboards only; the spec's
+      // /api/customer/{id}/dashboards does not define it.
+      final fallbackParams = fallbackPath.startsWith('/api/customer/')
+          ? (Map<String, dynamic>.of(params)..remove('mobile'))
+          : params;
       final fallbackResp = await _client.get<Map<String, dynamic>>(
         fallbackPath,
-        queryParameters: params,
+        queryParameters: fallbackParams,
         cancelToken: cancelToken,
       );
       return PageData<TbDashboardInfo>.fromJson(

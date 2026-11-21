@@ -129,7 +129,7 @@ final class RestAuthRepository implements AuthRepository {
   @override
   Future<LoginResponse> loginByQrSecret(String secret) async {
     final response = await _client.get<Map<String, dynamic>>(
-      '/api/noauth/qr/$secret',
+      '/api/noauth/qr/${Uri.encodeComponent(secret)}',
       options: Options(extra: const <String, dynamic>{'tb_skip_auth': true}),
     );
     return LoginResponse.fromJson(response.data ?? const <String, dynamic>{});

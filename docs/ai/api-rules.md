@@ -70,8 +70,10 @@
   - Write unit tests for interceptors, token refresh single-flight, error mapping, JSON/DTO parsing, WebSocket subscription manager, and Riverpod notifiers using mocked `Dio` (`HttpClientAdapter`) and `ProviderContainer` overrides.
   - Write widget tests for every screen covering loading, data, empty, error-retry, accessibility semantics, and `demo` mode interactions.
   - Never skip or weaken assertions to make tests pass.
-  - Mandatory verification after code changes:
-    1. `flutter analyze` (zero errors/warnings)
-    2. `flutter test` (all tests pass)
-    3. `dart format --output=none --set-exit-if-changed .` (or `dart format .`)
+  - Every repository method has a **contract test** (`test/core/api/repositories/contract/`) that validates the real outgoing request against the ThingsBoard 4.4.1PAAS OpenAPI snapshot (`test/fixtures/contract/`) and asserts parsed values and request bodies with literals. Deviations from the spec need an entry with a reason in `tools/api_contract/known_deviations.json`. See `docs/qa/API_CONTRACT.md`.
+  - User-typed values placed in a URL path (device name, QR secret) MUST be `Uri.encodeComponent`-encoded.
+  - Mandatory verification after code changes (the same gates CI runs; `tools/qa/run_checks.ps1` runs 1–3 plus coverage floors):
+    1. `flutter analyze --fatal-infos` (zero issues of any level)
+    2. `flutter test` (all tests pass; coverage floors in CI: lib >= 80%, `lib/core/api` >= 80%, `lib/widgets` >= 80%)
+    3. `dart format --output=none --set-exit-if-changed .`
     4. `flutter build apk --debug` (for Android/manifest/plugin/release-affecting changes)

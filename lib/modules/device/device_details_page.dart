@@ -152,15 +152,22 @@ class _DeviceDetailsPageState extends ConsumerState<DeviceDetailsPage> {
           padding: DesignTokens.paddingMedium,
           child: TbShimmerList(itemCount: 4),
         ),
-        error: (err, _) => TbEmptyState(
-          icon: TbIconKind.severityCritical,
-          title: 'Failed to load device',
-          subtitle: err is TbFailure ? err.message : err.toString(),
-          isError: true,
-          actionLabel: 'Retry',
-          onAction: () =>
-              ref.invalidate(deviceDetailsProvider(widget.deviceId)),
-        ),
+        error: (err, _) {
+          final failure = err is TbFailure ? err : null;
+          final is403 = failure?.type == TbFailureType.permissionDenied;
+          return TbEmptyState(
+            icon: TbIconKind.severityCritical,
+            title: is403 ? 'Access Restricted' : 'Failed to load device',
+            subtitle: is403
+                ? 'You do not have permission to view this device.'
+                : (err is TbFailure ? err.message : err.toString()),
+            isError: true,
+            actionLabel: is403 ? null : 'Retry',
+            onAction: is403
+                ? null
+                : () => ref.invalidate(deviceDetailsProvider(widget.deviceId)),
+          );
+        },
         data: (device) {
           final iconBox = Container(
             width: 44,
@@ -591,6 +598,7 @@ class _AttributesSection extends ConsumerWidget {
   }) async {
     final saved = await showModalBottomSheet<({String key, Object value})>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       builder: (sheetCtx) =>
           _AttributeEditorSheet(scope: scope, existing: existing),

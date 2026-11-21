@@ -8,11 +8,31 @@ import 'package:dio/dio.dart';
 typedef MockRouteHandler =
     FutureOr<ResponseBody> Function(RequestOptions options);
 
+/// A response the mock produced, kept with its request and decoded JSON so
+/// contract tests can validate the payload shape.
+final class CapturedResponse {
+  const CapturedResponse(this.request, this.statusCode, this.json);
+
+  final RequestOptions request;
+  final int statusCode;
+
+  /// The object passed to [MockDioAdapter.jsonResponse], or `null` when the
+  /// response was empty/non-JSON.
+  final Object? json;
+}
+
 /// Boundary-only Dio [HttpClientAdapter] for deterministic HTTP testing.
+///
+/// Like the real adapters it honors request cancellation: when Dio's cancel
+/// future completes before the handler answers, the call fails with a
+/// `DioExceptionType.cancel` instead of delivering a stale response.
 class MockDioAdapter implements HttpClientAdapter {
   final Map<String, MockRouteHandler> _handlers = {};
   final Map<String, Queue<MockRouteHandler>> _queuedHandlers = {};
   final List<RequestOptions> capturedRequests = [];
+  final List<CapturedResponse> capturedResponses = [];
+
+  static final Expando<Object> _jsonBodies = Expando<Object>('mock json body');
 
   static String _key(String method, String path) =>
       '${method.toUpperCase()} $path';
@@ -35,7 +55,7 @@ class MockDioAdapter implements HttpClientAdapter {
     Map<String, List<String>>? headers,
   }) {
     final encoded = body == null ? '' : jsonEncode(body);
-    return ResponseBody.fromString(
+    final response = ResponseBody.fromString(
       encoded,
       statusCode,
       headers:
@@ -44,6 +64,8 @@ class MockDioAdapter implements HttpClientAdapter {
             Headers.contentTypeHeader: <String>[Headers.jsonContentType],
           },
     );
+    if (body != null) _jsonBodies[response] = body;
+    return response;
   }
 
   /// Builds an empty [ResponseBody] (e.g. HTTP 504 or 200 empty).
@@ -51,13 +73,7 @@ class MockDioAdapter implements HttpClientAdapter {
     return ResponseBody.fromString('', statusCode);
   }
 
-  @override
-  Future<ResponseBody> fetch(
-    RequestOptions options,
-    Stream<Uint8List>? requestStream,
-    Future<void>? cancelFuture,
-  ) async {
-    capturedRequests.add(options);
+  Future<ResponseBody> _route(RequestOptions options) async {
     final k = _key(options.method, options.path);
     final queue = _queuedHandlers[k];
     if (queue != null && queue.isNotEmpty) {
@@ -74,6 +90,31 @@ class MockDioAdapter implements HttpClientAdapter {
       'message': 'No mock registered for $k',
       'path': options.path,
     }, statusCode: 404);
+  }
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    capturedRequests.add(options);
+    final answer = _route(options);
+    final response = cancelFuture == null
+        ? await answer
+        : await Future.any<ResponseBody>([
+            answer,
+            cancelFuture.then<ResponseBody>(
+              (_) => throw DioException.requestCancelled(
+                requestOptions: options,
+                reason: 'cancelled by caller',
+              ),
+            ),
+          ]);
+    capturedResponses.add(
+      CapturedResponse(options, response.statusCode, _jsonBodies[response]),
+    );
+    return response;
   }
 
   @override

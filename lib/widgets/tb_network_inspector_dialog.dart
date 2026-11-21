@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -13,6 +15,7 @@ class TbNetworkInspectorDialog extends ConsumerStatefulWidget {
   static Future<void> show(BuildContext context) {
     return showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => const TbNetworkInspectorDialog(),
@@ -134,22 +137,26 @@ class _TbNetworkInspectorDialogState
                   horizontal: 16,
                   vertical: 8,
                 ),
-                child: Row(
-                  children: [
-                    for (final filter in ['ALL', 'GET', 'POST', 'ERRORS'])
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: FilterChip(
-                          selected: _selectedFilter == filter,
-                          label: Text(filter),
-                          onSelected: (selected) {
-                            if (selected) {
-                              setState(() => _selectedFilter = filter);
-                            }
-                          },
+                // Scrolls sideways instead of overflowing on narrow/large-text.
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (final filter in ['ALL', 'GET', 'POST', 'ERRORS'])
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: FilterChip(
+                            selected: _selectedFilter == filter,
+                            label: Text(filter),
+                            onSelected: (selected) {
+                              if (selected) {
+                                setState(() => _selectedFilter = filter);
+                              }
+                            },
+                          ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               const Divider(height: 1),
@@ -197,70 +204,84 @@ class _TbNetworkInspectorDialogState
                                 children: [
                                   Row(
                                     children: [
-                                      // Method badge
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: methodColor.withValues(
-                                            alpha: 0.15,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          item.method,
-                                          style: textTheme.labelSmall?.copyWith(
-                                            color: methodColor,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-
-                                      // Status badge
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: statusColor.withValues(
-                                            alpha: 0.15,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          item.statusCode != null
-                                              ? '${item.statusCode}'
-                                              : (item.isError ? 'ERR' : 'OK'),
-                                          style: textTheme.labelSmall?.copyWith(
-                                            color: statusColor,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-
-                                      // Latency
-                                      if (item.durationMs != null)
-                                        Text(
-                                          '${item.durationMs}ms',
-                                          style:
-                                              TbTextStyles.tabular(
-                                                textTheme.labelSmall ??
-                                                    const TextStyle(),
-                                              ).copyWith(
-                                                color: scheme.onSurfaceVariant,
+                                      // Badges wrap onto a second line at large
+                                      // text sizes instead of overflowing.
+                                      Expanded(
+                                        child: Wrap(
+                                          spacing: 8,
+                                          runSpacing: 4,
+                                          crossAxisAlignment:
+                                              WrapCrossAlignment.center,
+                                          children: [
+                                            // Method badge
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 6,
+                                                    vertical: 2,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: methodColor.withValues(
+                                                  alpha: 0.15,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
                                               ),
+                                              child: Text(
+                                                item.method,
+                                                style: textTheme.labelSmall
+                                                    ?.copyWith(
+                                                      color: methodColor,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                              ),
+                                            ),
+                                            // Status badge
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 6,
+                                                    vertical: 2,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: statusColor.withValues(
+                                                  alpha: 0.15,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                item.statusCode != null
+                                                    ? '${item.statusCode}'
+                                                    : (item.isError
+                                                          ? 'ERR'
+                                                          : 'OK'),
+                                                style: textTheme.labelSmall
+                                                    ?.copyWith(
+                                                      color: statusColor,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                              ),
+                                            ),
+                                            // Latency
+                                            if (item.durationMs != null)
+                                              Text(
+                                                '${item.durationMs}ms',
+                                                style:
+                                                    TbTextStyles.tabular(
+                                                      textTheme.labelSmall ??
+                                                          const TextStyle(),
+                                                    ).copyWith(
+                                                      color: scheme
+                                                          .onSurfaceVariant,
+                                                    ),
+                                              ),
+                                          ],
                                         ),
-
-                                      const Spacer(),
+                                      ),
+                                      const SizedBox(width: 8),
 
                                       // Time
                                       Text(
@@ -346,11 +367,39 @@ class _TbNetworkInspectorDialogState
   }
 }
 
-class _PayloadSection extends StatelessWidget {
+class _PayloadSection extends StatefulWidget {
   const _PayloadSection({required this.title, required this.content});
 
   final String title;
   final String content;
+
+  @override
+  State<_PayloadSection> createState() => _PayloadSectionState();
+}
+
+class _PayloadSectionState extends State<_PayloadSection> {
+  Timer? _resetTimer;
+  bool _copied = false;
+
+  String get title => widget.title;
+  String get content => widget.content;
+
+  @override
+  void dispose() {
+    _resetTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Confirms on the button itself. A snackbar would be painted on the root
+  /// Scaffold, i.e. underneath this root-navigator bottom sheet.
+  void _copy() {
+    Clipboard.setData(ClipboardData(text: content));
+    _resetTimer?.cancel();
+    setState(() => _copied = true);
+    _resetTimer = Timer(const Duration(milliseconds: 1500), () {
+      if (mounted) setState(() => _copied = false);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -369,29 +418,28 @@ class _PayloadSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.8,
-                  color: scheme.primary,
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.8,
+                    color: scheme.primary,
+                  ),
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.copy_rounded, size: 16),
+                icon: Icon(
+                  _copied ? Icons.check_rounded : Icons.copy_rounded,
+                  size: 16,
+                  color: _copied ? scheme.primary : null,
+                ),
                 visualDensity: VisualDensity.compact,
-                tooltip: 'Copy $title',
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: content));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('$title copied to clipboard'),
-                      duration: const Duration(seconds: 1),
-                    ),
-                  );
-                },
+                tooltip: _copied ? 'Copied $title' : 'Copy $title',
+                onPressed: _copy,
               ),
             ],
           ),

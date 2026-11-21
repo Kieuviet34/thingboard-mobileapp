@@ -1,26 +1,18 @@
-import 'package:flutter/material.dart';
 import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 
+/// Top-level shell destination shown in the nav bar / rail.
 class TbMainNavigationItem {
   const TbMainNavigationItem({
     required this.title,
-    required this.icon,
+    required this.tbIconKind,
     required this.path,
-    this.tbIconKind,
-    this.id,
-    this.showAdditionalIcon = false,
-    this.additionalIconLarge,
-    this.additionalIconSmall,
-    this.badgeCount = 0,
+    this.badgeSemantics = '',
   });
 
   final String title;
-  final IconData icon;
-  final TbIconKind? tbIconKind;
+  final TbIconKind tbIconKind;
   final String path;
-  final String? id;
-  final bool showAdditionalIcon;
-  final Widget? additionalIconLarge;
-  final Widget? additionalIconSmall;
-  final int badgeCount;
+
+  /// Word read after the badge count (e.g. "active", "unread").
+  final String badgeSemantics;
 }

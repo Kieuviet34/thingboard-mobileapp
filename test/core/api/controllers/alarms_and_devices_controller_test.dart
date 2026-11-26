@@ -132,7 +132,9 @@ void main() {
 
         // Stale page refresh race: loadNextPage delayed, refresh supersedes it
         final slowGate = Completer<void>();
+        final slowEntered = Completer<void>();
         adapter.enqueue('GET', '/api/v2/alarms', (_) async {
+          slowEntered.complete();
           await slowGate.future;
           return MockDioAdapter.jsonResponse({
             'data': [
@@ -173,7 +175,9 @@ void main() {
         final loadMoreFuture = container
             .read(alarmsListProvider(null).notifier)
             .loadNextPage();
-        await Future<void>.delayed(const Duration(milliseconds: 10));
+        // Deterministic: wait until the slow request actually hit the adapter,
+        // so the FIFO queue is consumed in the intended order (no fixed sleep).
+        await slowEntered.future.timeout(const Duration(seconds: 10));
         await container.read(alarmsListProvider(null).notifier).refresh();
         slowGate.complete();
         await loadMoreFuture;

@@ -7,6 +7,7 @@ import 'package:thingsboard_democloud_app/config/themes/tb_text_styles.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/auth_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/notification_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/server_config_controller.dart';
+import 'package:thingsboard_democloud_app/core/api/controllers/tenant_controller.dart';
 import 'package:thingsboard_democloud_app/core/models/auth_models.dart';
 import 'package:thingsboard_democloud_app/core/models/entity_id.dart';
 import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
@@ -32,6 +33,7 @@ class MorePage extends ConsumerWidget {
     final user = authenticated?.user;
     final mode = authenticated?.mode ?? serverConfig.mode;
     final authority = user?.authority ?? Authority.unknown;
+    final showTenant = canAccessTenantWorkspace(authority);
     final showCustomers = authority != Authority.customerUser;
     final unreadCount = unreadAsync.valueOrNull ?? 0;
 
@@ -77,6 +79,20 @@ class MorePage extends ConsumerWidget {
                     index: 1,
                     child: _GroupedSection(
                       children: [
+                        if (showTenant)
+                          _MoreTile(
+                            leading: TbIcon(
+                              TbIconKind.gateway,
+                              color: scheme.primary,
+                            ),
+                            title: authority == Authority.sysAdmin
+                                ? 'Tenants'
+                                : 'Tenant',
+                            subtitle: authority == Authority.sysAdmin
+                                ? 'Tenants & profiles'
+                                : 'Workspace, views & edges',
+                            onTap: () => _navigate(context, AppRoutes.tenant),
+                          ),
                         if (showCustomers)
                           _MoreTile(
                             leading: TbIcon(

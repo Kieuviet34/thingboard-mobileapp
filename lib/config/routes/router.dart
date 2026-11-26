@@ -25,6 +25,7 @@ import 'package:thingsboard_democloud_app/modules/main/navigation_page.dart';
 import 'package:thingsboard_democloud_app/modules/more/more_page.dart';
 import 'package:thingsboard_democloud_app/modules/notification/notifications_page.dart';
 import 'package:thingsboard_democloud_app/modules/profile/profile_settings_page.dart';
+import 'package:thingsboard_democloud_app/modules/tenant/tenant_page.dart';
 import 'package:thingsboard_democloud_app/utils/transition/page_transitions.dart';
 import 'package:thingsboard_democloud_app/utils/ui/qr_code_scanner/qr_code_scanner_page.dart';
 import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
@@ -59,6 +60,7 @@ abstract final class AppRoutes {
 
   // Shell branch 3 — More
   static const more = '/more';
+  static const tenant = '/tenant';
   static const customers = '/customers';
   static const customerDetails = '/customers/customerDetails/:id';
   static const assets = '/assets';
@@ -353,12 +355,17 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          // 3 — More (+ customers, assets, audit logs, notifications, profile)
+          // 3 — More (+ tenant, customers, assets, audit logs, notifications, profile)
           StatefulShellBranch(
             routes: [
               GoRoute(
                 path: AppRoutes.more,
                 pageBuilder: (context, state) => _page(state, const MorePage()),
+              ),
+              GoRoute(
+                path: AppRoutes.tenant,
+                pageBuilder: (context, state) =>
+                    _page(state, const TenantPage()),
               ),
               GoRoute(
                 path: AppRoutes.customers,

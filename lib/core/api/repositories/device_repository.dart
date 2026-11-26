@@ -275,20 +275,21 @@ final class RestDeviceRepository implements DeviceRepository {
       else
         'deviceProfileId': '',
     };
+    final Response<Map<String, dynamic>> response;
     try {
-      final response = await _client.get<Map<String, dynamic>>(
+      response = await _client.get<Map<String, dynamic>>(
         '/api/tenant/deviceInfos',
         queryParameters: params,
-        cancelToken: cancelToken,
-      );
-      return _parseAndEnrichDevicePage(
-        response.data ?? const <String, dynamic>{},
         cancelToken: cancelToken,
       );
     } on TbFailure catch (e) {
       if (e.type != TbFailureType.notFound) rethrow;
       return getTenantDevices(query, type: type, cancelToken: cancelToken);
     }
+    return _parseAndEnrichDevicePage(
+      response.data ?? const <String, dynamic>{},
+      cancelToken: cancelToken,
+    );
   }
 
   /// Direct `GET /api/tenant/devices`.
@@ -383,11 +384,7 @@ final class RestDeviceRepository implements DeviceRepository {
 
     Future<Response<Map<String, dynamic>>> postFind({required bool legacy}) {
       final entityFilter = hasType
-          ? _deviceTypeEntityFilter(
-              filter.deviceType!,
-              search,
-              legacy: legacy,
-            )
+          ? _deviceTypeEntityFilter(filter.deviceType!, search, legacy: legacy)
           : <String, dynamic>{'type': 'entityType', 'entityType': 'DEVICE'};
       return _client.post<Map<String, dynamic>>(
         '/api/entitiesQuery/find',

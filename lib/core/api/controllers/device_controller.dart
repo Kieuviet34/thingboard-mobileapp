@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_democloud_app/core/api/controllers/auth_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/server_config_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/repositories/device_repository.dart';
 import 'package:thingsboard_democloud_app/core/mock/mock_data.dart';
@@ -15,7 +16,14 @@ final deviceRepositoryProvider = Provider<DeviceRepository>((ref) {
   if (sessionScope.$1 == SessionMode.demo) {
     return DemoDeviceRepository(ref.read(devicesProvider));
   }
-  return RestDeviceRepository(client: ref.watch(tbApiClientProvider));
+  return RestDeviceRepository(
+    client: ref.watch(tbApiClientProvider),
+    userScopeProvider: () {
+      final authState = ref.read(authProvider).valueOrNull;
+      final session = authState is AuthAuthenticated ? authState.session : null;
+      return (authority: session?.authority, customerId: session?.customerId);
+    },
+  );
 });
 
 /// Paginated device profiles with active/inactive counts.

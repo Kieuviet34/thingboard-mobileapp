@@ -1,11 +1,15 @@
 import 'package:dio/dio.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/auth_controller.dart';
+import 'package:thingsboard_democloud_app/core/api/controllers/device_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/server_config_controller.dart';
+import 'package:thingsboard_democloud_app/core/api/controllers/telemetry_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/repositories/dashboard_repository.dart';
 import 'package:thingsboard_democloud_app/core/mock/mock_data.dart';
 import 'package:thingsboard_democloud_app/core/models/auth_models.dart';
 import 'package:thingsboard_democloud_app/core/models/dashboard_models.dart';
+import 'package:thingsboard_democloud_app/core/models/device_models.dart';
+import 'package:thingsboard_democloud_app/core/models/entity_id.dart';
 import 'package:thingsboard_democloud_app/core/models/pagination.dart';
 import 'package:thingsboard_democloud_app/core/models/tb_failure.dart';
 
@@ -103,14 +107,21 @@ class DashboardsNotifier
     final authState = ref.read(authProvider).valueOrNull;
     final session = authState is AuthAuthenticated ? authState.session : null;
 
-    final result = await ref
-        .read(dashboardRepositoryProvider)
-        .getDashboards(
-          PageQuery(page: page, pageSize: 20, textSearch: textSearch),
-          authority: session?.authority,
-          customerId: session?.customerId,
-          cancelToken: cancelToken,
-        );
+    final repo = ref.read(dashboardRepositoryProvider);
+    final result = await repo.getDashboards(
+      PageQuery(page: page, pageSize: 20, textSearch: textSearch),
+      authority: session?.authority,
+      customerId: session?.customerId,
+      cancelToken: cancelToken,
+    );
+
+    Set<String> starredIds = const <String>{};
+    try {
+      final userDashboards = await repo.getLastVisitedDashboards();
+      starredIds = userDashboards.starred.map((e) => e.id).toSet();
+    } catch (_) {
+      // Optional PE 4.4 capability; ignore errors.
+    }
 
     if (seq != _requestSeq || gen != client.sessionGeneration) {
       throw const TbFailure(
@@ -119,8 +130,18 @@ class DashboardsNotifier
       );
     }
 
+    final mergedData = starredIds.isEmpty
+        ? result.data
+        : result.data
+              .map(
+                (d) => starredIds.contains(d.id) && !d.isStarred
+                    ? d.copyWith(isStarred: true)
+                    : d,
+              )
+              .toList(growable: false);
+
     return PagedListState<TbDashboardInfo>(
-      items: page == 0 ? result.data : [...existing, ...result.data],
+      items: page == 0 ? mergedData : [...existing, ...mergedData],
       page: page,
       hasNext: result.hasNext,
       totalElements: result.totalElements,
@@ -149,4 +170,88 @@ final dashboardDetailsProvider = FutureProvider.autoDispose
       final repo = ref.watch(dashboardRepositoryProvider);
       final dashboard = await repo.getDashboardById(id);
       return dashboard;
+    });
+
+/// Resolves the concrete telemetry [EntityId] for a dashboard, supporting
+/// widget-referenced aliases, 404 skipping for deleted devices, active-telemetry
+/// probing across multi-device dashboards, and dynamic `deviceType` aliases.
+final dashboardTelemetryEntityProvider = FutureProvider.autoDispose
+    .family<EntityId, String>((ref, dashboardId) async {
+      final dashboard = await ref.watch(
+        dashboardDetailsProvider(dashboardId).future,
+      );
+      final mode = ref.watch(serverConfigProvider.select((s) => s.mode));
+      final candidates = dashboard.resolveCandidateTelemetryEntities();
+
+      if (mode != SessionMode.live) {
+        return candidates.firstOrNull ??
+            EntityId(entityType: EntityType.dashboard, id: dashboard.info.id);
+      }
+
+      EntityId? firstExistingCandidate;
+      if (candidates.isNotEmpty) {
+        final telemetryRepo = ref.watch(telemetryRepositoryProvider);
+        for (final candidate in candidates) {
+          try {
+            final latest = await telemetryRepo.getLatestTimeseries(candidate);
+            firstExistingCandidate ??= candidate;
+            if (latest.isNotEmpty) {
+              return candidate;
+            }
+          } on TbFailure catch (e) {
+            if (e.type == TbFailureType.notFound) {
+              continue;
+            }
+            firstExistingCandidate ??= candidate;
+          } catch (_) {
+            firstExistingCandidate ??= candidate;
+          }
+        }
+      }
+
+      final aliasFilter = dashboard.extractDynamicDeviceAliasFilter();
+      if (aliasFilter != null) {
+        try {
+          final page = await ref
+              .watch(deviceRepositoryProvider)
+              .getDevices(
+                const PageQuery(page: 0, pageSize: 10),
+                TbDeviceQuery(
+                  deviceType: aliasFilter.deviceType,
+                  textSearch: aliasFilter.nameSearch,
+                ),
+              );
+          if (page.data.isNotEmpty) {
+            final chosen =
+                page.data.where((d) => d.active).firstOrNull ?? page.data.first;
+            return EntityId(entityType: EntityType.device, id: chosen.id);
+          }
+        } catch (_) {
+          // Fall through if dynamic device lookup fails.
+        }
+      }
+
+      if (firstExistingCandidate != null) {
+        return firstExistingCandidate;
+      }
+
+      if (candidates.any((c) => c.entityType == EntityType.device)) {
+        try {
+          final page = await ref
+              .watch(deviceRepositoryProvider)
+              .getDevices(
+                const PageQuery(page: 0, pageSize: 10),
+                const TbDeviceQuery(),
+              );
+          if (page.data.isNotEmpty) {
+            final chosen =
+                page.data.where((d) => d.active).firstOrNull ?? page.data.first;
+            return EntityId(entityType: EntityType.device, id: chosen.id);
+          }
+        } catch (_) {
+          // Fall through to dashboard entity ID.
+        }
+      }
+
+      return EntityId(entityType: EntityType.dashboard, id: dashboard.info.id);
     });

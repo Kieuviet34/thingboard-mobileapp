@@ -51,10 +51,12 @@ class _ActiveSubscription {
   final StreamController<Map<String, dynamic>> controller;
 }
 
-/// Shared WebSocket multiplexer for `wss://<host>/api/ws`.
+/// Shared WebSocket multiplexer for `wss://<host>/api/ws` (PE 4.4.x / 3.4+),
+/// with automatic handshake fallback to `wss://<host>/api/ws/plugins/telemetry?token=<jwt>`
+/// (`TelemetryPluginCmdsWrapper`) for ThingsBoard 3.3.x servers.
 ///
 /// Features:
-/// - Single connection with `authCmd` on connect
+/// - Single connection with `authCmd` on `/api/ws` (or query token on 3.3 fallback)
 /// - 30-second application heartbeat (< 90s server idle timeout)
 /// - `socketGeneration` scoping so stale frames never cross reconnects
 /// - Immediate local intent cleanup on offline dispose
@@ -92,6 +94,7 @@ class TbWebSocketService {
   int _reconnectAttempt = 0;
   bool _disposed = false;
   bool _manuallyPausedOrClosed = false;
+  bool _useLegacyTelemetryEndpoint = false;
 
   WsConnectionState get currentState => _currentState;
   Stream<WsConnectionState> get connectionStateStream =>
@@ -106,6 +109,16 @@ class TbWebSocketService {
       scheme: scheme,
       path: '/api/ws',
       query: null,
+      fragment: null,
+    );
+  }
+
+  /// Builds the legacy ThingsBoard 3.3.x `/api/ws/plugins/telemetry?token=...` URI
+  /// from the primary `/api/ws` URI without logging or persisting the token.
+  static Uri _buildLegacyTelemetryUri(Uri primaryWsUri, String token) {
+    return primaryWsUri.replace(
+      path: '/api/ws/plugins/telemetry',
+      queryParameters: <String, String>{'token': token},
       fragment: null,
     );
   }
@@ -144,9 +157,10 @@ class TbWebSocketService {
     _activeSubscriptions[cmdId] = sub;
 
     if (_currentState == WsConnectionState.authenticated) {
-      _sendJson(<String, dynamic>{
-        'cmds': <Map<String, dynamic>>[_buildSubscribeCmd(sub)],
-      });
+      final frame = _buildSubscribeFrame(sub);
+      if (frame != null) {
+        _sendJson(frame);
+      }
     } else if (!_manuallyPausedOrClosed &&
         _currentState == WsConnectionState.disconnected) {
       unawaited(connect());
@@ -175,7 +189,10 @@ class TbWebSocketService {
   }
 
   /// Resets the WebSocket session on logout, host switch, or `SessionMode` change.
-  Future<void> resetSession() => disconnect(preserveSubscriptions: false);
+  Future<void> resetSession() async {
+    _useLegacyTelemetryEndpoint = false;
+    await disconnect(preserveSubscriptions: false);
+  }
 
   /// Pauses socket on background and reconnects with fresh JWT on resume.
   Future<void> handleAppLifecycleState(AppLifecycleState state) async {
@@ -220,9 +237,36 @@ class TbWebSocketService {
         return;
       }
 
-      final channel = _channelFactory(_wsUriProvider());
-      _channel = channel;
-      await channel.ready;
+      final primaryUri = _wsUriProvider();
+      WebSocketChannel channel;
+      if (_useLegacyTelemetryEndpoint) {
+        channel = _channelFactory(_buildLegacyTelemetryUri(primaryUri, token));
+        _channel = channel;
+        await channel.ready;
+      } else {
+        channel = _channelFactory(primaryUri);
+        _channel = channel;
+        try {
+          await channel.ready;
+        } catch (_) {
+          await channel.sink.close();
+          if (_disposed ||
+              _manuallyPausedOrClosed ||
+              gen != _socketGeneration) {
+            return;
+          }
+          // Pre-3.4 ThingsBoard rejects unauthenticated `/api/ws` upgrades with 401
+          // and exposes `/api/ws/plugins/telemetry?token=<jwt>` instead.
+          final legacyChannel = _channelFactory(
+            _buildLegacyTelemetryUri(primaryUri, token),
+          );
+          _channel = legacyChannel;
+          await legacyChannel.ready;
+          channel = legacyChannel;
+          _useLegacyTelemetryEndpoint = true;
+        }
+      }
+
       if (_disposed || _manuallyPausedOrClosed || gen != _socketGeneration) {
         await channel.sink.close();
         return;
@@ -235,21 +279,24 @@ class TbWebSocketService {
         cancelOnError: false,
       );
 
-      // First frame: authCmd.
-      _sendJson(<String, dynamic>{
-        'authCmd': <String, dynamic>{'cmdId': 0, 'token': token},
-      });
+      // First frame on `/api/ws` (PE 4.4.x / 3.4+): authCmd.
+      if (!_useLegacyTelemetryEndpoint) {
+        _sendJson(<String, dynamic>{
+          'authCmd': <String, dynamic>{'cmdId': 0, 'token': token},
+        });
+      }
 
       _reconnectAttempt = 0;
       _setState(WsConnectionState.authenticated);
       _startHeartbeat(gen);
 
-      // Replay active subscriptions (after authCmd).
+      // Replay active subscriptions.
       if (_activeSubscriptions.isNotEmpty) {
         for (final sub in _activeSubscriptions.values) {
-          _sendJson(<String, dynamic>{
-            'cmds': <Map<String, dynamic>>[_buildSubscribeCmd(sub)],
-          });
+          final frame = _buildSubscribeFrame(sub);
+          if (frame != null) {
+            _sendJson(frame);
+          }
         }
       }
     } catch (error) {
@@ -332,7 +379,11 @@ class TbWebSocketService {
         return;
       }
       // Valid empty command batch keeps the 90s server idle timeout reset.
-      _sendJson(const <String, dynamic>{'cmds': <Object>[]});
+      _sendJson(
+        _useLegacyTelemetryEndpoint
+            ? const <String, dynamic>{'attrSubCmds': <Object>[]}
+            : const <String, dynamic>{'cmds': <Object>[]},
+      );
     });
   }
 
@@ -342,26 +393,9 @@ class TbWebSocketService {
 
     if (_currentState == WsConnectionState.authenticated &&
         !_manuallyPausedOrClosed) {
-      if (removed.type.isLegacyV1) {
-        _sendJson(<String, dynamic>{
-          'cmds': <Map<String, dynamic>>[
-            <String, dynamic>{
-              ...removed.payload,
-              'cmdId': removed.cmdId,
-              'type': removed.type.wireValue,
-              'unsubscribe': true,
-            },
-          ],
-        });
-      } else if (removed.type.unsubscribeWire != null) {
-        _sendJson(<String, dynamic>{
-          'cmds': <Map<String, dynamic>>[
-            <String, dynamic>{
-              'cmdId': removed.cmdId,
-              'type': removed.type.unsubscribeWire,
-            },
-          ],
-        });
+      final frame = _buildUnsubscribeFrame(removed);
+      if (frame != null) {
+        _sendJson(frame);
       }
     }
 
@@ -370,11 +404,112 @@ class TbWebSocketService {
     }
   }
 
-  Map<String, dynamic> _buildSubscribeCmd(_ActiveSubscription sub) {
-    return <String, dynamic>{
-      ...sub.payload,
-      'cmdId': sub.cmdId,
-      'type': sub.type.wireValue,
+  Map<String, dynamic>? _buildSubscribeFrame(_ActiveSubscription sub) {
+    if (!_useLegacyTelemetryEndpoint) {
+      return <String, dynamic>{
+        'cmds': <Map<String, dynamic>>[
+          <String, dynamic>{
+            ...sub.payload,
+            'cmdId': sub.cmdId,
+            'type': sub.type.wireValue,
+          },
+        ],
+      };
+    }
+
+    final cmdBody = <String, dynamic>{...sub.payload, 'cmdId': sub.cmdId};
+    return switch (sub.type) {
+      WsCommandType.entityData => <String, dynamic>{
+        'entityDataCmds': <Map<String, dynamic>>[cmdBody],
+      },
+      WsCommandType.entityCount => <String, dynamic>{
+        'entityCountCmds': <Map<String, dynamic>>[cmdBody],
+      },
+      WsCommandType.alarmData => <String, dynamic>{
+        'alarmDataCmds': <Map<String, dynamic>>[cmdBody],
+      },
+      WsCommandType.attributes => <String, dynamic>{
+        'attrSubCmds': <Map<String, dynamic>>[cmdBody],
+      },
+      WsCommandType.timeseries => <String, dynamic>{
+        'tsSubCmds': <Map<String, dynamic>>[cmdBody],
+      },
+      WsCommandType.timeseriesHistory => <String, dynamic>{
+        'historyCmds': <Map<String, dynamic>>[cmdBody],
+      },
+      WsCommandType.alarmCount ||
+      WsCommandType.alarmStatus ||
+      WsCommandType.notifications ||
+      WsCommandType.notificationsCount => null,
+    };
+  }
+
+  Map<String, dynamic>? _buildUnsubscribeFrame(_ActiveSubscription removed) {
+    if (!_useLegacyTelemetryEndpoint) {
+      if (removed.type.isLegacyV1) {
+        return <String, dynamic>{
+          'cmds': <Map<String, dynamic>>[
+            <String, dynamic>{
+              ...removed.payload,
+              'cmdId': removed.cmdId,
+              'type': removed.type.wireValue,
+              'unsubscribe': true,
+            },
+          ],
+        };
+      }
+      if (removed.type.unsubscribeWire != null) {
+        return <String, dynamic>{
+          'cmds': <Map<String, dynamic>>[
+            <String, dynamic>{
+              'cmdId': removed.cmdId,
+              'type': removed.type.unsubscribeWire,
+            },
+          ],
+        };
+      }
+      return null;
+    }
+
+    return switch (removed.type) {
+      WsCommandType.entityData => <String, dynamic>{
+        'entityDataUnsubscribeCmds': <Map<String, dynamic>>[
+          <String, dynamic>{'cmdId': removed.cmdId},
+        ],
+      },
+      WsCommandType.entityCount => <String, dynamic>{
+        'entityCountUnsubscribeCmds': <Map<String, dynamic>>[
+          <String, dynamic>{'cmdId': removed.cmdId},
+        ],
+      },
+      WsCommandType.alarmData => <String, dynamic>{
+        'alarmDataUnsubscribeCmds': <Map<String, dynamic>>[
+          <String, dynamic>{'cmdId': removed.cmdId},
+        ],
+      },
+      WsCommandType.attributes => <String, dynamic>{
+        'attrSubCmds': <Map<String, dynamic>>[
+          <String, dynamic>{
+            ...removed.payload,
+            'cmdId': removed.cmdId,
+            'unsubscribe': true,
+          },
+        ],
+      },
+      WsCommandType.timeseries => <String, dynamic>{
+        'tsSubCmds': <Map<String, dynamic>>[
+          <String, dynamic>{
+            ...removed.payload,
+            'cmdId': removed.cmdId,
+            'unsubscribe': true,
+          },
+        ],
+      },
+      WsCommandType.timeseriesHistory ||
+      WsCommandType.alarmCount ||
+      WsCommandType.alarmStatus ||
+      WsCommandType.notifications ||
+      WsCommandType.notificationsCount => null,
     };
   }
 

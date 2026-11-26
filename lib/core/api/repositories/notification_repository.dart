@@ -4,6 +4,7 @@ import 'package:thingsboard_democloud_app/core/mock/mock_data.dart';
 import 'package:thingsboard_democloud_app/core/models/alarm_models.dart';
 import 'package:thingsboard_democloud_app/core/models/notification_models.dart';
 import 'package:thingsboard_democloud_app/core/models/pagination.dart';
+import 'package:thingsboard_democloud_app/core/models/tb_failure.dart';
 
 /// User notifications inbox, preferences, and mobile push session boundary.
 abstract interface class NotificationRepository {
@@ -36,24 +37,43 @@ final class RestNotificationRepository implements NotificationRepository {
     bool unreadOnly = false,
     CancelToken? cancelToken,
   }) async {
-    final response = await _client.get<Map<String, dynamic>>(
-      '/api/notifications',
-      queryParameters: <String, dynamic>{
-        ...query.toQueryParameters(),
-        'unreadOnly': unreadOnly,
-      },
-      cancelToken: cancelToken,
-    );
-    return PageData<TbNotification>.fromJson(
-      response.data ?? const <String, dynamic>{},
-      TbNotification.fromJson,
-    );
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        '/api/notifications',
+        queryParameters: <String, dynamic>{
+          ...query.toQueryParameters(),
+          'unreadOnly': unreadOnly,
+        },
+        cancelToken: cancelToken,
+      );
+      return PageData<TbNotification>.fromJson(
+        response.data ?? const <String, dynamic>{},
+        TbNotification.fromJson,
+      );
+    } on TbFailure catch (e) {
+      if (e.type == TbFailureType.notFound) {
+        return const PageData<TbNotification>(
+          data: [],
+          totalPages: 0,
+          totalElements: 0,
+          hasNext: false,
+        );
+      }
+      rethrow;
+    }
   }
 
   @override
   Future<int> getUnreadCount() async {
-    final response = await _client.get<num>('/api/notifications/unread/count');
-    return response.data?.toInt() ?? 0;
+    try {
+      final response = await _client.get<num>(
+        '/api/notifications/unread/count',
+      );
+      return response.data?.toInt() ?? 0;
+    } on TbFailure catch (e) {
+      if (e.type == TbFailureType.notFound) return 0;
+      rethrow;
+    }
   }
 
   @override
@@ -73,12 +93,19 @@ final class RestNotificationRepository implements NotificationRepository {
 
   @override
   Future<TbUserNotificationSettings> getNotificationSettings() async {
-    final response = await _client.get<Map<String, dynamic>>(
-      '/api/notification/settings/user',
-    );
-    return TbUserNotificationSettings.fromJson(
-      response.data ?? const <String, dynamic>{},
-    );
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        '/api/notification/settings/user',
+      );
+      return TbUserNotificationSettings.fromJson(
+        response.data ?? const <String, dynamic>{},
+      );
+    } on TbFailure catch (e) {
+      if (e.type == TbFailureType.notFound) {
+        return const TbUserNotificationSettings();
+      }
+      rethrow;
+    }
   }
 
   @override

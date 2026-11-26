@@ -51,24 +51,84 @@ final class RestAlarmRepository implements AlarmRepository {
       if (filter.textSearch != null && filter.textSearch!.trim().isNotEmpty)
         'textSearch': filter.textSearch!.trim(),
       if (filter.statusList.isNotEmpty)
-        'statusList': filter.statusList.map((s) => s.wireValue).toList(),
+        'statusList': filter.statusList.map((s) => s.wireValue).join(','),
       if (filter.severityList.isNotEmpty)
-        'severityList': filter.severityList.map((s) => s.wireValue).toList(),
-      if (filter.typeList.isNotEmpty) 'typeList': filter.typeList.toList(),
+        'severityList': filter.severityList.map((s) => s.wireValue).join(','),
+      if (filter.typeList.isNotEmpty) 'typeList': filter.typeList.join(','),
       if (filter.assigneeId != null) 'assigneeId': filter.assigneeId,
       if (filter.startTime != null) 'startTime': filter.startTime,
       if (filter.endTime != null) 'endTime': filter.endTime,
     };
 
-    final response = await _client.get<Map<String, dynamic>>(
-      path,
-      queryParameters: params,
-      cancelToken: cancelToken,
-    );
-    return PageData<TbAlarmInfo>.fromJson(
-      response.data ?? const <String, dynamic>{},
-      TbAlarmInfo.fromJson,
-    );
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        path,
+        queryParameters: params,
+        cancelToken: cancelToken,
+      );
+      return PageData<TbAlarmInfo>.fromJson(
+        response.data ?? const <String, dynamic>{},
+        TbAlarmInfo.fromJson,
+      );
+    } on TbFailure catch (e) {
+      if (e.type != TbFailureType.notFound) rethrow;
+
+      final v1Path = originator != null
+          ? '/api/alarm/${originator.entityType.wireValue}/${originator.id}'
+          : '/api/alarms';
+      final v1Params = <String, dynamic>{
+        ...query.toQueryParameters(),
+        'fetchOriginator': true,
+        if (filter.textSearch != null && filter.textSearch!.trim().isNotEmpty)
+          'textSearch': filter.textSearch!.trim(),
+        if (filter.statusList.length == 1)
+          'searchStatus': filter.statusList.first.wireValue,
+        if (filter.assigneeId != null) 'assigneeId': filter.assigneeId,
+        if (filter.startTime != null) 'startTime': filter.startTime,
+        if (filter.endTime != null) 'endTime': filter.endTime,
+      };
+
+      final fallbackResp = await _client.get<Map<String, dynamic>>(
+        v1Path,
+        queryParameters: v1Params,
+        cancelToken: cancelToken,
+      );
+      final rawPage = PageData<TbAlarmInfo>.fromJson(
+        fallbackResp.data ?? const <String, dynamic>{},
+        TbAlarmInfo.fromJson,
+      );
+      if (filter.severityList.isEmpty && filter.statusList.length <= 1) {
+        return rawPage;
+      }
+      final filteredData = rawPage.data
+          .where((a) {
+            if (filter.severityList.isNotEmpty &&
+                !filter.severityList.contains(a.severity)) {
+              return false;
+            }
+            if (filter.statusList.length > 1 &&
+                !filter.statusList.contains(AlarmSearchStatus.any)) {
+              final matchesStatus = filter.statusList.any(
+                (s) => switch (s) {
+                  AlarmSearchStatus.any => true,
+                  AlarmSearchStatus.active => a.isActive,
+                  AlarmSearchStatus.cleared => a.cleared,
+                  AlarmSearchStatus.ack => a.acknowledged,
+                  AlarmSearchStatus.unack => !a.acknowledged,
+                },
+              );
+              if (!matchesStatus) return false;
+            }
+            return true;
+          })
+          .toList(growable: false);
+      return PageData<TbAlarmInfo>(
+        data: filteredData,
+        totalPages: rawPage.totalPages,
+        totalElements: filteredData.length,
+        hasNext: rawPage.hasNext,
+      );
+    }
   }
 
   @override
@@ -116,14 +176,26 @@ final class RestAlarmRepository implements AlarmRepository {
     String alarmId,
     PageQuery query,
   ) async {
-    final response = await _client.get<Map<String, dynamic>>(
-      '/api/users/assign/$alarmId',
-      queryParameters: query.toQueryParameters(),
-    );
-    return PageData<TbUserEmailInfo>.fromJson(
-      response.data ?? const <String, dynamic>{},
-      TbUserEmailInfo.fromJson,
-    );
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        '/api/users/assign/$alarmId',
+        queryParameters: query.toQueryParameters(),
+      );
+      return PageData<TbUserEmailInfo>.fromJson(
+        response.data ?? const <String, dynamic>{},
+        TbUserEmailInfo.fromJson,
+      );
+    } on TbFailure catch (e) {
+      if (e.type == TbFailureType.notFound) {
+        return const PageData<TbUserEmailInfo>(
+          data: [],
+          totalPages: 0,
+          totalElements: 0,
+          hasNext: false,
+        );
+      }
+      rethrow;
+    }
   }
 
   @override
@@ -131,14 +203,26 @@ final class RestAlarmRepository implements AlarmRepository {
     String alarmId,
     PageQuery query,
   ) async {
-    final response = await _client.get<Map<String, dynamic>>(
-      '/api/alarm/$alarmId/comment',
-      queryParameters: query.toQueryParameters(),
-    );
-    return PageData<TbAlarmComment>.fromJson(
-      response.data ?? const <String, dynamic>{},
-      TbAlarmComment.fromJson,
-    );
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        '/api/alarm/$alarmId/comment',
+        queryParameters: query.toQueryParameters(),
+      );
+      return PageData<TbAlarmComment>.fromJson(
+        response.data ?? const <String, dynamic>{},
+        TbAlarmComment.fromJson,
+      );
+    } on TbFailure catch (e) {
+      if (e.type == TbFailureType.notFound) {
+        return const PageData<TbAlarmComment>(
+          data: [],
+          totalPages: 0,
+          totalElements: 0,
+          hasNext: false,
+        );
+      }
+      rethrow;
+    }
   }
 
   @override

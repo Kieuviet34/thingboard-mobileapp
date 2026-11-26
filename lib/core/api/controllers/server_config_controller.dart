@@ -77,8 +77,12 @@ final telemetryWsServiceProvider = Provider<TbWebSocketService>((ref) {
 });
 
 /// Live connection state stream for [TbWebSocketService].
-final wsConnectionStateProvider = StreamProvider<WsConnectionState>((ref) {
-  return ref.watch(telemetryWsServiceProvider).connectionStateStream;
+final wsConnectionStateProvider = StreamProvider<WsConnectionState>((
+  ref,
+) async* {
+  final service = ref.watch(telemetryWsServiceProvider);
+  yield service.currentState;
+  yield* service.connectionStateStream;
 });
 
 final serverConfigRepositoryProvider = Provider<ServerConfigRepository>((ref) {
@@ -106,15 +110,16 @@ class ServerConfigController extends Notifier<ServerConfigState> {
     final mode = await prefs.getSessionMode();
     final themeMode = await prefs.getThemeMode();
 
+    final normalizedBaseUrl = _normalize(baseUrl);
     final client = ref.read(tbApiClientProvider);
-    if (client.baseUrl != _normalize(baseUrl)) {
-      client.switchBaseUrl(baseUrl);
+    if (client.baseUrl != normalizedBaseUrl) {
+      client.switchBaseUrl(normalizedBaseUrl);
     }
 
     ref.read(themeModeProvider.notifier).setThemeMode(themeMode);
 
     state = state.copyWith(
-      baseUrl: _normalize(baseUrl),
+      baseUrl: normalizedBaseUrl,
       mode: mode,
       themeMode: themeMode,
       sessionGeneration: client.sessionGeneration,
@@ -243,7 +248,11 @@ class ServerConfigController extends Notifier<ServerConfigState> {
     if (trimmed.isEmpty) {
       return ThingsboardAppConstants.thingsBoardApiEndpoint;
     }
-    return trimmed.endsWith('/') ? trimmed : '$trimmed/';
+    final withScheme =
+        trimmed.startsWith('http://') || trimmed.startsWith('https://')
+        ? trimmed
+        : 'https://$trimmed';
+    return withScheme.endsWith('/') ? withScheme : '$withScheme/';
   }
 }
 

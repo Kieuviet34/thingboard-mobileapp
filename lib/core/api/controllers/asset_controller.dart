@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_democloud_app/core/api/controllers/auth_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/server_config_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/repositories/asset_repository.dart';
 import 'package:thingsboard_democloud_app/core/mock/mock_data.dart';
@@ -16,7 +17,14 @@ final assetRepositoryProvider = Provider<AssetRepository>((ref) {
   if (sessionScope.$1 == SessionMode.demo) {
     return DemoAssetRepository(ref.read(assetsProvider));
   }
-  return RestAssetRepository(client: ref.watch(tbApiClientProvider));
+  return RestAssetRepository(
+    client: ref.watch(tbApiClientProvider),
+    userScopeProvider: () {
+      final authState = ref.read(authProvider).valueOrNull;
+      final session = authState is AuthAuthenticated ? authState.session : null;
+      return (authority: session?.authority, customerId: session?.customerId);
+    },
+  );
 });
 
 /// Paginated assets list controller with `_requestSeq` + `CancelToken` race guard.

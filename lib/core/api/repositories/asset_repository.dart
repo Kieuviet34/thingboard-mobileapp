@@ -23,9 +23,17 @@ abstract interface class AssetRepository {
 }
 
 final class RestAssetRepository implements AssetRepository {
-  RestAssetRepository({required TbApiClient client}) : _client = client;
+  RestAssetRepository({
+    required TbApiClient client,
+    ({Authority? authority, String? customerId}) Function()? userScopeProvider,
+  }) : _client = client,
+       _userScopeProvider = userScopeProvider;
+
+  static const String _nullUuid = '13814000-1dd2-11b2-8080-808080808080';
 
   final TbApiClient _client;
+  final ({Authority? authority, String? customerId}) Function()?
+  _userScopeProvider;
 
   @override
   Future<PageData<TbAssetInfo>> getAssets(
@@ -53,8 +61,19 @@ final class RestAssetRepository implements AssetRepository {
       );
     } on TbFailure catch (e) {
       if (e.type != TbFailureType.notFound) rethrow;
+      final scope = _userScopeProvider?.call();
+      final customerId = scope?.customerId;
+      final useCustomerPath =
+          scope?.authority == Authority.customerUser &&
+          customerId != null &&
+          customerId.isNotEmpty &&
+          customerId != _nullUuid;
+      final fallbackPath = useCustomerPath
+          ? '/api/customer/$customerId/assetInfos'
+          : '/api/tenant/assetInfos';
+
       final fallback = await _client.get<Map<String, dynamic>>(
-        '/api/tenant/assetInfos',
+        fallbackPath,
         queryParameters: params,
         cancelToken: cancelToken,
       );
@@ -91,14 +110,35 @@ final class RestAssetRepository implements AssetRepository {
     bool outgoing = true,
   }) async {
     final dir = outgoing ? 'from' : 'to';
-    final response = await _client.get<List<dynamic>>(
-      '/api/relations/info/$dir/${entity.entityType.wireValue}/${entity.id}',
-    );
-    final list = response.data ?? const [];
-    return list
-        .whereType<Map<String, dynamic>>()
-        .map(TbEntityRelationInfo.fromJson)
-        .toList(growable: false);
+    try {
+      final response = await _client.get<List<dynamic>>(
+        '/api/relations/info/$dir/${entity.entityType.wireValue}/${entity.id}',
+      );
+      final list = response.data ?? const [];
+      return list
+          .whereType<Map<String, dynamic>>()
+          .map(TbEntityRelationInfo.fromJson)
+          .toList(growable: false);
+    } on TbFailure catch (e) {
+      if (e.type != TbFailureType.notFound) rethrow;
+      final fallback = await _client.get<List<dynamic>>(
+        '/api/relations/info',
+        queryParameters: outgoing
+            ? <String, dynamic>{
+                'fromId': entity.id,
+                'fromType': entity.entityType.wireValue,
+              }
+            : <String, dynamic>{
+                'toId': entity.id,
+                'toType': entity.entityType.wireValue,
+              },
+      );
+      final list = fallback.data ?? const [];
+      return list
+          .whereType<Map<String, dynamic>>()
+          .map(TbEntityRelationInfo.fromJson)
+          .toList(growable: false);
+    }
   }
 }
 

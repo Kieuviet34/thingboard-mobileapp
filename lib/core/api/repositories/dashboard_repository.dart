@@ -27,7 +27,25 @@ abstract interface class DashboardRepository {
 final class RestDashboardRepository implements DashboardRepository {
   RestDashboardRepository({required TbApiClient client}) : _client = client;
 
+  static const String _nullUuid = '13814000-1dd2-11b2-8080-808080808080';
+
   final TbApiClient _client;
+
+  /// Detects either HTTP 404 or Spring MVC `/api/user/{userId}` path collision
+  /// on pre-3.6 servers (HTTP 400 `"Invalid UUID string: <segment>"`).
+  /// Never matches HTTP 403 (`permissionDenied`) or unrelated 400 errors.
+  static bool _isMissingUserDashboardEndpoint(TbFailure e, String segment) {
+    if (e.type == TbFailureType.notFound) return true;
+    if (e.type == TbFailureType.validation) {
+      final msg = e.message.toLowerCase();
+      return msg.contains('invalid uuid string') &&
+          msg.contains(segment.toLowerCase());
+    }
+    return false;
+  }
+
+  static bool _hasScopedCustomerId(String? customerId) =>
+      customerId != null && customerId.isNotEmpty && customerId != _nullUuid;
 
   @override
   Future<PageData<TbDashboardInfo>> getDashboards(
@@ -36,7 +54,7 @@ final class RestDashboardRepository implements DashboardRepository {
     String? customerId,
     CancelToken? cancelToken,
   }) async {
-    final params = <String, dynamic>{
+    final mobileParams = <String, dynamic>{
       ...query.toQueryParameters(),
       'mobile': true,
     };
@@ -44,7 +62,7 @@ final class RestDashboardRepository implements DashboardRepository {
     try {
       final response = await _client.get<Map<String, dynamic>>(
         '/api/user/dashboards',
-        queryParameters: params,
+        queryParameters: mobileParams,
         cancelToken: cancelToken,
       );
       return PageData<TbDashboardInfo>.fromJson(
@@ -52,24 +70,49 @@ final class RestDashboardRepository implements DashboardRepository {
         TbDashboardInfo.fromJson,
       );
     } on TbFailure catch (e) {
-      // Only fall back on HTTP 404 (pre-PE/older endpoint absence); never mask 403.
-      if (e.type != TbFailureType.notFound) rethrow;
+      if (!_isMissingUserDashboardEndpoint(e, 'dashboards')) rethrow;
 
-      final fallbackPath =
-          (authority == Authority.customerUser &&
-              customerId != null &&
-              customerId.isNotEmpty)
-          ? '/api/customer/$customerId/dashboards'
-          : '/api/tenant/dashboards';
-      final fallbackResp = await _client.get<Map<String, dynamic>>(
-        fallbackPath,
-        queryParameters: params,
-        cancelToken: cancelToken,
-      );
-      return PageData<TbDashboardInfo>.fromJson(
-        fallbackResp.data ?? const <String, dynamic>{},
-        TbDashboardInfo.fromJson,
-      );
+      if (authority == Authority.customerUser &&
+          _hasScopedCustomerId(customerId)) {
+        final customerResp = await _client.get<Map<String, dynamic>>(
+          '/api/customer/$customerId/dashboards',
+          queryParameters: <String, dynamic>{
+            ...query.toQueryParameters(),
+            'includeCustomers': true,
+          },
+          cancelToken: cancelToken,
+        );
+        return PageData<TbDashboardInfo>.fromJson(
+          customerResp.data ?? const <String, dynamic>{},
+          TbDashboardInfo.fromJson,
+        );
+      }
+
+      try {
+        final tenantResp = await _client.get<Map<String, dynamic>>(
+          '/api/tenant/dashboards',
+          queryParameters: mobileParams,
+          cancelToken: cancelToken,
+        );
+        return PageData<TbDashboardInfo>.fromJson(
+          tenantResp.data ?? const <String, dynamic>{},
+          TbDashboardInfo.fromJson,
+        );
+      } on TbFailure catch (tenantErr) {
+        if (tenantErr.type != TbFailureType.notFound) rethrow;
+        final allResp = await _client.get<Map<String, dynamic>>(
+          '/api/dashboards/all',
+          queryParameters: <String, dynamic>{
+            ...query.toQueryParameters(),
+            'includeCustomers': true,
+          },
+          cancelToken: cancelToken,
+        );
+        return PageData<TbDashboardInfo>.fromJson(
+          allResp.data ?? const <String, dynamic>{},
+          TbDashboardInfo.fromJson,
+        );
+      }
     }
   }
 
@@ -97,7 +140,9 @@ final class RestDashboardRepository implements DashboardRepository {
         response.data ?? const <String, dynamic>{},
       );
     } on TbFailure catch (e) {
-      if (e.type == TbFailureType.notFound) return const UserDashboardsInfo();
+      if (_isMissingUserDashboardEndpoint(e, 'lastVisitedDashboards')) {
+        return const UserDashboardsInfo();
+      }
       rethrow;
     }
   }
@@ -107,18 +152,26 @@ final class RestDashboardRepository implements DashboardRepository {
     String dashboardId,
     String action,
   ) async {
-    final response = await _client.get<Map<String, dynamic>>(
-      '/api/user/dashboards/$dashboardId/$action',
-    );
-    return UserDashboardsInfo.fromJson(
-      response.data ?? const <String, dynamic>{},
-    );
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        '/api/user/dashboards/${dashboardId.trim()}/$action',
+      );
+      return UserDashboardsInfo.fromJson(
+        response.data ?? const <String, dynamic>{},
+      );
+    } on TbFailure catch (e) {
+      if (_isMissingUserDashboardEndpoint(e, 'dashboards')) {
+        return const UserDashboardsInfo();
+      }
+      rethrow;
+    }
   }
 
   @override
   Future<TbDashboard> getDashboardById(String dashboardId) async {
+    final cleanId = dashboardId.trim();
     final response = await _client.get<Map<String, dynamic>>(
-      '/api/dashboard/$dashboardId',
+      '/api/dashboard/$cleanId',
       queryParameters: const <String, dynamic>{'includeResources': true},
     );
     return TbDashboard.fromJson(response.data ?? const <String, dynamic>{});

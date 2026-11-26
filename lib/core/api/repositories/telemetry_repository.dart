@@ -98,17 +98,47 @@ final class RestTelemetryRepository implements TelemetryRepository {
     };
   }
 
+  Future<List<String>> _discoverTimeseriesKeys(
+    EntityId entityId, {
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      final response = await _client.get<List<dynamic>>(
+        '/api/plugins/telemetry/${entityId.entityType.wireValue}/${entityId.id}/keys/timeseries',
+        cancelToken: cancelToken,
+      );
+      return (response.data ?? const <dynamic>[])
+          .whereType<String>()
+          .map((k) => k.trim())
+          .where((k) => k.isNotEmpty)
+          .toList(growable: false);
+    } on TbFailure catch (e) {
+      if (e.type == TbFailureType.notFound) return const <String>[];
+      rethrow;
+    }
+  }
+
   @override
   Future<Map<String, List<TbTsPoint>>> getTimeseriesHistory(
     TbTsHistoryQuery query, {
     CancelToken? cancelToken,
   }) async {
+    final resolvedKeys = query.keys.isNotEmpty
+        ? query.keys
+        : await _discoverTimeseriesKeys(
+            query.entityId,
+            cancelToken: cancelToken,
+          );
+    if (resolvedKeys.isEmpty) {
+      return const <String, List<TbTsPoint>>{};
+    }
+
     final baseParams = <String, dynamic>{
-      if (query.keys.isNotEmpty) 'keys': query.keys.join(','),
+      'keys': resolvedKeys.join(','),
       'startTs': query.startTs,
       'endTs': query.endTs,
       if (query.intervalMs > 0) 'interval': query.intervalMs,
-      'limit': query.limit,
+      if (query.agg == TsAggregation.none) 'limit': query.limit,
       'agg': query.agg.wireValue,
       'orderBy': 'ASC',
       'useStrictDataTypes': true,

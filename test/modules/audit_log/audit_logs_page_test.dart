@@ -13,6 +13,7 @@ import 'package:thingsboard_democloud_app/core/models/tb_failure.dart';
 import 'package:thingsboard_democloud_app/modules/audit_log/audit_logs_page.dart';
 import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_list_row.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_status_badge.dart';
 
 import '../../helpers/fake_app_preferences.dart';
@@ -127,6 +128,30 @@ void main() {
         expect(find.byType(TbIcon), findsWidgets);
       },
     );
+
+    testWidgets('rows use TbListRow with action and user meta', (tester) async {
+      final repo = _FakeAuditLogRepo(logs: _sampleLogs);
+      await tester.pumpWidget(buildApp(repo: repo));
+      await tester.pumpAndSettle();
+
+      final rows = tester
+          .widgetList<TbListRow>(find.byType(TbListRow))
+          .toList();
+      expect(rows, hasLength(2));
+      expect(rows[0].title, 'Solar Inverter 01');
+      expect(rows[0].meta, startsWith('UPDATED · '));
+      expect(rows[0].meta, endsWith(' · tenant@thingsboard.org'));
+      expect(rows[1].meta, endsWith(' · admin@tb.io'));
+
+      final ok = tester.widget<TbStatusBadge>(
+        find.byKey(const ValueKey('audit-status-log-1')),
+      );
+      final failed = tester.widget<TbStatusBadge>(
+        find.byKey(const ValueKey('audit-status-log-2')),
+      );
+      expect(ok.label, 'SUCCESS');
+      expect(failed.label, 'FAILED');
+    });
 
     testWidgets('filtering by action chip updates the list', (tester) async {
       final repo = _FakeAuditLogRepo(logs: _sampleLogs);

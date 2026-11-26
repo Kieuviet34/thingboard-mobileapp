@@ -24,7 +24,9 @@ import 'package:thingsboard_democloud_app/core/models/tb_failure.dart';
 import 'package:thingsboard_democloud_app/modules/home/home_page.dart';
 import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_list_row.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_metric_pill.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_section_card.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_shimmer.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_status_badge.dart';
 
@@ -311,6 +313,51 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('ALARMS_ROUTE'), findsOneWidget);
         expect(visited, contains(AppRoutes.alarms));
+      },
+    );
+
+    testWidgets(
+      'groups content in TbSectionCard sections with TbListRow rows',
+      (tester) async {
+        await tester.pumpWidget(
+          buildApp(
+            dashboardRepo: _ControlledDashboardRepo(),
+            disableAnimations: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(TbSectionCard), findsNWidgets(3));
+        for (final title in [
+          'Overview',
+          'Home dashboard',
+          'Starred & recent',
+        ]) {
+          expect(
+            find.descendant(
+              of: find.byType(TbSectionCard),
+              matching: find.text(title),
+            ),
+            findsOneWidget,
+            reason: title,
+          );
+        }
+        expect(
+          find.descendant(
+            of: find.byKey(const Key('home-kpi-alarms')),
+            matching: find.byType(TbMetricPill),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: find.byKey(const Key('home-card-dash-2')),
+            matching: find.byType(TbListRow),
+          ),
+          findsNothing,
+        );
+        expect(find.byKey(const Key('home-card-dash-2')), findsOneWidget);
+        expect(find.byType(TbListRow), findsOneWidget);
       },
     );
 

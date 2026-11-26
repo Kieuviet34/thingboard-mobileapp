@@ -13,6 +13,8 @@ import 'package:thingsboard_democloud_app/modules/alarm/widgets/user_info_avatar
 import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_list_row.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_section_card.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_shimmer.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_status_badge.dart';
 
@@ -93,6 +95,7 @@ class _AlarmDetailsPageState extends ConsumerState<AlarmDetailsPage> {
     final picked =
         await showModalBottomSheet<({bool unassign, TbUserEmailInfo? user})>(
           context: context,
+          useRootNavigator: true,
           isScrollControlled: true,
           builder: (sheetCtx) => _AssigneePickerSheet(
             alarmId: alarm.id,
@@ -238,6 +241,10 @@ class _AlarmDetailsPageState extends ConsumerState<AlarmDetailsPage> {
             ),
           );
 
+          final hasActions =
+              !alarm.acknowledged ||
+              !alarm.cleared ||
+              (alarm.dashboardId != null && alarm.dashboardId!.isNotEmpty);
           final heroIcon = widget.embedded
               ? severityIconBox
               : Hero(tag: 'alarm-${alarm.id}', child: severityIconBox);
@@ -343,98 +350,91 @@ class _AlarmDetailsPageState extends ConsumerState<AlarmDetailsPage> {
                                           ),
                                       ],
                                     ),
-                                    Wrap(
-                                      spacing: DesignTokens.spacing8,
-                                      runSpacing: DesignTokens.spacing8,
-                                      children: [
-                                        if (!alarm.acknowledged)
-                                          FilledButton.tonalIcon(
-                                            key: const Key('alarm-ack-button'),
-                                            onPressed: _mutating
-                                                ? null
-                                                : () => _confirmAndRun(
-                                                    title: 'Acknowledge alarm?',
-                                                    actionLabel: 'Acknowledge',
-                                                    action: () => ref
-                                                        .read(
-                                                          alarmDetailsProvider(
-                                                            widget.id,
-                                                          ).notifier,
-                                                        )
-                                                        .acknowledge(),
-                                                    successText:
-                                                        'Alarm acknowledged',
-                                                  ),
-                                            icon: const Icon(
-                                              Icons.check,
-                                              size: DesignTokens.iconSmall,
-                                            ),
-                                            label: const Text('Acknowledge'),
-                                          ),
-                                        if (!alarm.cleared)
-                                          FilledButton.icon(
-                                            key: const Key(
-                                              'alarm-clear-button',
-                                            ),
-                                            onPressed: _mutating
-                                                ? null
-                                                : () => _confirmAndRun(
-                                                    title: 'Clear alarm?',
-                                                    actionLabel: 'Clear',
-                                                    action: () => ref
-                                                        .read(
-                                                          alarmDetailsProvider(
-                                                            widget.id,
-                                                          ).notifier,
-                                                        )
-                                                        .clear(),
-                                                    successText:
-                                                        'Alarm cleared',
-                                                  ),
-                                            icon: const Icon(
-                                              Icons.done_all,
-                                              size: DesignTokens.iconSmall,
-                                            ),
-                                            label: const Text('Clear'),
-                                          ),
-                                        if (alarm.dashboardId != null &&
-                                            alarm.dashboardId!.isNotEmpty)
-                                          OutlinedButton.icon(
-                                            onPressed: () {
-                                              final router = GoRouter.maybeOf(
-                                                context,
-                                              );
-                                              router?.push(
-                                                AppRoutes.dashboardDetailsPath(
-                                                  alarm.dashboardId!,
-                                                ),
-                                              );
-                                            },
-                                            icon: TbIcon(
-                                              TbIconKind.dashboardTile,
-                                              size: DesignTokens.iconSmall,
-                                              color: scheme.primary,
-                                            ),
-                                            label: const Text('Dashboard'),
-                                          ),
-                                      ],
-                                    ),
                                   ],
                                 ),
                               ),
 
-                              // Assignee selector tile
-                              Material(
-                                color: scheme.surfaceContainerLow,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: DesignTokens.borderRadiusLarge,
-                                  side: BorderSide(
-                                    color: scheme.outlineVariant,
+                              if (hasActions)
+                                TbSectionCard(
+                                  title: 'Actions',
+                                  child: Wrap(
+                                    spacing: DesignTokens.spacing8,
+                                    runSpacing: DesignTokens.spacing8,
+                                    children: [
+                                      if (!alarm.acknowledged)
+                                        FilledButton.tonalIcon(
+                                          key: const Key('alarm-ack-button'),
+                                          onPressed: _mutating
+                                              ? null
+                                              : () => _confirmAndRun(
+                                                  title: 'Acknowledge alarm?',
+                                                  actionLabel: 'Acknowledge',
+                                                  action: () => ref
+                                                      .read(
+                                                        alarmDetailsProvider(
+                                                          widget.id,
+                                                        ).notifier,
+                                                      )
+                                                      .acknowledge(),
+                                                  successText:
+                                                      'Alarm acknowledged',
+                                                ),
+                                          icon: const Icon(
+                                            Icons.check,
+                                            size: DesignTokens.iconSmall,
+                                          ),
+                                          label: const Text('Acknowledge'),
+                                        ),
+                                      if (!alarm.cleared)
+                                        FilledButton.icon(
+                                          key: const Key('alarm-clear-button'),
+                                          onPressed: _mutating
+                                              ? null
+                                              : () => _confirmAndRun(
+                                                  title: 'Clear alarm?',
+                                                  actionLabel: 'Clear',
+                                                  action: () => ref
+                                                      .read(
+                                                        alarmDetailsProvider(
+                                                          widget.id,
+                                                        ).notifier,
+                                                      )
+                                                      .clear(),
+                                                  successText: 'Alarm cleared',
+                                                ),
+                                          icon: const Icon(
+                                            Icons.done_all,
+                                            size: DesignTokens.iconSmall,
+                                          ),
+                                          label: const Text('Clear'),
+                                        ),
+                                      if (alarm.dashboardId != null &&
+                                          alarm.dashboardId!.isNotEmpty)
+                                        OutlinedButton.icon(
+                                          onPressed: () {
+                                            final router = GoRouter.maybeOf(
+                                              context,
+                                            );
+                                            router?.push(
+                                              AppRoutes.dashboardDetailsPath(
+                                                alarm.dashboardId!,
+                                              ),
+                                            );
+                                          },
+                                          icon: TbIcon(
+                                            TbIconKind.dashboardTile,
+                                            size: DesignTokens.iconSmall,
+                                            color: scheme.primary,
+                                          ),
+                                          label: const Text('Dashboard'),
+                                        ),
+                                    ],
                                   ),
                                 ),
-                                child: ListTile(
+                              TbSectionCard(
+                                title: 'Assignee',
+                                child: TbListRow(
                                   key: const Key('alarm-assignee-tile'),
-                                  minTileHeight: DesignTokens.minTouchTarget,
                                   leading: UserInfoAvatarWidget(
                                     shortName: _initialsFromName(
                                       alarm.assigneeName,
@@ -443,174 +443,105 @@ class _AlarmDetailsPageState extends ConsumerState<AlarmDetailsPage> {
                                         ? 'Assigned to ${alarm.assigneeName}'
                                         : 'Unassigned',
                                   ),
-                                  title: Text(
-                                    alarm.assigneeName ?? 'Unassigned',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  subtitle: Text(
-                                    alarm.assigneeEmail ?? 'Tap to assign',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                                  title: alarm.assigneeName ?? 'Unassigned',
+                                  meta: alarm.assigneeEmail ?? 'Tap to assign',
                                   trailing: const Icon(Icons.chevron_right),
                                   onTap: _mutating
                                       ? null
                                       : () => _openAssigneePicker(alarm),
                                 ),
                               ),
-
-                              // Expandable technical timeline & metadata
-                              Material(
-                                color: scheme.surfaceContainerLow,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: DesignTokens.borderRadiusLarge,
-                                  side: BorderSide(
-                                    color: scheme.outlineVariant,
-                                  ),
-                                ),
-                                clipBehavior: Clip.antiAlias,
-                                child: Theme(
-                                  data: Theme.of(
-                                    context,
-                                  ).copyWith(dividerColor: Colors.transparent),
-                                  child: ExpansionTile(
-                                    initiallyExpanded: false,
-                                    title: Text(
-                                      'Timeline & details',
-                                      style: textTheme.titleSmall?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                              TbSectionCard(
+                                title: 'Timeline & details',
+                                child: Column(
+                                  children: [
+                                    TbKvRow(
+                                      label: 'Created',
+                                      value: _formatTs(alarm.createdTime),
                                     ),
-                                    childrenPadding: const EdgeInsets.fromLTRB(
-                                      DesignTokens.spacing16,
-                                      0,
-                                      DesignTokens.spacing16,
-                                      DesignTokens.spacing12,
-                                    ),
-                                    children: [
-                                      _MetaRow(
-                                        label: 'Created',
-                                        value: _formatTs(alarm.createdTime),
+                                    if (alarm.ackTs > 0)
+                                      TbKvRow(
+                                        label: 'Acknowledged',
+                                        value: _formatTs(alarm.ackTs),
                                       ),
-                                      if (alarm.ackTs > 0)
-                                        _MetaRow(
-                                          label: 'Acknowledged',
-                                          value: _formatTs(alarm.ackTs),
-                                        ),
-                                      if (alarm.clearTs > 0)
-                                        _MetaRow(
-                                          label: 'Cleared',
-                                          value: _formatTs(alarm.clearTs),
-                                        ),
-                                      if (alarm.originator != null)
-                                        _MetaRow(
-                                          label: 'Originator',
-                                          value: alarm
-                                              .originator!
-                                              .entityType
-                                              .wireValue,
-                                        ),
-                                      for (final entry in alarm.details.entries)
-                                        _MetaRow(
-                                          label: entry.key,
-                                          value: '${entry.value}',
-                                        ),
-                                    ],
-                                  ),
+                                    if (alarm.clearTs > 0)
+                                      TbKvRow(
+                                        label: 'Cleared',
+                                        value: _formatTs(alarm.clearTs),
+                                      ),
+                                    if (alarm.originator != null)
+                                      TbKvRow(
+                                        label: 'Originator',
+                                        value: alarm
+                                            .originator!
+                                            .entityType
+                                            .wireValue,
+                                      ),
+                                    for (final entry in alarm.details.entries)
+                                      TbKvRow(
+                                        label: entry.key,
+                                        value: '${entry.value}',
+                                      ),
+                                  ],
                                 ),
                               ),
-
-                              // Activity header with working refresh button
-                              Row(
-                                children: [
-                                  TbIcon(
-                                    TbIconKind.auditLog,
-                                    size: DesignTokens.iconSmall,
-                                    color: scheme.primary,
+                              TbSectionCard(
+                                title: 'Activity',
+                                trailing: IconButton(
+                                  key: const Key(
+                                    'alarm-activity-refresh-button',
                                   ),
-                                  const SizedBox(width: DesignTokens.spacing8),
-                                  Expanded(
-                                    child: Text(
-                                      'Activity',
-                                      style: textTheme.titleSmall?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
+                                  tooltip: 'Refresh activity',
+                                  constraints: const BoxConstraints(
+                                    minWidth: DesignTokens.minTouchTarget,
+                                    minHeight: DesignTokens.minTouchTarget,
                                   ),
-                                  IconButton(
-                                    key: const Key(
-                                      'alarm-activity-refresh-button',
-                                    ),
-                                    tooltip: 'Refresh activity',
-                                    constraints: const BoxConstraints(
-                                      minWidth: DesignTokens.minTouchTarget,
-                                      minHeight: DesignTokens.minTouchTarget,
-                                    ),
-                                    icon: const Icon(Icons.refresh),
-                                    onPressed: () => ref.invalidate(
+                                  icon: const Icon(Icons.refresh),
+                                  onPressed: () => ref.invalidate(
+                                    alarmCommentsProvider(widget.id),
+                                  ),
+                                ),
+                                child: commentsAsync.when(
+                                  loading: () =>
+                                      const TbShimmerList(itemCount: 2),
+                                  error: (err, _) => TbEmptyState(
+                                    icon: TbIconKind.severityCritical,
+                                    title: 'Activity unavailable',
+                                    subtitle: err is TbFailure
+                                        ? err.message
+                                        : err.toString(),
+                                    isError: true,
+                                    actionLabel: 'Retry',
+                                    onAction: () => ref.invalidate(
                                       alarmCommentsProvider(widget.id),
                                     ),
                                   ),
-                                ],
+                                  data: (commentsState) {
+                                    if (commentsState.items.isEmpty) {
+                                      return const TbEmptyState(
+                                        icon: TbIconKind.auditLog,
+                                        title: 'No activity yet',
+                                      );
+                                    }
+                                    return Column(
+                                      spacing: DesignTokens.spacing8,
+                                      children: [
+                                        for (final comment
+                                            in commentsState.items)
+                                          _AlarmCommentTile(
+                                            comment: comment,
+                                            formattedTime: _formatTs(
+                                              comment.createdTime,
+                                            ),
+                                          ),
+                                      ],
+                                    );
+                                  },
+                                ),
                               ),
                             ],
                           ),
                         ),
-                      ),
-                      commentsAsync.when(
-                        loading: () => const SliverPadding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: DesignTokens.spacing16,
-                          ),
-                          sliver: SliverToBoxAdapter(
-                            child: TbShimmerList(itemCount: 2),
-                          ),
-                        ),
-                        error: (err, _) => SliverToBoxAdapter(
-                          child: TbEmptyState(
-                            icon: TbIconKind.severityCritical,
-                            title: 'Activity unavailable',
-                            subtitle: err is TbFailure
-                                ? err.message
-                                : err.toString(),
-                            isError: true,
-                            actionLabel: 'Retry',
-                            onAction: () => ref.invalidate(
-                              alarmCommentsProvider(widget.id),
-                            ),
-                          ),
-                        ),
-                        data: (commentsState) {
-                          if (commentsState.items.isEmpty) {
-                            return const SliverToBoxAdapter(
-                              child: TbEmptyState(
-                                icon: TbIconKind.auditLog,
-                                title: 'No activity yet',
-                              ),
-                            );
-                          }
-                          return SliverPadding(
-                            padding: const EdgeInsets.fromLTRB(
-                              DesignTokens.spacing16,
-                              0,
-                              DesignTokens.spacing16,
-                              DesignTokens.spacing16,
-                            ),
-                            sliver: SliverList.separated(
-                              itemCount: commentsState.items.length,
-                              separatorBuilder: (_, _) =>
-                                  const SizedBox(height: DesignTokens.spacing8),
-                              itemBuilder: (context, index) {
-                                final comment = commentsState.items[index];
-                                return _AlarmCommentTile(
-                                  comment: comment,
-                                  formattedTime: _formatTs(comment.createdTime),
-                                );
-                              },
-                            ),
-                          );
-                        },
                       ),
                     ],
                   ),
@@ -664,47 +595,6 @@ class _AlarmDetailsPageState extends ConsumerState<AlarmDetailsPage> {
             ],
           );
         },
-      ),
-    );
-  }
-}
-
-class _MetaRow extends StatelessWidget {
-  const _MetaRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: DesignTokens.spacing4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              label,
-              style: textTheme.bodySmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          const SizedBox(width: DesignTokens.spacing8),
-          Expanded(
-            flex: 3,
-            child: Text(
-              value,
-              textAlign: TextAlign.end,
-              style: TbTextStyles.tabular(
-                textTheme.bodySmall ?? TbTextStyles.bodyMedium,
-              ).copyWith(color: scheme.onSurface),
-            ),
-          ),
-        ],
       ),
     );
   }

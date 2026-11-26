@@ -4,7 +4,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_democloud_app/config/routes/router.dart';
 import 'package:thingsboard_democloud_app/config/themes/design_tokens.dart';
 import 'package:thingsboard_democloud_app/config/themes/tb_status_colors.dart';
-import 'package:thingsboard_democloud_app/config/themes/tb_text_styles.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/alarm_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/dashboard_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/device_controller.dart';
@@ -16,8 +15,10 @@ import 'package:thingsboard_democloud_app/core/models/tb_failure.dart';
 import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_list_row.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_metric_pill.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_motion.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_section_card.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_shimmer.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_status_badge.dart';
 
@@ -159,42 +160,69 @@ class HomePage extends ConsumerWidget {
                           )
                         else ...[
                           if (spotlight != null) ...[
-                            _SectionHeader(
-                              title: 'Home dashboard',
-                              trailingLabel: 'See all',
-                              onTrailingTap: () =>
-                                  context.push(AppRoutes.dashboards),
-                            ),
-                            const SizedBox(height: DesignTokens.spacing8),
                             TbStaggeredEntry(
                               index: 1,
-                              child: _HomeSpotlightCard(
-                                dashboard: spotlight,
-                                onOpen: () => context.push(
-                                  AppRoutes.dashboardDetailsPath(spotlight.id),
+                              child: TbSectionCard(
+                                title: 'Home dashboard',
+                                trailing: TextButton(
+                                  style: TextButton.styleFrom(
+                                    minimumSize: const Size(
+                                      DesignTokens.minTouchTarget,
+                                      DesignTokens.minTouchTarget,
+                                    ),
+                                  ),
+                                  onPressed: () =>
+                                      context.push(AppRoutes.dashboards),
+                                  child: const Text('See all'),
                                 ),
-                                onToggleStar: () => ref
-                                    .read(dashboardsListProvider(null).notifier)
-                                    .toggleStar(spotlight.id),
+                                child: _HomeSpotlight(
+                                  dashboard: spotlight,
+                                  onOpen: () => context.push(
+                                    AppRoutes.dashboardDetailsPath(
+                                      spotlight.id,
+                                    ),
+                                  ),
+                                  onToggleStar: () => ref
+                                      .read(
+                                        dashboardsListProvider(null).notifier,
+                                      )
+                                      .toggleStar(spotlight.id),
+                                ),
                               ),
                             ),
                             const SizedBox(height: DesignTokens.spacing16),
                           ],
-                          if (otherDashboards.isNotEmpty) ...[
-                            const _SectionHeader(title: 'Starred & recent'),
-                            const SizedBox(height: DesignTokens.spacing8),
-                            _ResponsiveDashboardGrid(
-                              dashboards: otherDashboards,
-                              startIndex: 2,
-                              keyPrefix: 'home',
-                              onOpen: (id) => context.push(
-                                AppRoutes.dashboardDetailsPath(id),
+                          if (otherDashboards.isNotEmpty)
+                            TbSectionCard(
+                              title: 'Starred & recent',
+                              child: Column(
+                                children: [
+                                  for (
+                                    var i = 0;
+                                    i < otherDashboards.length;
+                                    i++
+                                  )
+                                    TbStaggeredEntry(
+                                      index: 2 + i,
+                                      child: _DashboardRow(
+                                        dashboard: otherDashboards[i],
+                                        onOpen: () => context.push(
+                                          AppRoutes.dashboardDetailsPath(
+                                            otherDashboards[i].id,
+                                          ),
+                                        ),
+                                        onToggleStar: () => ref
+                                            .read(
+                                              dashboardsListProvider(
+                                                null,
+                                              ).notifier,
+                                            )
+                                            .toggleStar(otherDashboards[i].id),
+                                      ),
+                                    ),
+                                ],
                               ),
-                              onToggleStar: (id) => ref
-                                  .read(dashboardsListProvider(null).notifier)
-                                  .toggleStar(id),
                             ),
-                          ],
                         ],
                         const SizedBox(height: 84),
                       ]),
@@ -210,51 +238,7 @@ class HomePage extends ConsumerWidget {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({
-    required this.title,
-    this.trailingLabel,
-    this.onTrailingTap,
-  });
-
-  final String title;
-  final String? trailingLabel;
-  final VoidCallback? onTrailingTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: textTheme.titleSmall?.copyWith(
-              color: scheme.onSurface,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        if (trailingLabel != null && onTrailingTap != null)
-          TextButton(
-            style: TextButton.styleFrom(
-              minimumSize: const Size(
-                DesignTokens.minTouchTarget,
-                DesignTokens.minTouchTarget,
-              ),
-            ),
-            onPressed: onTrailingTap,
-            child: Text(trailingLabel!),
-          ),
-      ],
-    );
-  }
-}
-
+/// Overview section: tappable alarm and device summary pills.
 class _HomeKpiStrip extends StatelessWidget {
   const _HomeKpiStrip({
     required this.activeAlarms,
@@ -275,68 +259,53 @@ class _HomeKpiStrip extends StatelessWidget {
     final statusColors = TbStatusColors.of(context);
     final totalDevices = onlineDevices + offlineDevices;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final useSingleColumn = constraints.maxWidth < 280;
-        final alarmsTile = _KpiTile(
-          tileKey: const Key('home-kpi-alarms'),
-          icon: TbIconKind.navAlarms,
-          accentColor: activeAlarms > 0
-              ? statusColors.critical
-              : statusColors.cleared,
-          label: 'Alarms',
-          value: '$activeAlarms',
-          caption: activeAlarms > 0 ? 'Active' : 'Clear',
-          semanticLabel: 'Alarms: $activeAlarms active',
-          isLoading: isLoadingAlarms,
-          onTap: () => context.go(AppRoutes.alarms),
-        );
-        final devicesTile = _KpiTile(
-          tileKey: const Key('home-kpi-devices'),
-          icon: TbIconKind.navDevices,
-          accentColor: onlineDevices > 0
-              ? statusColors.online
-              : statusColors.offline,
-          label: 'Devices',
-          value: '$onlineDevices/$totalDevices',
-          caption: '$offlineDevices offline',
-          semanticLabel:
-              'Devices: $onlineDevices online, $offlineDevices offline',
-          isLoading: isLoadingDevices,
-          onTap: () => context.go(AppRoutes.devices),
-        );
-
-        if (useSingleColumn) {
-          return Column(
-            children: [
-              alarmsTile,
-              const SizedBox(height: DesignTokens.spacing12),
-              devicesTile,
-            ],
-          );
-        }
-
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: alarmsTile),
-            const SizedBox(width: DesignTokens.spacing12),
-            Expanded(child: devicesTile),
-          ],
-        );
-      },
+    return TbSectionCard(
+      title: 'Overview',
+      child: Wrap(
+        spacing: DesignTokens.spacing12,
+        runSpacing: DesignTokens.spacing12,
+        children: [
+          _KpiPill(
+            tileKey: const Key('home-kpi-alarms'),
+            icon: TbIconKind.navAlarms,
+            accentColor: activeAlarms > 0
+                ? statusColors.critical
+                : statusColors.cleared,
+            label: 'Alarms',
+            value: '$activeAlarms',
+            unit: activeAlarms > 0 ? 'active' : 'clear',
+            semanticLabel: 'Alarms: $activeAlarms active',
+            isLoading: isLoadingAlarms,
+            onTap: () => context.go(AppRoutes.alarms),
+          ),
+          _KpiPill(
+            tileKey: const Key('home-kpi-devices'),
+            icon: TbIconKind.navDevices,
+            accentColor: onlineDevices > 0
+                ? statusColors.online
+                : statusColors.offline,
+            label: 'Devices',
+            value: '$onlineDevices/$totalDevices',
+            unit: 'online',
+            semanticLabel:
+                'Devices: $onlineDevices online, $offlineDevices offline',
+            isLoading: isLoadingDevices,
+            onTap: () => context.go(AppRoutes.devices),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _KpiTile extends StatelessWidget {
-  const _KpiTile({
+class _KpiPill extends StatelessWidget {
+  const _KpiPill({
     required this.tileKey,
     required this.icon,
     required this.accentColor,
     required this.label,
     required this.value,
-    required this.caption,
+    required this.unit,
     required this.semanticLabel,
     required this.isLoading,
     required this.onTap,
@@ -347,87 +316,44 @@ class _KpiTile extends StatelessWidget {
   final Color accentColor;
   final String label;
   final String value;
-  final String caption;
+  final String unit;
   final String semanticLabel;
   final bool isLoading;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
     return Semantics(
       button: true,
       label: semanticLabel,
-      child: TbPressScale(
+      excludeSemantics: true,
+      child: InkWell(
+        key: tileKey,
         onTap: onTap,
-        borderRadius: DesignTokens.borderRadiusXl,
-        child: Container(
-          key: tileKey,
+        borderRadius: DesignTokens.borderRadiusLarge,
+        child: ConstrainedBox(
           constraints: const BoxConstraints(
             minHeight: DesignTokens.minTouchTarget,
           ),
-          padding: DesignTokens.cardPadding,
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerLow,
-            borderRadius: DesignTokens.borderRadiusXl,
-            border: Border.all(color: scheme.outlineVariant),
-          ),
           child: isLoading
-              ? const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TbShimmer(width: 64, height: 14),
-                    SizedBox(height: DesignTokens.spacing8),
-                    TbShimmer(width: 48, height: 24),
-                  ],
+              ? const Padding(
+                  padding: DesignTokens.paddingSmall,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TbShimmer(width: 64, height: 14),
+                      SizedBox(height: DesignTokens.spacing8),
+                      TbShimmer(width: 48, height: 24),
+                    ],
+                  ),
                 )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        TbIcon(
-                          icon,
-                          size: DesignTokens.iconSmall,
-                          color: accentColor,
-                          filled: true,
-                        ),
-                        const SizedBox(width: DesignTokens.spacing8),
-                        Expanded(
-                          child: Text(
-                            label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: textTheme.labelMedium?.copyWith(
-                              color: scheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: DesignTokens.spacing8),
-                    Text(
-                      value,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style:
-                          TbTextStyles.tabular(
-                            textTheme.headlineSmall ?? TbTextStyles.titleMedium,
-                          ).copyWith(
-                            color: scheme.onSurface,
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                    const SizedBox(height: DesignTokens.spacing2),
-                    Text(
-                      caption,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: textTheme.labelSmall?.copyWith(color: accentColor),
-                    ),
-                  ],
+              : TbMetricPill(
+                  icon: icon,
+                  label: label,
+                  value: value,
+                  unit: unit,
+                  accentColor: accentColor,
                 ),
         ),
       ),
@@ -435,8 +361,9 @@ class _KpiTile extends StatelessWidget {
   }
 }
 
-class _HomeSpotlightCard extends StatelessWidget {
-  const _HomeSpotlightCard({
+/// Home dashboard summary inside a [TbSectionCard]: title, star and metric pills.
+class _HomeSpotlight extends StatelessWidget {
+  const _HomeSpotlight({
     required this.dashboard,
     required this.onOpen,
     required this.onToggleStar,
@@ -449,7 +376,6 @@ class _HomeSpotlightCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final metrics = dashboard.metrics.entries.take(4).toList(growable: false);
 
     return Semantics(
@@ -457,33 +383,21 @@ class _HomeSpotlightCard extends StatelessWidget {
       label: 'Home dashboard ${dashboard.title}',
       child: TbPressScale(
         onTap: onOpen,
-        borderRadius: DesignTokens.borderRadiusXl,
-        child: Container(
+        borderRadius: DesignTokens.borderRadiusLarge,
+        child: ColoredBox(
           key: Key('home-spotlight-${dashboard.id}'),
-          padding: DesignTokens.cardPadding,
-          decoration: BoxDecoration(
-            color: scheme.primaryContainer.withValues(alpha: 0.35),
-            borderRadius: DesignTokens.borderRadiusXl,
-            border: Border.all(color: scheme.primary.withValues(alpha: 0.25)),
-          ),
+          color: Colors.transparent,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
                 children: [
                   Hero(
                     tag: 'dashboard-${dashboard.id}',
-                    child: Container(
-                      padding: DesignTokens.paddingSmall,
-                      decoration: BoxDecoration(
-                        color: scheme.primaryContainer,
-                        borderRadius: DesignTokens.borderRadiusLarge,
-                      ),
-                      child: TbIcon(
-                        TbIconKind.dashboardTile,
-                        size: DesignTokens.iconMedium,
-                        color: scheme.onPrimaryContainer,
-                      ),
+                    child: TbIcon(
+                      TbIconKind.dashboardTile,
+                      size: DesignTokens.iconMedium,
+                      color: scheme.primary,
                     ),
                   ),
                   const SizedBox(width: DesignTokens.spacing12),
@@ -492,33 +406,21 @@ class _HomeSpotlightCard extends StatelessWidget {
                       dashboard.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: textTheme.titleMedium?.copyWith(
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         color: scheme.onSurface,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
-                  IconButton(
-                    key: Key('home-spotlight-star-${dashboard.id}'),
-                    tooltip: dashboard.isStarred ? 'Unstar' : 'Star',
-                    constraints: const BoxConstraints(
-                      minWidth: DesignTokens.minTouchTarget,
-                      minHeight: DesignTokens.minTouchTarget,
-                    ),
-                    icon: Icon(
-                      dashboard.isStarred
-                          ? Icons.star_rounded
-                          : Icons.star_outline_rounded,
-                      color: dashboard.isStarred
-                          ? scheme.tertiary
-                          : scheme.onSurfaceVariant,
-                    ),
+                  _StarButton(
+                    buttonKey: Key('home-spotlight-star-${dashboard.id}'),
+                    starred: dashboard.isStarred,
                     onPressed: onToggleStar,
                   ),
                 ],
               ),
               if (metrics.isNotEmpty) ...[
-                const SizedBox(height: DesignTokens.spacing12),
+                const SizedBox(height: DesignTokens.spacing8),
                 Wrap(
                   spacing: DesignTokens.spacing8,
                   runSpacing: DesignTokens.spacing8,
@@ -540,141 +442,68 @@ class _HomeSpotlightCard extends StatelessWidget {
   }
 }
 
-class _ResponsiveDashboardGrid extends StatelessWidget {
-  const _ResponsiveDashboardGrid({
-    required this.dashboards,
-    required this.startIndex,
-    required this.keyPrefix,
-    required this.onOpen,
-    required this.onToggleStar,
-  });
-
-  final List<TbDashboardInfo> dashboards;
-  final int startIndex;
-  final String keyPrefix;
-  final ValueChanged<String> onOpen;
-  final ValueChanged<String> onToggleStar;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = constraints.maxWidth >= DesignTokens.mediumMaxWidth
-            ? 3
-            : (constraints.maxWidth >= 320 ? 2 : 1);
-        final spacing = DesignTokens.spacing12;
-        final cardWidth =
-            (constraints.maxWidth - spacing * (columns - 1)) / columns;
-
-        return Wrap(
-          spacing: spacing,
-          runSpacing: spacing,
-          children: [
-            for (var i = 0; i < dashboards.length; i++)
-              SizedBox(
-                width: cardWidth,
-                child: TbStaggeredEntry(
-                  index: startIndex + i,
-                  child: _CompactDashboardCard(
-                    dashboard: dashboards[i],
-                    keyPrefix: keyPrefix,
-                    onOpen: () => onOpen(dashboards[i].id),
-                    onToggleStar: () => onToggleStar(dashboards[i].id),
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _CompactDashboardCard extends StatelessWidget {
-  const _CompactDashboardCard({
+class _DashboardRow extends StatelessWidget {
+  const _DashboardRow({
     required this.dashboard,
-    required this.keyPrefix,
     required this.onOpen,
     required this.onToggleStar,
   });
 
   final TbDashboardInfo dashboard;
-  final String keyPrefix;
   final VoidCallback onOpen;
   final VoidCallback onToggleStar;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final firstMetric = dashboard.metrics.entries.firstOrNull;
 
-    return Semantics(
-      button: true,
-      label: dashboard.title,
-      child: TbPressScale(
-        onTap: onOpen,
-        borderRadius: DesignTokens.borderRadiusLarge,
-        child: Container(
-          key: Key('$keyPrefix-card-${dashboard.id}'),
-          padding: DesignTokens.paddingMedium,
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerLow,
-            borderRadius: DesignTokens.borderRadiusLarge,
-            border: Border.all(color: scheme.outlineVariant),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  TbIcon(
-                    TbIconKind.dashboardTile,
-                    size: DesignTokens.iconSmall,
-                    color: scheme.primary,
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    key: Key('$keyPrefix-star-${dashboard.id}'),
-                    tooltip: dashboard.isStarred ? 'Unstar' : 'Star',
-                    constraints: const BoxConstraints(
-                      minWidth: DesignTokens.minTouchTarget,
-                      minHeight: DesignTokens.minTouchTarget,
-                    ),
-                    padding: DesignTokens.paddingZero,
-                    icon: Icon(
-                      dashboard.isStarred
-                          ? Icons.star_rounded
-                          : Icons.star_outline_rounded,
-                      color: dashboard.isStarred
-                          ? scheme.tertiary
-                          : scheme.onSurfaceVariant,
-                    ),
-                    onPressed: onToggleStar,
-                  ),
-                ],
-              ),
-              const SizedBox(height: DesignTokens.spacing4),
-              Text(
-                dashboard.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: textTheme.titleSmall?.copyWith(
-                  color: scheme.onSurface,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              if (firstMetric != null) ...[
-                const SizedBox(height: DesignTokens.spacing8),
-                TbMetricPill(
-                  icon: TbIcons.kindForTelemetryKey(firstMetric.key),
-                  value: firstMetric.value,
-                ),
-              ],
-            ],
-          ),
-        ),
+    return TbListRow(
+      key: Key('home-card-${dashboard.id}'),
+      leading: TbIcon(
+        TbIconKind.dashboardTile,
+        size: DesignTokens.iconSmall,
+        color: Theme.of(context).colorScheme.primary,
       ),
+      title: dashboard.title,
+      meta: firstMetric == null
+          ? null
+          : '${firstMetric.key} ${firstMetric.value}',
+      trailing: _StarButton(
+        buttonKey: Key('home-star-${dashboard.id}'),
+        starred: dashboard.isStarred,
+        onPressed: onToggleStar,
+      ),
+      onTap: onOpen,
+    );
+  }
+}
+
+class _StarButton extends StatelessWidget {
+  const _StarButton({
+    required this.buttonKey,
+    required this.starred,
+    required this.onPressed,
+  });
+
+  final Key buttonKey;
+  final bool starred;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return IconButton(
+      key: buttonKey,
+      tooltip: starred ? 'Unstar' : 'Star',
+      constraints: const BoxConstraints(
+        minWidth: DesignTokens.minTouchTarget,
+        minHeight: DesignTokens.minTouchTarget,
+      ),
+      icon: Icon(
+        starred ? Icons.star_rounded : Icons.star_outline_rounded,
+        color: starred ? scheme.tertiary : scheme.onSurfaceVariant,
+      ),
+      onPressed: onPressed,
     );
   }
 }

@@ -11,7 +11,9 @@ import 'package:thingsboard_democloud_app/core/models/auth_models.dart';
 import 'package:thingsboard_democloud_app/core/models/entity_id.dart';
 import 'package:thingsboard_democloud_app/core/models/user_models.dart';
 import 'package:thingsboard_democloud_app/modules/tenant/tenant_page.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_list_row.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_metric_pill.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_section_card.dart';
 
 import '../../helpers/fake_app_preferences.dart';
 import '../../helpers/fake_secure_storage.dart';
@@ -171,6 +173,61 @@ void main() {
         expect(find.text('Enterprise IoT'), findsOneWidget);
       },
     );
+
+    testWidgets('TENANT_ADMIN overview, views and edges use section cards', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildApp(authority: Authority.tenantAdmin));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Organization'), findsOneWidget);
+      expect(find.byType(TbSectionCard), findsWidgets);
+      expect(find.byType(TbListRow), findsWidgets);
+
+      await tester.tap(find.text('Views'));
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byType(TbSectionCard),
+          matching: find.text('Views'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byType(TbListRow), findsWidgets);
+
+      await tester.tap(find.text('Edges').first);
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byType(TbSectionCard),
+          matching: find.text('Edges'),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('SYS_ADMIN tenant row opens editor with Details and Contact', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildApp(authority: Authority.sysAdmin));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TbListRow), findsWidgets);
+      final row = find.ancestor(
+        of: find.text('Regional Water Authority'),
+        matching: find.byType(TbListRow),
+      );
+      final size = tester.getSize(row);
+      expect(size.height, greaterThanOrEqualTo(DesignTokens.minTouchTarget));
+
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Edit Tenant'), findsOneWidget);
+      expect(find.text('Details'), findsOneWidget);
+      expect(find.text('Contact'), findsOneWidget);
+      expect(find.byKey(const Key('tenant_title_field')), findsOneWidget);
+    });
 
     testWidgets(
       'CUSTOMER_USER sees Access Restricted state and Dark 2.0x text scale renders cleanly',

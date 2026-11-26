@@ -13,6 +13,7 @@ class TbNetworkInspectorDialog extends ConsumerStatefulWidget {
   static Future<void> show(BuildContext context) {
     return showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => const TbNetworkInspectorDialog(),

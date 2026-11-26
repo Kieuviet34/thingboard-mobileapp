@@ -19,6 +19,7 @@ import 'package:thingsboard_democloud_app/core/models/telemetry_models.dart';
 import 'package:thingsboard_democloud_app/modules/asset/asset_details_page.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_motion.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_section_card.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_status_badge.dart';
 
 import '../../helpers/fake_app_preferences.dart';
@@ -241,6 +242,32 @@ void main() {
   }
 
   group('AssetDetailsPage', () {
+    testWidgets('uses TbSectionCard sections with TbKvRow details', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(TbSectionCard, 'Details'), findsOneWidget);
+      expect(find.widgetWithText(TbKvRow, 'Type'), findsOneWidget);
+      expect(find.widgetWithText(TbKvRow, 'Owner'), findsOneWidget);
+      expect(find.text('Latest'), findsOneWidget);
+      expect(find.text('History (24 Hours)'), findsOneWidget);
+
+      await tester.tap(find.text('Attributes'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(TbSectionCard, 'Attributes'), findsOneWidget);
+      expect(find.widgetWithText(TbKvRow, 'activeAlerts'), findsOneWidget);
+
+      await tester.tap(find.text('Alarms'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(TbSectionCard, 'Alarms'), findsOneWidget);
+
+      await tester.tap(find.text('Relations'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(TbSectionCard, 'Relations'), findsOneWidget);
+    });
+
     testWidgets(
       'renders header and switches between Telemetry, Attributes, Alarms, and Relations tabs',
       (tester) async {

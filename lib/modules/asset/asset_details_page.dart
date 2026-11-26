@@ -14,8 +14,10 @@ import 'package:thingsboard_democloud_app/core/models/telemetry_models.dart';
 import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_list_row.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_metric_pill.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_motion.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_section_card.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_shimmer.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_status_badge.dart';
 
@@ -110,19 +112,14 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
                   DesignTokens.spacing16,
                   DesignTokens.spacing8,
                 ),
-                child: Material(
-                  color: scheme.surfaceContainerLow,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: DesignTokens.borderRadiusLarge,
-                    side: BorderSide(color: scheme.outlineVariant),
-                  ),
-                  child: Padding(
-                    padding: DesignTokens.cardPadding,
-                    child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
                       children: [
                         Container(
-                          width: 52,
-                          height: 52,
+                          width: 48,
+                          height: 48,
                           decoration: BoxDecoration(
                             color: scheme.primaryContainer,
                             borderRadius: DesignTokens.borderRadiusMedium,
@@ -130,67 +127,38 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
                           child: Center(
                             child: TbIcon(
                               TbIconKind.assetBuilding,
-                              size: DesignTokens.iconLarge,
+                              size: DesignTokens.iconMedium,
                               color: scheme.onPrimaryContainer,
                             ),
                           ),
                         ),
-                        const SizedBox(width: DesignTokens.spacing16),
+                        const SizedBox(width: DesignTokens.spacing12),
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                asset.name,
-                                style: textTheme.titleMedium?.copyWith(
-                                  color: scheme.onSurface,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: DesignTokens.spacing4),
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: DesignTokens.spacing8,
-                                      vertical: DesignTokens.spacing2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: scheme.surfaceContainerHigh,
-                                      borderRadius:
-                                          DesignTokens.borderRadiusRound,
-                                    ),
-                                    child: Text(
-                                      asset.type,
-                                      style: textTheme.labelSmall?.copyWith(
-                                        color: scheme.onSurfaceVariant,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                  if (asset.ownerName.isNotEmpty) ...[
-                                    const SizedBox(
-                                      width: DesignTokens.spacing8,
-                                    ),
-                                    Expanded(
-                                      child: Text(
-                                        asset.ownerName,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: textTheme.bodySmall?.copyWith(
-                                          color: scheme.onSurfaceVariant,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ],
+                          child: Text(
+                            asset.name,
+                            style: textTheme.titleMedium?.copyWith(
+                              color: scheme.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
+                    const SizedBox(height: DesignTokens.spacing12),
+                    TbSectionCard(
+                      title: 'Details',
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TbKvRow(label: 'Type', value: asset.type),
+                          if (asset.label.isNotEmpty)
+                            TbKvRow(label: 'Label', value: asset.label),
+                          if (asset.ownerName.isNotEmpty)
+                            TbKvRow(label: 'Owner', value: asset.ownerName),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -227,6 +195,17 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
     );
   }
 
+  Widget _errorState(String title, VoidCallback onRetry) => TbEmptyState(
+    icon: TbIconKind.assetBuilding,
+    title: title,
+    actionLabel: 'Retry',
+    onAction: onRetry,
+    isError: true,
+  );
+
+  Widget _tabList(List<Widget> children) =>
+      ListView(padding: DesignTokens.paddingMedium, children: children);
+
   Widget _buildTelemetryTab() {
     final telemetryAsync = ref.watch(entityLatestTelemetryProvider(_entityId));
     final historyAsync = ref.watch(entityTelemetryHistoryProvider(_entityId));
@@ -238,24 +217,25 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
         ref.invalidate(entityLatestTelemetryProvider(_entityId));
         ref.invalidate(entityTelemetryHistoryProvider(_entityId));
       },
-      child: SingleChildScrollView(
+      child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: DesignTokens.paddingMedium,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            telemetryAsync.when(
-              error: (e, _) => Text(
+        children: [
+          TbSectionCard(
+            title: 'Latest',
+            child: telemetryAsync.when(
+              error: (e, _) => _errorState(
                 'Failed to load telemetry',
-                style: textTheme.bodyMedium?.copyWith(color: scheme.error),
+                () => ref.invalidate(entityLatestTelemetryProvider(_entityId)),
               ),
               loading: () => const TbShimmerList(itemCount: 2),
               data: (latest) {
                 if (latest.isEmpty) {
-                  return const TbEmptyState(
-                    icon: TbIconKind.sensorNode,
-                    title: 'No telemetry values',
-                    subtitle: 'Latest metric readings will appear here.',
+                  return Text(
+                    'No telemetry values',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
                   );
                 }
                 return Wrap(
@@ -272,78 +252,63 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
                 );
               },
             ),
-            const SizedBox(height: DesignTokens.spacing24),
-            Text(
-              'History (24 Hours)',
-              style: textTheme.labelLarge?.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: DesignTokens.spacing8),
-            historyAsync.when(
-              error: (e, _) => Text(
-                'Failed to load chart history',
-                style: textTheme.bodyMedium?.copyWith(color: scheme.error),
+          ),
+          const SizedBox(height: DesignTokens.spacing12),
+          TbSectionCard(
+            title: 'History (24 Hours)',
+            child: historyAsync.when(
+              error: (e, _) => _errorState(
+                'Failed to load history',
+                () => ref.invalidate(entityTelemetryHistoryProvider(_entityId)),
               ),
               loading: () => const TbShimmer(height: 96),
               data: (history) {
                 if (history.isEmpty) {
-                  return const Text('No history points recorded.');
+                  return Text(
+                    'No history points',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  );
                 }
                 return Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     for (final entry in history.entries) ...[
-                      Material(
-                        color: scheme.surfaceContainerLow,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: DesignTokens.borderRadiusLarge,
-                          side: BorderSide(color: scheme.outlineVariant),
-                        ),
-                        child: Padding(
-                          padding: DesignTokens.cardPadding,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                entry.key,
-                                style: textTheme.titleSmall?.copyWith(
-                                  color: scheme.onSurface,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: DesignTokens.spacing12),
-                              TbSparklineChart(
-                                values: [
-                                  for (final pt in entry.value)
-                                    pt.numericValue ?? 0.0,
-                                ],
-                                height: 64,
-                                color: scheme.primary,
-                                semanticLabel: '${entry.key} sparkline chart',
-                              ),
-                            ],
-                          ),
+                      Text(
+                        entry.key,
+                        style: textTheme.labelLarge?.copyWith(
+                          color: scheme.onSurfaceVariant,
                         ),
                       ),
                       const SizedBox(height: DesignTokens.spacing8),
+                      TbSparklineChart(
+                        values: [
+                          for (final pt in entry.value) pt.numericValue ?? 0.0,
+                        ],
+                        height: 64,
+                        color: scheme.primary,
+                        semanticLabel: '${entry.key} sparkline chart',
+                      ),
+                      const SizedBox(height: DesignTokens.spacing12),
                     ],
                   ],
                 );
               },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildAttributesTab() {
-    final attributesAsync = ref.watch(
-      entityAttributesProvider((id: _entityId, scope: _attributeScope)),
-    );
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+    final provider = entityAttributesProvider((
+      id: _entityId,
+      scope: _attributeScope,
+    ));
+    final attributesAsync = ref.watch(provider);
 
     return Column(
       children: [
@@ -370,11 +335,9 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
         ),
         Expanded(
           child: attributesAsync.when(
-            error: (e, _) => Center(
-              child: Text(
-                'Failed to load attributes',
-                style: textTheme.bodyMedium?.copyWith(color: scheme.error),
-              ),
+            error: (e, _) => _errorState(
+              'Failed to load attributes',
+              () => ref.invalidate(provider),
             ),
             loading: () => const SingleChildScrollView(
               padding: DesignTokens.paddingMedium,
@@ -388,51 +351,18 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
                   subtitle: 'Select another attribute scope above.',
                 );
               }
-              return ListView.separated(
-                padding: DesignTokens.paddingMedium,
-                itemCount: attributes.length,
-                separatorBuilder: (_, _) =>
-                    const SizedBox(height: DesignTokens.spacing8),
-                itemBuilder: (context, index) {
-                  final attr = attributes[index];
-                  return Material(
-                    color: scheme.surfaceContainerLow,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: DesignTokens.borderRadiusLarge,
-                      side: BorderSide(color: scheme.outlineVariant),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: DesignTokens.spacing16,
-                        vertical: DesignTokens.spacing12,
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              attr.key,
-                              style: textTheme.bodyMedium?.copyWith(
-                                color: scheme.onSurface,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: DesignTokens.spacing12),
-                          Flexible(
-                            child: Text(
-                              attr.displayValue,
-                              textAlign: TextAlign.end,
-                              style: textTheme.bodyMedium?.copyWith(
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              );
+              return _tabList([
+                TbSectionCard(
+                  title: 'Attributes',
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final attr in attributes)
+                        TbKvRow(label: attr.key, value: attr.displayValue),
+                    ],
+                  ),
+                ),
+              ]);
             },
           ),
         ),
@@ -442,15 +372,11 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
 
   Widget _buildAlarmsTab() {
     final alarmsAsync = ref.watch(alarmsListProvider(_entityId));
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
 
     return alarmsAsync.when(
-      error: (e, _) => Center(
-        child: Text(
-          'Failed to load alarms',
-          style: textTheme.bodyMedium?.copyWith(color: scheme.error),
-        ),
+      error: (e, _) => _errorState(
+        'Failed to load alarms',
+        () => ref.invalidate(alarmsListProvider(_entityId)),
       ),
       loading: () => const SingleChildScrollView(
         padding: DesignTokens.paddingMedium,
@@ -464,101 +390,83 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
             subtitle: 'This asset has no triggered alarms.',
           );
         }
-        return ListView.separated(
-          padding: DesignTokens.paddingMedium,
-          itemCount: pagedAlarms.items.length,
-          separatorBuilder: (_, _) =>
-              const SizedBox(height: DesignTokens.spacing8),
-          itemBuilder: (context, index) {
-            final alarm = pagedAlarms.items[index];
-            final dateStr = alarm.createdTime > 0
-                ? DateFormat.yMMMd().add_jm().format(
-                    DateTime.fromMillisecondsSinceEpoch(alarm.createdTime),
-                  )
-                : '';
-
-            return Material(
-              color: scheme.surfaceContainerLow,
-              shape: RoundedRectangleBorder(
-                borderRadius: DesignTokens.borderRadiusLarge,
-                side: BorderSide(color: scheme.outlineVariant),
-              ),
-              child: Padding(
-                padding: DesignTokens.cardPadding,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        TbStatusBadge.severity(alarm.severity, compact: true),
-                        const SizedBox(width: DesignTokens.spacing8),
-                        Expanded(
-                          child: Text(
-                            alarm.type,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: textTheme.titleSmall?.copyWith(
-                              color: scheme.onSurface,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (dateStr.isNotEmpty) ...[
-                      const SizedBox(height: DesignTokens.spacing4),
-                      Text(
-                        dateStr,
-                        style: textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
+        return _tabList([
+          TbSectionCard(
+            title: 'Alarms',
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final alarm in pagedAlarms.items)
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TbListRow(
+                        title: alarm.type,
+                        meta: alarm.createdTime > 0
+                            ? DateFormat.yMMMd().add_jm().format(
+                                DateTime.fromMillisecondsSinceEpoch(
+                                  alarm.createdTime,
+                                ),
+                              )
+                            : null,
+                        leading: TbStatusBadge.severity(
+                          alarm.severity,
+                          compact: true,
                         ),
                       ),
+                      if (!alarm.acknowledged || !alarm.cleared)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: DesignTokens.spacing16,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              if (!alarm.acknowledged)
+                                TextButton(
+                                  onPressed: () => ref
+                                      .read(
+                                        alarmsListProvider(_entityId).notifier,
+                                      )
+                                      .acknowledge(alarm.id),
+                                  child: const Text('Acknowledge'),
+                                ),
+                              if (!alarm.cleared) ...[
+                                const SizedBox(width: DesignTokens.spacing8),
+                                FilledButton.tonal(
+                                  onPressed: () => ref
+                                      .read(
+                                        alarmsListProvider(_entityId).notifier,
+                                      )
+                                      .clear(alarm.id),
+                                  child: const Text('Clear'),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
                     ],
-                    const SizedBox(height: DesignTokens.spacing8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        if (!alarm.acknowledged)
-                          TextButton(
-                            onPressed: () => ref
-                                .read(alarmsListProvider(_entityId).notifier)
-                                .acknowledge(alarm.id),
-                            child: const Text('Acknowledge'),
-                          ),
-                        if (!alarm.cleared) ...[
-                          const SizedBox(width: DesignTokens.spacing8),
-                          FilledButton.tonal(
-                            onPressed: () => ref
-                                .read(alarmsListProvider(_entityId).notifier)
-                                .clear(alarm.id),
-                            child: const Text('Clear'),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
+                  ),
+              ],
+            ),
+          ),
+        ]);
       },
     );
   }
 
   Widget _buildRelationsTab() {
-    final relationsAsync = ref.watch(
-      entityRelationsProvider((entity: _entityId, outgoing: true)),
-    );
+    final provider = entityRelationsProvider((
+      entity: _entityId,
+      outgoing: true,
+    ));
+    final relationsAsync = ref.watch(provider);
     final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
 
     return relationsAsync.when(
-      error: (e, _) => Center(
-        child: Text(
-          'Failed to load relations',
-          style: textTheme.bodyMedium?.copyWith(color: scheme.error),
-        ),
+      error: (e, _) => _errorState(
+        'Failed to load relations',
+        () => ref.invalidate(provider),
       ),
       loading: () => const SingleChildScrollView(
         padding: DesignTokens.paddingMedium,
@@ -572,86 +480,46 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
             subtitle: 'Contained devices and assets will appear here.',
           );
         }
-        return ListView.separated(
-          padding: DesignTokens.paddingMedium,
-          itemCount: relations.length,
-          separatorBuilder: (_, _) =>
-              const SizedBox(height: DesignTokens.spacing8),
-          itemBuilder: (context, index) {
-            final rel = relations[index];
-            final isDevice = rel.to.entityType == EntityType.device;
-            final isAsset = rel.to.entityType == EntityType.asset;
-
-            return Material(
-              color: scheme.surfaceContainerLow,
-              shape: RoundedRectangleBorder(
-                borderRadius: DesignTokens.borderRadiusLarge,
-                side: BorderSide(color: scheme.outlineVariant),
-              ),
-              child: InkWell(
-                borderRadius: DesignTokens.borderRadiusLarge,
-                onTap: isDevice
-                    ? () {
-                        final router = GoRouter.maybeOf(context);
-                        if (router != null) {
-                          context.push(AppRoutes.deviceDetailsPath(rel.to.id));
-                        }
-                      }
-                    : isAsset
-                    ? () {
-                        final router = GoRouter.maybeOf(context);
-                        if (router != null) {
-                          context.push(AppRoutes.assetDetailsPath(rel.to.id));
-                        }
-                      }
-                    : null,
-                child: Padding(
-                  padding: DesignTokens.cardPadding,
-                  child: Row(
-                    children: [
-                      TbIcon(
-                        isDevice
-                            ? TbIconKind.sensorNode
-                            : TbIconKind.assetBuilding,
-                        color: scheme.primary,
-                        size: DesignTokens.iconMedium,
-                      ),
-                      const SizedBox(width: DesignTokens.spacing12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              rel.toName.isNotEmpty ? rel.toName : rel.to.id,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: textTheme.bodyLarge?.copyWith(
-                                color: scheme.onSurface,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            Text(
-                              '${rel.type} · ${rel.to.entityType.wireValue}',
-                              style: textTheme.bodySmall?.copyWith(
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (isDevice || isAsset)
-                        Icon(
-                          Icons.chevron_right,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
+        return _tabList([
+          TbSectionCard(
+            title: 'Relations',
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final rel in relations) _relationRow(rel, scheme),
+              ],
+            ),
+          ),
+        ]);
       },
+    );
+  }
+
+  Widget _relationRow(TbEntityRelationInfo rel, ColorScheme scheme) {
+    final isDevice = rel.to.entityType == EntityType.device;
+    final isAsset = rel.to.entityType == EntityType.asset;
+    final route = isDevice
+        ? AppRoutes.deviceDetailsPath(rel.to.id)
+        : isAsset
+        ? AppRoutes.assetDetailsPath(rel.to.id)
+        : null;
+
+    return TbListRow(
+      title: rel.toName.isNotEmpty ? rel.toName : rel.to.id,
+      meta: '${rel.type} · ${rel.to.entityType.wireValue}',
+      leading: TbIcon(
+        isDevice ? TbIconKind.sensorNode : TbIconKind.assetBuilding,
+        color: scheme.primary,
+        size: DesignTokens.iconMedium,
+      ),
+      trailing: route == null
+          ? null
+          : Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
+      onTap: route == null
+          ? null
+          : () {
+              if (GoRouter.maybeOf(context) != null) context.push(route);
+            },
     );
   }
 }

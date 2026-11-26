@@ -13,6 +13,7 @@ import 'package:thingsboard_democloud_app/modules/customer/customer_details_page
 import 'package:thingsboard_democloud_app/modules/customer/customers_page.dart';
 import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_list_row.dart';
 
 import '../../helpers/fake_app_preferences.dart';
 import '../../helpers/fake_secure_storage.dart';
@@ -109,6 +110,37 @@ void main() {
   }
 
   group('CustomersPage', () {
+    testWidgets('rows use TbListRow with location meta', (tester) async {
+      final repo = _FakeCustomerRepo(customers: _sampleCustomers);
+      await tester.pumpWidget(buildApp(repo: repo));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TbListRow), findsNWidgets(2));
+      expect(
+        find.descendant(
+          of: find.byType(TbListRow).last,
+          matching: find.text('Rotterdam, Netherlands'),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('row meta falls back to email then phone without location', (
+      tester,
+    ) async {
+      final repo = _FakeCustomerRepo(
+        customers: const [
+          TbCustomerInfo(id: 'c-3', title: 'No Place', email: 'a@b.io'),
+          TbCustomerInfo(id: 'c-4', title: 'Phone Only', phone: '+1 555'),
+        ],
+      );
+      await tester.pumpWidget(buildApp(repo: repo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('a@b.io'), findsOneWidget);
+      expect(find.text('+1 555'), findsOneWidget);
+    });
+
     testWidgets('renders list of customers with TbIcon and location', (
       tester,
     ) async {

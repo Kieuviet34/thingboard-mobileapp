@@ -11,8 +11,10 @@ import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_search_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_list_row.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_metric_pill.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_motion.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_section_card.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_shimmer.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_status_badge.dart';
 
@@ -77,6 +79,7 @@ class _TenantPageState extends ConsumerState<TenantPage> {
 
     final submitted = await showModalBottomSheet<TbTenantInfo>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (sheetCtx) {
@@ -99,50 +102,68 @@ class _TenantPageState extends ConsumerState<TenantPage> {
                   ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: DesignTokens.spacing16),
-                TextField(
-                  key: const Key('tenant_title_field'),
-                  controller: titleCtrl,
-                  decoration: const InputDecoration(labelText: 'Title'),
-                ),
-                const SizedBox(height: DesignTokens.spacing12),
-                TextField(
-                  key: const Key('tenant_region_field'),
-                  controller: regionCtrl,
-                  decoration: const InputDecoration(labelText: 'Region'),
-                ),
-                const SizedBox(height: DesignTokens.spacing12),
-                TextField(
-                  key: const Key('tenant_email_field'),
-                  controller: emailCtrl,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(labelText: 'Email'),
-                ),
-                const SizedBox(height: DesignTokens.spacing12),
-                TextField(
-                  key: const Key('tenant_phone_field'),
-                  controller: phoneCtrl,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(labelText: 'Phone'),
-                ),
-                const SizedBox(height: DesignTokens.spacing12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        key: const Key('tenant_city_field'),
-                        controller: cityCtrl,
-                        decoration: const InputDecoration(labelText: 'City'),
+                TbSectionCard(
+                  title: 'Details',
+                  child: Column(
+                    children: [
+                      TextField(
+                        key: const Key('tenant_title_field'),
+                        controller: titleCtrl,
+                        decoration: const InputDecoration(labelText: 'Title'),
                       ),
-                    ),
-                    const SizedBox(width: DesignTokens.spacing12),
-                    Expanded(
-                      child: TextField(
-                        key: const Key('tenant_country_field'),
-                        controller: countryCtrl,
-                        decoration: const InputDecoration(labelText: 'Country'),
+                      const SizedBox(height: DesignTokens.spacing12),
+                      TextField(
+                        key: const Key('tenant_region_field'),
+                        controller: regionCtrl,
+                        decoration: const InputDecoration(labelText: 'Region'),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: DesignTokens.spacing12),
+                TbSectionCard(
+                  title: 'Contact',
+                  child: Column(
+                    children: [
+                      TextField(
+                        key: const Key('tenant_email_field'),
+                        controller: emailCtrl,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(labelText: 'Email'),
+                      ),
+                      const SizedBox(height: DesignTokens.spacing12),
+                      TextField(
+                        key: const Key('tenant_phone_field'),
+                        controller: phoneCtrl,
+                        keyboardType: TextInputType.phone,
+                        decoration: const InputDecoration(labelText: 'Phone'),
+                      ),
+                      const SizedBox(height: DesignTokens.spacing12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              key: const Key('tenant_city_field'),
+                              controller: cityCtrl,
+                              decoration: const InputDecoration(
+                                labelText: 'City',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: DesignTokens.spacing12),
+                          Expanded(
+                            child: TextField(
+                              key: const Key('tenant_country_field'),
+                              controller: countryCtrl,
+                              decoration: const InputDecoration(
+                                labelText: 'Country',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: DesignTokens.spacing20),
                 Row(
@@ -373,7 +394,6 @@ class _TenantOverviewSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final tenantAsync = ref.watch(currentTenantInfoProvider);
     final subAsync = ref.watch(tenantSubscriptionSummaryProvider);
     final homeDashAsync = ref.watch(tenantHomeDashboardProvider);
@@ -417,113 +437,45 @@ class _TenantOverviewSection extends ConsumerWidget {
           },
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(
-              DesignTokens.spacing16,
-              DesignTokens.spacing8,
-              DesignTokens.spacing16,
-              84,
-            ),
+            padding: _listPadding,
             children: [
               TbStaggeredEntry(
                 index: 0,
-                child: Container(
-                  padding: DesignTokens.cardPadding,
-                  decoration: BoxDecoration(
-                    color: scheme.surfaceContainerLow,
-                    borderRadius: DesignTokens.borderRadiusXl,
-                    border: Border.all(color: scheme.outlineVariant),
+                child: TbSectionCard(
+                  title: 'Organization',
+                  trailing: IconButton(
+                    key: const Key('edit_tenant_button'),
+                    tooltip: 'Edit tenant',
+                    constraints: const BoxConstraints(
+                      minWidth: DesignTokens.minTouchTarget,
+                      minHeight: DesignTokens.minTouchTarget,
+                    ),
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: () => onEdit(tenant),
                   ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: scheme.primaryContainer,
-                              borderRadius: DesignTokens.borderRadiusMedium,
-                            ),
-                            child: Center(
-                              child: TbIcon(
-                                TbIconKind.customerOrg,
-                                color: scheme.onPrimaryContainer,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: DesignTokens.spacing12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  tenant.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: DesignTokens.spacing4),
-                                Wrap(
-                                  spacing: DesignTokens.spacing8,
-                                  runSpacing: DesignTokens.spacing4,
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  children: [
-                                    TbStatusBadge.online(
-                                      tenant.active,
-                                      compact: true,
-                                    ),
-                                    if (tenant.tenantProfileName.isNotEmpty)
-                                      _MetaChip(
-                                        label: tenant.tenantProfileName,
-                                      ),
-                                    if (tenant.region.isNotEmpty)
-                                      _MetaChip(label: tenant.region),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            key: const Key('edit_tenant_button'),
-                            tooltip: 'Edit tenant',
-                            constraints: const BoxConstraints(
-                              minWidth: DesignTokens.minTouchTarget,
-                              minHeight: DesignTokens.minTouchTarget,
-                            ),
-                            icon: const Icon(Icons.edit_outlined),
-                            onPressed: () => onEdit(tenant),
-                          ),
-                        ],
-                      ),
-                      if (location.isNotEmpty ||
-                          tenant.email.isNotEmpty ||
-                          tenant.phone.isNotEmpty) ...[
-                        const SizedBox(height: DesignTokens.spacing16),
-                        Wrap(
-                          spacing: DesignTokens.spacing12,
-                          runSpacing: DesignTokens.spacing8,
-                          children: [
-                            if (location.isNotEmpty)
-                              _IconValuePair(
-                                icon: Icons.place_outlined,
-                                value: location,
-                              ),
-                            if (tenant.email.isNotEmpty)
-                              _IconValuePair(
-                                icon: Icons.alternate_email_rounded,
-                                value: tenant.email,
-                              ),
-                            if (tenant.phone.isNotEmpty)
-                              _IconValuePair(
-                                icon: Icons.phone_outlined,
-                                value: tenant.phone,
-                              ),
-                          ],
+                      TbListRow(
+                        leading: TbIcon(
+                          TbIconKind.customerOrg,
+                          color: scheme.primary,
                         ),
-                      ],
+                        title: tenant.title,
+                        meta: _joinMeta([
+                          tenant.tenantProfileName,
+                          tenant.region,
+                        ]),
+                        trailing: TbStatusBadge.online(
+                          tenant.active,
+                          compact: true,
+                        ),
+                      ),
+                      if (location.isNotEmpty)
+                        TbKvRow(label: 'Location', value: location),
+                      if (tenant.email.isNotEmpty)
+                        TbKvRow(label: 'Email', value: tenant.email),
+                      if (tenant.phone.isNotEmpty)
+                        TbKvRow(label: 'Phone', value: tenant.phone),
                     ],
                   ),
                 ),
@@ -532,33 +484,15 @@ class _TenantOverviewSection extends ConsumerWidget {
                 const SizedBox(height: DesignTokens.spacing12),
                 TbStaggeredEntry(
                   index: 1,
-                  child: Container(
-                    padding: DesignTokens.cardPadding,
-                    decoration: BoxDecoration(
-                      color: scheme.surfaceContainerLow,
-                      borderRadius: DesignTokens.borderRadiusXl,
-                      border: Border.all(color: scheme.outlineVariant),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              sub.planName ?? 'Subscription',
-                              style: textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            if (sub.state != null && sub.state!.isNotEmpty)
-                              _MetaChip(label: sub.state!),
-                          ],
-                        ),
-                        if (sub.usage.isNotEmpty) ...[
-                          const SizedBox(height: DesignTokens.spacing12),
-                          Wrap(
-                            spacing: DesignTokens.spacing16,
+                  child: TbSectionCard(
+                    title: sub.planName ?? 'Subscription',
+                    trailing: (sub.state != null && sub.state!.isNotEmpty)
+                        ? _MetaChip(label: sub.state!)
+                        : null,
+                    child: sub.usage.isEmpty
+                        ? const SizedBox.shrink()
+                        : Wrap(
+                            spacing: DesignTokens.spacing12,
                             runSpacing: DesignTokens.spacing12,
                             children: [
                               if (sub.usage['devices'] != null)
@@ -579,9 +513,6 @@ class _TenantOverviewSection extends ConsumerWidget {
                                 ),
                             ],
                           ),
-                        ],
-                      ],
-                    ),
                   ),
                 ),
               ],
@@ -589,33 +520,15 @@ class _TenantOverviewSection extends ConsumerWidget {
                 const SizedBox(height: DesignTokens.spacing12),
                 TbStaggeredEntry(
                   index: 2,
-                  child: Container(
-                    padding: DesignTokens.cardPadding,
-                    decoration: BoxDecoration(
-                      color: scheme.surfaceContainerLow,
-                      borderRadius: DesignTokens.borderRadiusLarge,
-                      border: Border.all(color: scheme.outlineVariant),
-                    ),
-                    child: Row(
-                      children: [
-                        TbIcon(TbIconKind.dashboardTile, color: scheme.primary),
-                        const SizedBox(width: DesignTokens.spacing12),
-                        Expanded(
-                          child: Text(
-                            'Home: ${homeDash!.dashboardId}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        _MetaChip(
-                          label: homeDash.hideDashboardToolbar
-                              ? 'Clean'
-                              : 'Toolbar',
-                        ),
-                      ],
+                  child: TbSectionCard(
+                    title: 'Home dashboard',
+                    child: TbListRow(
+                      leading: TbIcon(
+                        TbIconKind.dashboardTile,
+                        color: scheme.primary,
+                      ),
+                      title: 'Home: ${homeDash!.dashboardId}',
+                      meta: homeDash.hideDashboardToolbar ? 'Clean' : 'Toolbar',
                     ),
                   ),
                 ),
@@ -628,6 +541,51 @@ class _TenantOverviewSection extends ConsumerWidget {
   }
 }
 
+const _listPadding = EdgeInsets.fromLTRB(
+  DesignTokens.spacing16,
+  DesignTokens.spacing8,
+  DesignTokens.spacing16,
+  84,
+);
+
+String _joinMeta(List<String> parts) =>
+    parts.where((p) => p.isNotEmpty).join(' · ');
+
+/// Refreshable list page: one [TbSectionCard] holding [TbListRow] items.
+class _SectionList extends StatelessWidget {
+  const _SectionList({
+    required this.title,
+    required this.onRefresh,
+    required this.children,
+  });
+
+  final String title;
+  final Future<void> Function() onRefresh;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: _listPadding,
+        children: [
+          TbSectionCard(
+            title: title,
+            child: Column(
+              children: [
+                for (var i = 0; i < children.length; i++)
+                  TbStaggeredEntry(index: i, child: children[i]),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _TenantEntityViewsList extends ConsumerWidget {
   const _TenantEntityViewsList({required this.searchQuery});
 
@@ -636,7 +594,6 @@ class _TenantEntityViewsList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final viewsAsync = ref.watch(tenantEntityViewsProvider(searchQuery));
 
     return viewsAsync.when(
@@ -660,72 +617,22 @@ class _TenantEntityViewsList extends ConsumerWidget {
             title: 'No entity views',
           );
         }
-        return RefreshIndicator(
+        return _SectionList(
+          title: 'Views',
           onRefresh: () => ref
               .read(tenantEntityViewsProvider(searchQuery).notifier)
               .refresh(),
-          child: ListView.separated(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(
-              DesignTokens.spacing16,
-              DesignTokens.spacing8,
-              DesignTokens.spacing16,
-              84,
-            ),
-            itemCount: paged.items.length,
-            separatorBuilder: (_, _) =>
-                const SizedBox(height: DesignTokens.spacing8),
-            itemBuilder: (context, index) {
-              final view = paged.items[index];
-              return TbStaggeredEntry(
-                index: index,
-                child: Container(
-                  padding: DesignTokens.cardPadding,
-                  decoration: BoxDecoration(
-                    color: scheme.surfaceContainerLow,
-                    borderRadius: DesignTokens.borderRadiusLarge,
-                    border: Border.all(color: scheme.outlineVariant),
-                  ),
-                  child: Row(
-                    children: [
-                      TbIcon(TbIconKind.relationsGraph, color: scheme.primary),
-                      const SizedBox(width: DesignTokens.spacing12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              view.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: DesignTokens.spacing4),
-                            Wrap(
-                              spacing: DesignTokens.spacing8,
-                              children: [
-                                if (view.type.isNotEmpty)
-                                  _MetaChip(label: view.type),
-                                if (view.ownerName.isNotEmpty)
-                                  Text(
-                                    view.ownerName,
-                                    style: textTheme.bodySmall?.copyWith(
-                                      color: scheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+          children: [
+            for (final view in paged.items)
+              TbListRow(
+                leading: TbIcon(
+                  TbIconKind.relationsGraph,
+                  color: scheme.primary,
                 ),
-              );
-            },
-          ),
+                title: view.name,
+                meta: _joinMeta([view.type, view.ownerName]),
+              ),
+          ],
         );
       },
     );
@@ -740,7 +647,6 @@ class _TenantEdgesList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final edgesAsync = ref.watch(tenantEdgesProvider(searchQuery));
 
     return edgesAsync.when(
@@ -764,71 +670,18 @@ class _TenantEdgesList extends ConsumerWidget {
             title: 'No edge instances',
           );
         }
-        return RefreshIndicator(
+        return _SectionList(
+          title: 'Edges',
           onRefresh: () =>
               ref.read(tenantEdgesProvider(searchQuery).notifier).refresh(),
-          child: ListView.separated(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(
-              DesignTokens.spacing16,
-              DesignTokens.spacing8,
-              DesignTokens.spacing16,
-              84,
-            ),
-            itemCount: paged.items.length,
-            separatorBuilder: (_, _) =>
-                const SizedBox(height: DesignTokens.spacing8),
-            itemBuilder: (context, index) {
-              final edge = paged.items[index];
-              return TbStaggeredEntry(
-                index: index,
-                child: Container(
-                  padding: DesignTokens.cardPadding,
-                  decoration: BoxDecoration(
-                    color: scheme.surfaceContainerLow,
-                    borderRadius: DesignTokens.borderRadiusLarge,
-                    border: Border.all(color: scheme.outlineVariant),
-                  ),
-                  child: Row(
-                    children: [
-                      TbIcon(TbIconKind.gateway, color: scheme.primary),
-                      const SizedBox(width: DesignTokens.spacing12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              edge.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: DesignTokens.spacing4),
-                            Wrap(
-                              spacing: DesignTokens.spacing8,
-                              children: [
-                                if (edge.type.isNotEmpty)
-                                  _MetaChip(label: edge.type),
-                                if (edge.label.isNotEmpty)
-                                  Text(
-                                    edge.label,
-                                    style: textTheme.bodySmall?.copyWith(
-                                      color: scheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
+          children: [
+            for (final edge in paged.items)
+              TbListRow(
+                leading: TbIcon(TbIconKind.gateway, color: scheme.primary),
+                title: edge.name,
+                meta: _joinMeta([edge.type, edge.label]),
+              ),
+          ],
         );
       },
     );
@@ -844,7 +697,6 @@ class _SysAdminTenantsList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final tenantsAsync = ref.watch(tenantsListProvider(searchQuery));
 
     return tenantsAsync.when(
@@ -868,94 +720,32 @@ class _SysAdminTenantsList extends ConsumerWidget {
             title: 'No tenants',
           );
         }
-        return RefreshIndicator(
+        return _SectionList(
+          title: 'Tenants',
           onRefresh: () =>
               ref.read(tenantsListProvider(searchQuery).notifier).refresh(),
-          child: ListView.separated(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(
-              DesignTokens.spacing16,
-              DesignTokens.spacing8,
-              DesignTokens.spacing16,
-              84,
-            ),
-            itemCount: paged.items.length,
-            separatorBuilder: (_, _) =>
-                const SizedBox(height: DesignTokens.spacing8),
-            itemBuilder: (context, index) {
-              final tenant = paged.items[index];
-              return TbStaggeredEntry(
-                index: index,
-                child: Material(
-                  color: scheme.surfaceContainerLow,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: DesignTokens.borderRadiusLarge,
-                    side: BorderSide(color: scheme.outlineVariant),
+          children: [
+            for (final tenant in paged.items)
+              TbListRow(
+                leading: TbIcon(TbIconKind.customerOrg, color: scheme.primary),
+                title: tenant.title,
+                meta: _joinMeta([tenant.tenantProfileName, tenant.email]),
+                trailing: IconButton(
+                  tooltip: 'Delete tenant',
+                  constraints: const BoxConstraints(
+                    minWidth: DesignTokens.minTouchTarget,
+                    minHeight: DesignTokens.minTouchTarget,
                   ),
-                  child: InkWell(
-                    borderRadius: DesignTokens.borderRadiusLarge,
-                    onTap: () => onEdit(tenant),
-                    child: Padding(
-                      padding: DesignTokens.cardPadding,
-                      child: Row(
-                        children: [
-                          TbIcon(TbIconKind.customerOrg, color: scheme.primary),
-                          const SizedBox(width: DesignTokens.spacing12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  tenant.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: DesignTokens.spacing4),
-                                Wrap(
-                                  spacing: DesignTokens.spacing8,
-                                  children: [
-                                    _MetaChip(label: tenant.tenantProfileName),
-                                    if (tenant.email.isNotEmpty)
-                                      Text(
-                                        tenant.email,
-                                        style: textTheme.bodySmall?.copyWith(
-                                          color: scheme.onSurfaceVariant,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: 'Delete tenant',
-                            constraints: const BoxConstraints(
-                              minWidth: DesignTokens.minTouchTarget,
-                              minHeight: DesignTokens.minTouchTarget,
-                            ),
-                            icon: Icon(
-                              Icons.delete_outline,
-                              color: scheme.error,
-                            ),
-                            onPressed: () async {
-                              await ref
-                                  .read(
-                                    tenantsListProvider(searchQuery).notifier,
-                                  )
-                                  .deleteTenant(tenant.id);
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  icon: Icon(Icons.delete_outline, color: scheme.error),
+                  onPressed: () async {
+                    await ref
+                        .read(tenantsListProvider(searchQuery).notifier)
+                        .deleteTenant(tenant.id);
+                  },
                 ),
-              );
-            },
-          ),
+                onTap: () => onEdit(tenant),
+              ),
+          ],
         );
       },
     );
@@ -970,7 +760,6 @@ class _SysAdminProfilesList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final profilesAsync = ref.watch(tenantProfilesListProvider(searchQuery));
 
     return profilesAsync.when(
@@ -995,81 +784,32 @@ class _SysAdminProfilesList extends ConsumerWidget {
             title: 'No tenant profiles',
           );
         }
-        return RefreshIndicator(
+        return _SectionList(
+          title: 'Profiles',
           onRefresh: () => ref
               .read(tenantProfilesListProvider(searchQuery).notifier)
               .refresh(),
-          child: ListView.separated(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(
-              DesignTokens.spacing16,
-              DesignTokens.spacing8,
-              DesignTokens.spacing16,
-              84,
-            ),
-            itemCount: paged.items.length,
-            separatorBuilder: (_, _) =>
-                const SizedBox(height: DesignTokens.spacing8),
-            itemBuilder: (context, index) {
-              final profile = paged.items[index];
-              return TbStaggeredEntry(
-                index: index,
-                child: Container(
-                  padding: DesignTokens.cardPadding,
-                  decoration: BoxDecoration(
-                    color: scheme.surfaceContainerLow,
-                    borderRadius: DesignTokens.borderRadiusLarge,
-                    border: Border.all(color: scheme.outlineVariant),
-                  ),
-                  child: Row(
-                    children: [
-                      TbIcon(TbIconKind.attributesTag, color: scheme.primary),
-                      const SizedBox(width: DesignTokens.spacing12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              profile.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            if (profile.description.isNotEmpty) ...[
-                              const SizedBox(height: DesignTokens.spacing4),
-                              Text(
-                                profile.description,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: textTheme.bodySmall?.copyWith(
-                                  color: scheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      if (profile.isDefault)
-                        const _MetaChip(label: 'Default')
-                      else
-                        TextButton(
-                          onPressed: () => ref
-                              .read(
-                                tenantProfilesListProvider(
-                                  searchQuery,
-                                ).notifier,
-                              )
-                              .setDefault(profile.id),
-                          child: const Text('Set default'),
-                        ),
-                    ],
-                  ),
+          children: [
+            for (final profile in paged.items)
+              TbListRow(
+                leading: TbIcon(
+                  TbIconKind.attributesTag,
+                  color: scheme.primary,
                 ),
-              );
-            },
-          ),
+                title: profile.name,
+                meta: profile.description,
+                trailing: profile.isDefault
+                    ? const _MetaChip(label: 'Default')
+                    : TextButton(
+                        onPressed: () => ref
+                            .read(
+                              tenantProfilesListProvider(searchQuery).notifier,
+                            )
+                            .setDefault(profile.id),
+                        child: const Text('Set default'),
+                      ),
+              ),
+          ],
         );
       },
     );
@@ -1101,40 +841,6 @@ class _MetaChip extends StatelessWidget {
           fontWeight: FontWeight.w600,
         ),
       ),
-    );
-  }
-}
-
-class _IconValuePair extends StatelessWidget {
-  const _IconValuePair({required this.icon, required this.value});
-
-  final IconData icon;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          size: DesignTokens.iconSmall,
-          color: scheme.onSurfaceVariant,
-        ),
-        const SizedBox(width: DesignTokens.spacing4),
-        Flexible(
-          child: Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: textTheme.bodySmall?.copyWith(
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

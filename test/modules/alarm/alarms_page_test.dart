@@ -16,6 +16,7 @@ import 'package:thingsboard_democloud_app/modules/alarm/alarms_page.dart';
 import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_search_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_list_row.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_shimmer.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_status_badge.dart';
 
@@ -304,21 +305,57 @@ void main() {
       expect(find.text('All systems nominal'), findsOneWidget);
     });
 
-    testWidgets(
-      'renders alarm list with M3 status badges and severity glyphs',
-      (WidgetTester tester) async {
-        await tester.pumpWidget(buildTestWidget(tester));
-        await tester.pumpAndSettle();
+    testWidgets('renders alarm list with M3 status badges and severity glyphs', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(buildTestWidget(tester));
+      await tester.pumpAndSettle();
 
-        expect(find.text('High Temperature'), findsOneWidget);
-        expect(find.text('Low Battery'), findsOneWidget);
-        expect(find.text('Connection Timeout'), findsOneWidget);
-        expect(find.byType(TbStatusBadge), findsWidgets);
-        expect(find.byType(TbIcon), findsWidgets);
-        expect(find.text('Alice Smith'), findsNothing); // Initials avatar used
-        expect(find.text('Office Sensor · UNACK'), findsOneWidget);
-      },
-    );
+      expect(find.text('High Temperature'), findsOneWidget);
+      expect(find.text('Low Battery'), findsOneWidget);
+      expect(find.text('Connection Timeout'), findsOneWidget);
+      expect(find.byType(TbStatusBadge), findsWidgets);
+      expect(find.byType(TbIcon), findsWidgets);
+      expect(find.text('Alice Smith'), findsNothing); // Initials avatar used
+      // Row meta is "originator · relative time" (ack state shown by the Ack action).
+      expect(
+        find.textContaining(RegExp(r'^Office Sensor · (now|\d+[mhd] ago)$')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('rows are TbListRow with type title and originator meta', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(buildTestWidget(tester));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TbListRow), findsNWidgets(3));
+      final firstRow = find.widgetWithText(TbListRow, 'High Temperature');
+      expect(firstRow, findsOneWidget);
+      final row = tester.widget<TbListRow>(firstRow);
+      expect(row.title, 'High Temperature');
+      expect(row.meta, startsWith('Office Sensor · '));
+      expect(row.meta, endsWith('ago'));
+    });
+
+    testWidgets('360dp row with assignee and both actions does not overflow', (
+      WidgetTester tester,
+    ) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(buildTestWidget(tester));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      for (final key in const ['quick-ack-alarm-1', 'quick-clear-alarm-1']) {
+        final f = find.byKey(Key(key));
+        expect(f, findsOneWidget);
+        expect(f.hitTestable(), findsOneWidget);
+      }
+    });
 
     testWidgets('filters alarms by severity and status chips', (
       WidgetTester tester,

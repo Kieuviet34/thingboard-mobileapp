@@ -20,6 +20,7 @@ import 'package:thingsboard_democloud_app/modules/asset/asset_details_page.dart'
 import 'package:thingsboard_democloud_app/modules/asset/assets_page.dart';
 import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_list_row.dart';
 
 import '../../helpers/fake_app_preferences.dart';
 import '../../helpers/fake_secure_storage.dart';
@@ -233,6 +234,19 @@ void main() {
   }
 
   group('AssetsPage', () {
+    testWidgets('rows use TbListRow with type and owner meta', (tester) async {
+      final repo = _FakeAssetRepo(
+        assets: _sampleAssets,
+        profiles: _sampleProfiles,
+      );
+      await tester.pumpWidget(buildApp(repo: repo));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TbListRow), findsNWidgets(2));
+      expect(find.text('Facility · Green Energy'), findsOneWidget);
+      expect(find.text('Depot · North Logistics'), findsOneWidget);
+    });
+
     testWidgets('renders assets list and profile filter chips', (tester) async {
       final repo = _FakeAssetRepo(
         assets: _sampleAssets,

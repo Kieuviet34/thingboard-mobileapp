@@ -12,6 +12,8 @@ import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_search_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_list_row.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_section_card.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_motion.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_shimmer.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_status_badge.dart';
@@ -95,6 +97,7 @@ class _AuditLogsPageState extends ConsumerState<AuditLogsPage> {
 
     showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (bottomSheetContext) {
@@ -167,25 +170,27 @@ class _AuditLogsPageState extends ConsumerState<AuditLogsPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _DetailRow(
-                            label: 'Entity',
-                            value:
-                                '${log.entityName} (${log.entityType.wireValue})',
+                          TbSectionCard(
+                            title: 'Details',
+                            trailing: _statusBadge(log.isSuccess),
+                            child: Column(
+                              children: [
+                                TbKvRow(
+                                  label: 'Entity',
+                                  value:
+                                      '${log.entityName} (${log.entityType.wireValue})',
+                                ),
+                                TbKvRow(label: 'Action', value: log.actionType),
+                                TbKvRow(
+                                  label: 'User',
+                                  value: log.userName.isNotEmpty
+                                      ? log.userName
+                                      : (log.userId ?? 'System'),
+                                ),
+                              ],
+                            ),
                           ),
-                          _DetailRow(label: 'Action', value: log.actionType),
-                          _DetailRow(
-                            label: 'User',
-                            value: log.userName.isNotEmpty
-                                ? log.userName
-                                : (log.userId ?? 'System'),
-                          ),
-                          _DetailRow(
-                            label: 'Status',
-                            value: log.isSuccess ? 'SUCCESS' : 'FAILURE',
-                            valueColor: log.isSuccess
-                                ? scheme.primary
-                                : scheme.error,
-                          ),
+                          const SizedBox(height: DesignTokens.spacing12),
                           if (log.failureDetails != null &&
                               log.failureDetails!.isNotEmpty) ...[
                             const SizedBox(height: DesignTokens.spacing8),
@@ -378,17 +383,14 @@ class _AuditLogsPageState extends ConsumerState<AuditLogsPage> {
                         child: ListView.separated(
                           controller: _scrollController,
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(
-                            DesignTokens.spacing16,
-                            DesignTokens.spacing16,
-                            DesignTokens.spacing16,
-                            84.0,
-                          ),
+                          padding: const EdgeInsets.only(bottom: 84.0),
                           itemCount:
                               pagedState.items.length +
                               (pagedState.isLoadingMore ? 1 : 0),
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(height: DesignTokens.spacing8),
+                          separatorBuilder: (_, _) => const Divider(
+                            height: 1,
+                            indent: DesignTokens.spacing16,
+                          ),
                           itemBuilder: (context, index) {
                             if (index >= pagedState.items.length) {
                               return const Center(
@@ -424,6 +426,14 @@ class _AuditLogsPageState extends ConsumerState<AuditLogsPage> {
   }
 }
 
+TbStatusBadge _statusBadge(bool success, {Key? key}) => TbStatusBadge(
+  key: key,
+  label: success ? 'SUCCESS' : 'FAILED',
+  icon: success ? TbIconKind.statusCleared : TbIconKind.severityCritical,
+  tone: success ? TbStatusTone.cleared : TbStatusTone.critical,
+  compact: true,
+);
+
 class _AuditLogRow extends StatelessWidget {
   const _AuditLogRow({required this.log, required this.onTap});
 
@@ -433,13 +443,17 @@ class _AuditLogRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
 
     final formattedTime = log.createdTime > 0
-        ? DateFormat.yMMMd().add_jm().format(
+        ? DateFormat.MMMd().add_jm().format(
             DateTime.fromMillisecondsSinceEpoch(log.createdTime),
           )
         : '';
+    final meta = [
+      log.actionType,
+      formattedTime,
+      log.userName,
+    ].where((e) => e.isNotEmpty).join(' · ');
 
     final iconKind = switch (log.entityType) {
       EntityType.device => TbIconKind.sensorNode,
@@ -453,159 +467,19 @@ class _AuditLogRow extends StatelessWidget {
     return Semantics(
       button: true,
       label: 'Audit log ${log.actionType} on ${log.entityName}',
-      child: Material(
-        color: scheme.surfaceContainerLow,
-        shape: RoundedRectangleBorder(
-          borderRadius: DesignTokens.borderRadiusLarge,
-          side: BorderSide(color: scheme.outlineVariant),
+      child: TbListRow(
+        title: log.entityName.isNotEmpty ? log.entityName : log.actionType,
+        meta: meta,
+        leading: TbIcon(
+          iconKind,
+          size: DesignTokens.iconSmall,
+          color: scheme.primary,
         ),
-        clipBehavior: Clip.antiAlias,
-        child: TbPressScale(
-          borderRadius: DesignTokens.borderRadiusLarge,
-          onTap: onTap,
-          child: Padding(
-            padding: DesignTokens.cardPadding,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: scheme.surfaceContainerHigh,
-                    borderRadius: DesignTokens.borderRadiusMedium,
-                  ),
-                  child: Center(
-                    child: TbIcon(
-                      iconKind,
-                      size: DesignTokens.iconSmall,
-                      color: scheme.primary,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: DesignTokens.spacing12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              log.entityName.isNotEmpty
-                                  ? log.entityName
-                                  : log.actionType,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: textTheme.titleSmall?.copyWith(
-                                color: scheme.onSurface,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: DesignTokens.spacing8),
-                          TbStatusBadge(
-                            label: log.isSuccess ? 'SUCCESS' : 'FAILED',
-                            icon: log.isSuccess
-                                ? TbIconKind.statusCleared
-                                : TbIconKind.severityCritical,
-                            tone: log.isSuccess
-                                ? TbStatusTone.cleared
-                                : TbStatusTone.critical,
-                            compact: true,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: DesignTokens.spacing4),
-                      Wrap(
-                        spacing: DesignTokens.spacing8,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: DesignTokens.spacing8,
-                              vertical: DesignTokens.spacing2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: scheme.surfaceContainerHigh,
-                              borderRadius: DesignTokens.borderRadiusRound,
-                            ),
-                            child: Text(
-                              log.actionType,
-                              style: textTheme.labelSmall?.copyWith(
-                                color: scheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          if (log.userName.isNotEmpty)
-                            Text(
-                              log.userName,
-                              style: textTheme.bodySmall?.copyWith(
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ),
-                        ],
-                      ),
-                      if (formattedTime.isNotEmpty) ...[
-                        const SizedBox(height: DesignTokens.spacing4),
-                        Text(
-                          formattedTime,
-                          style: textTheme.labelSmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: DesignTokens.spacing4),
-                Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
-              ],
-            ),
-          ),
+        trailing: _statusBadge(
+          log.isSuccess,
+          key: ValueKey('audit-status-${log.id}'),
         ),
-      ),
-    );
-  }
-}
-
-class _DetailRow extends StatelessWidget {
-  const _DetailRow({required this.label, required this.value, this.valueColor});
-
-  final String label;
-  final String value;
-  final Color? valueColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: DesignTokens.spacing8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
-              style: textTheme.bodySmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: textTheme.bodyMedium?.copyWith(
-                color: valueColor ?? scheme.onSurface,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
+        onTap: onTap,
       ),
     );
   }

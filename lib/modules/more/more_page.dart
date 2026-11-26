@@ -12,7 +12,9 @@ import 'package:thingsboard_democloud_app/core/models/auth_models.dart';
 import 'package:thingsboard_democloud_app/core/models/entity_id.dart';
 import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_bar.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_list_row.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_motion.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_section_card.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_status_badge.dart';
 
 /// More hub screen with user header, RBAC-aware entity shortcuts, unread badge, and logout.
@@ -22,7 +24,6 @@ class MorePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final authAsync = ref.watch(authProvider);
     final serverConfig = ref.watch(serverConfigProvider);
     final unreadAsync = ref.watch(unreadNotificationsCountProvider);
@@ -63,111 +64,75 @@ class MorePage extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: DesignTokens.spacing20),
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      left: DesignTokens.spacing4,
-                      bottom: DesignTokens.spacing8,
-                    ),
-                    child: Text(
-                      'Entities',
-                      style: textTheme.labelLarge?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
                   TbStaggeredEntry(
                     index: 1,
-                    child: _GroupedSection(
-                      children: [
-                        if (showTenant)
-                          _MoreTile(
-                            leading: TbIcon(
-                              TbIconKind.gateway,
-                              color: scheme.primary,
+                    child: TbSectionCard(
+                      title: 'Entities',
+                      child: Column(
+                        children: [
+                          if (showTenant)
+                            _MoreRow(
+                              icon: TbIconKind.gateway,
+                              title: authority == Authority.sysAdmin
+                                  ? 'Tenants'
+                                  : 'Tenant',
+                              meta: authority == Authority.sysAdmin
+                                  ? 'Tenants & profiles'
+                                  : 'Workspace, views & edges',
+                              onTap: () => _navigate(context, AppRoutes.tenant),
                             ),
-                            title: authority == Authority.sysAdmin
-                                ? 'Tenants'
-                                : 'Tenant',
-                            subtitle: authority == Authority.sysAdmin
-                                ? 'Tenants & profiles'
-                                : 'Workspace, views & edges',
-                            onTap: () => _navigate(context, AppRoutes.tenant),
+                          if (showCustomers)
+                            _MoreRow(
+                              icon: TbIconKind.customerOrg,
+                              title: 'Customers',
+                              meta: 'Organizations & contacts',
+                              onTap: () =>
+                                  _navigate(context, AppRoutes.customers),
+                            ),
+                          _MoreRow(
+                            icon: TbIconKind.assetBuilding,
+                            title: 'Assets',
+                            meta: 'Sites, telemetry & relations',
+                            onTap: () => _navigate(context, AppRoutes.assets),
                           ),
-                        if (showCustomers)
-                          _MoreTile(
-                            leading: TbIcon(
-                              TbIconKind.customerOrg,
-                              color: scheme.primary,
-                            ),
-                            title: 'Customers',
-                            subtitle: 'Organizations & contacts',
+                          _MoreRow(
+                            icon: TbIconKind.auditLog,
+                            title: 'Audit Logs',
+                            meta: 'Activity timeline',
                             onTap: () =>
-                                _navigate(context, AppRoutes.customers),
+                                _navigate(context, AppRoutes.auditLogs),
                           ),
-                        _MoreTile(
-                          leading: TbIcon(
-                            TbIconKind.assetBuilding,
-                            color: scheme.primary,
-                          ),
-                          title: 'Assets',
-                          subtitle: 'Sites, telemetry & relations',
-                          onTap: () => _navigate(context, AppRoutes.assets),
-                        ),
-                        _MoreTile(
-                          leading: TbIcon(
-                            TbIconKind.auditLog,
-                            color: scheme.primary,
-                          ),
-                          title: 'Audit Logs',
-                          subtitle: 'Activity timeline',
-                          onTap: () => _navigate(context, AppRoutes.auditLogs),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: DesignTokens.spacing20),
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      left: DesignTokens.spacing4,
-                      bottom: DesignTokens.spacing8,
-                    ),
-                    child: Text(
-                      'Account',
-                      style: textTheme.labelLarge?.copyWith(
-                        color: scheme.onSurfaceVariant,
+                        ],
                       ),
                     ),
                   ),
+                  const SizedBox(height: DesignTokens.spacing16),
                   TbStaggeredEntry(
                     index: 2,
-                    child: _GroupedSection(
-                      children: [
-                        _MoreTile(
-                          leading: TbIcon(
-                            TbIconKind.notificationInbox,
-                            color: scheme.primary,
+                    child: TbSectionCard(
+                      title: 'Account',
+                      child: Column(
+                        children: [
+                          _MoreRow(
+                            icon: TbIconKind.notificationInbox,
+                            title: 'Notifications',
+                            meta: unreadCount > 0
+                                ? '$unreadCount unread'
+                                : 'Inbox & alerts',
+                            badge: unreadCount > 0
+                                ? _UnreadCountPill(count: unreadCount)
+                                : null,
+                            onTap: () =>
+                                _navigate(context, AppRoutes.notifications),
                           ),
-                          title: 'Notifications',
-                          subtitle: unreadCount > 0
-                              ? '$unreadCount unread'
-                              : 'Inbox & alerts',
-                          trailingBadge: unreadCount > 0
-                              ? _UnreadCountPill(count: unreadCount)
-                              : null,
-                          onTap: () =>
-                              _navigate(context, AppRoutes.notifications),
-                        ),
-                        _MoreTile(
-                          leading: Icon(
-                            Icons.tune_rounded,
-                            size: DesignTokens.iconMedium,
-                            color: scheme.primary,
+                          _MoreRow(
+                            materialIcon: Icons.tune_rounded,
+                            title: 'Profile & Settings',
+                            meta: 'Theme, password & server',
+                            onTap: () => _navigate(context, AppRoutes.profile),
                           ),
-                          title: 'Profile & Settings',
-                          subtitle: 'Theme, password & server',
-                          onTap: () => _navigate(context, AppRoutes.profile),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: DesignTokens.spacing24),
@@ -390,117 +355,49 @@ class _UserHeaderCard extends StatelessWidget {
   }
 }
 
-class _GroupedSection extends StatelessWidget {
-  const _GroupedSection({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: scheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
-        borderRadius: DesignTokens.borderRadiusLarge,
-        side: BorderSide(color: scheme.outlineVariant),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 0; i < children.length; i++) ...[
-            children[i],
-            if (i < children.length - 1)
-              Divider(
-                height: 1,
-                thickness: 1,
-                indent: 56,
-                color: scheme.outlineVariant,
-              ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _MoreTile extends StatelessWidget {
-  const _MoreTile({
-    required this.leading,
+/// Navigation row inside a [TbSectionCard]: icon, title, one meta line, chevron.
+class _MoreRow extends StatelessWidget {
+  const _MoreRow({
+    this.icon,
+    this.materialIcon,
     required this.title,
-    required this.subtitle,
+    required this.meta,
     required this.onTap,
-    this.trailingBadge,
+    this.badge,
   });
 
-  final Widget leading;
+  final TbIconKind? icon;
+  final IconData? materialIcon;
   final String title;
-  final String subtitle;
+  final String meta;
   final VoidCallback onTap;
-  final Widget? trailingBadge;
+  final Widget? badge;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
 
-    return Semantics(
-      button: true,
-      label: title,
-      child: InkWell(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minHeight: DesignTokens.minTouchTarget,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: DesignTokens.spacing16,
-              vertical: DesignTokens.spacing12,
+    return TbListRow(
+      leading: icon != null
+          ? TbIcon(icon!, color: scheme.primary)
+          : Icon(
+              materialIcon,
+              size: DesignTokens.iconMedium,
+              color: scheme.primary,
             ),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: DesignTokens.iconLarge,
-                  child: Center(child: leading),
-                ),
-                const SizedBox(width: DesignTokens.spacing12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.bodyLarge?.copyWith(
-                          color: scheme.onSurface,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      Text(
-                        subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (trailingBadge != null) ...[
-                  const SizedBox(width: DesignTokens.spacing8),
-                  trailingBadge!,
-                ],
-                const SizedBox(width: DesignTokens.spacing4),
-                Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
-              ],
-            ),
-          ),
-        ),
+      title: title,
+      meta: meta,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (badge != null) ...[
+            badge!,
+            const SizedBox(width: DesignTokens.spacing4),
+          ],
+          Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
+        ],
       ),
+      onTap: onTap,
     );
   }
 }

@@ -11,6 +11,7 @@ import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_search_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_list_row.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_motion.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_shimmer.dart';
 
@@ -341,106 +342,39 @@ class _AssetListCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
 
     return Semantics(
       button: true,
       label: 'Asset ${asset.name}',
-      child: Material(
-        color: isSelected
-            ? scheme.primaryContainer.withValues(alpha: 0.3)
-            : scheme.surfaceContainerLow,
-        shape: RoundedRectangleBorder(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: isSelected
+              ? scheme.primaryContainer.withValues(alpha: 0.3)
+              : scheme.surfaceContainerLow,
           borderRadius: DesignTokens.borderRadiusLarge,
-          side: BorderSide(
+          border: Border.all(
             color: isSelected ? scheme.primary : scheme.outlineVariant,
             width: isSelected ? 1.5 : 1.0,
           ),
         ),
-        clipBehavior: Clip.antiAlias,
-        child: TbPressScale(
+        child: ClipRRect(
           borderRadius: DesignTokens.borderRadiusLarge,
-          onTap: onTap,
-          child: Padding(
-            padding: DesignTokens.cardPadding,
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? scheme.primary
-                        : scheme.surfaceContainerHigh,
-                    borderRadius: DesignTokens.borderRadiusMedium,
-                  ),
-                  child: Center(
-                    child: TbIcon(
-                      TbIconKind.assetBuilding,
-                      size: DesignTokens.iconMedium,
-                      color: isSelected ? scheme.onPrimary : scheme.primary,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: DesignTokens.spacing12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        asset.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.titleSmall?.copyWith(
-                          color: scheme.onSurface,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: DesignTokens.spacing4),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: DesignTokens.spacing8,
-                              vertical: DesignTokens.spacing2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: scheme.surfaceContainerHigh,
-                              borderRadius: DesignTokens.borderRadiusRound,
-                            ),
-                            child: Text(
-                              asset.type,
-                              style: textTheme.labelSmall?.copyWith(
-                                color: scheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          if (asset.ownerName.isNotEmpty) ...[
-                            const SizedBox(width: DesignTokens.spacing8),
-                            Expanded(
-                              child: Text(
-                                asset.ownerName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: textTheme.bodySmall?.copyWith(
-                                  color: scheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: DesignTokens.spacing8),
-                Icon(
-                  Icons.chevron_right,
-                  color: isSelected ? scheme.primary : scheme.onSurfaceVariant,
-                ),
-              ],
+          child: TbListRow(
+            title: asset.name,
+            meta: [
+              asset.type,
+              asset.ownerName,
+            ].where((s) => s.trim().isNotEmpty).join(' · '),
+            leading: TbIcon(
+              TbIconKind.assetBuilding,
+              size: DesignTokens.iconMedium,
+              color: scheme.primary,
             ),
+            trailing: Icon(
+              Icons.chevron_right,
+              color: isSelected ? scheme.primary : scheme.onSurfaceVariant,
+            ),
+            onTap: onTap,
           ),
         ),
       ),

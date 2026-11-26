@@ -13,6 +13,8 @@ import 'package:thingsboard_democloud_app/core/models/tb_failure.dart';
 import 'package:thingsboard_democloud_app/modules/notification/notifications_page.dart';
 import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_list_row.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_status_badge.dart';
 
 import '../../helpers/fake_app_preferences.dart';
 import '../../helpers/fake_secure_storage.dart';
@@ -162,6 +164,38 @@ void main() {
         expect(find.text('System Maintenance Scheduled'), findsNothing);
       },
     );
+
+    testWidgets('rows use TbListRow with channel meta and unread badge', (
+      tester,
+    ) async {
+      final repo = _FakeNotificationRepo(
+        initial: List.of(_sampleNotifications),
+      );
+      await tester.pumpWidget(buildApp(repo: repo));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TbListRow), findsNWidgets(2));
+      final rows = tester.widgetList<TbListRow>(find.byType(TbListRow));
+      for (final row in rows) {
+        expect(row.meta, endsWith(' · WEB'));
+      }
+      expect(
+        find.byKey(const ValueKey('notification-unread-n-1')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('notification-unread-n-2')),
+        findsNothing,
+      );
+      expect(find.byType(TbStatusBadge), findsOneWidget);
+
+      await tester.tap(find.text('Critical: Inverter Offline'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('notification-unread-n-1')),
+        findsNothing,
+      );
+    });
 
     testWidgets('mark all as read action triggers repository call', (
       tester,

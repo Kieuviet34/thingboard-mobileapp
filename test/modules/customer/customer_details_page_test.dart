@@ -8,6 +8,7 @@ import 'package:thingsboard_democloud_app/core/models/customer_models.dart';
 import 'package:thingsboard_democloud_app/core/models/tb_failure.dart';
 import 'package:thingsboard_democloud_app/modules/customer/customer_details_page.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_section_card.dart';
 
 import '../../helpers/fake_app_preferences.dart';
 import '../../helpers/fake_secure_storage.dart';
@@ -67,6 +68,45 @@ void main() {
   }
 
   group('CustomerDetailsPage', () {
+    testWidgets('uses Contact and Details TbSectionCard sections', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildApp(
+          overrides: [
+            customerDetailsProvider(
+              'cust-1',
+            ).overrideWith((ref) => Future.value(_mockCustomer)),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(TbSectionCard, 'Contact'), findsOneWidget);
+      expect(find.widgetWithText(TbSectionCard, 'Details'), findsOneWidget);
+      expect(find.widgetWithText(TbKvRow, 'Location'), findsOneWidget);
+      expect(find.widgetWithText(TbKvRow, 'Address'), findsOneWidget);
+      expect(find.widgetWithText(TbKvRow, 'ZIP'), findsOneWidget);
+    });
+
+    testWidgets('omits Contact section when no email or phone', (tester) async {
+      await tester.pumpWidget(
+        buildApp(
+          overrides: [
+            customerDetailsProvider('cust-1').overrideWith(
+              (ref) => Future.value(
+                const TbCustomerInfo(id: 'cust-1', title: 'Bare Co'),
+              ),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Contact'), findsNothing);
+      expect(find.widgetWithText(TbSectionCard, 'Details'), findsOneWidget);
+    });
+
     testWidgets('renders customer details, contact info and address cards', (
       tester,
     ) async {

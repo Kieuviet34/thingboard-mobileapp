@@ -259,6 +259,7 @@ class LoginWidget extends HookConsumerWidget {
     final controller = TextEditingController(text: currentUrl);
     await showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       builder: (sheetCtx) {
         final bottomInset = MediaQuery.viewInsetsOf(sheetCtx).bottom;

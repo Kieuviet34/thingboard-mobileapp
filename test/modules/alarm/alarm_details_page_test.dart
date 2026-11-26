@@ -15,6 +15,7 @@ import 'package:thingsboard_democloud_app/core/models/tb_failure.dart';
 import 'package:thingsboard_democloud_app/modules/alarm/alarm_details_page.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_shimmer.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_section_card.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_status_badge.dart';
 
 import '../../helpers/fake_app_preferences.dart';
@@ -398,6 +399,29 @@ void main() {
         );
       },
     );
+
+    testWidgets('detail sections use TbSectionCard with expected titles', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(buildTestWidget(tester));
+      await tester.pumpAndSettle();
+
+      for (final title in const [
+        'Actions',
+        'Assignee',
+        'Timeline & details',
+        'Activity',
+      ]) {
+        expect(
+          find.descendant(
+            of: find.byType(TbSectionCard),
+            matching: find.text(title),
+          ),
+          findsOneWidget,
+          reason: title,
+        );
+      }
+    });
 
     testWidgets('expands timeline & technical details panel', (
       WidgetTester tester,

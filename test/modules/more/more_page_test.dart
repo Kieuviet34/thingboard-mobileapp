@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_democloud_app/config/routes/router.dart';
 import 'package:thingsboard_democloud_app/config/themes/design_tokens.dart';
 import 'package:thingsboard_democloud_app/config/themes/tb_theme.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/auth_controller.dart';
@@ -11,6 +13,8 @@ import 'package:thingsboard_democloud_app/core/models/entity_id.dart';
 import 'package:thingsboard_democloud_app/core/models/user_models.dart';
 import 'package:thingsboard_democloud_app/modules/more/more_page.dart';
 import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_list_row.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_section_card.dart';
 
 import '../../helpers/fake_app_preferences.dart';
 import '../../helpers/fake_secure_storage.dart';
@@ -63,6 +67,7 @@ void main() {
     ThemeData? theme,
     double textScale = 1.0,
     bool disableAnimations = false,
+    GoRouter? router,
   }) {
     return ProviderScope(
       overrides: [
@@ -83,10 +88,15 @@ void main() {
           textScaler: TextScaler.linear(textScale),
           disableAnimations: disableAnimations,
         ),
-        child: MaterialApp(
-          theme: theme ?? tbLightTheme(),
-          home: const MorePage(),
-        ),
+        child: router == null
+            ? MaterialApp(
+                theme: theme ?? tbLightTheme(),
+                home: const MorePage(),
+              )
+            : MaterialApp.router(
+                theme: theme ?? tbLightTheme(),
+                routerConfig: router,
+              ),
       ),
     );
   }
@@ -125,6 +135,67 @@ void main() {
         );
       },
     );
+
+    testWidgets('groups render as TbSectionCard with TbListRow and navigate', (
+      tester,
+    ) async {
+      final auth = _StubAuthController(
+        _buildAuth(authority: Authority.tenantAdmin, mode: SessionMode.demo),
+      );
+      final visited = <String>[];
+      final router = GoRouter(
+        routes: [
+          GoRoute(path: '/', builder: (_, _) => const MorePage()),
+          for (final path in [
+            AppRoutes.tenant,
+            AppRoutes.customers,
+            AppRoutes.assets,
+            AppRoutes.auditLogs,
+            AppRoutes.notifications,
+            AppRoutes.profile,
+          ])
+            GoRoute(
+              path: path,
+              builder: (_, _) {
+                visited.add(path);
+                return const Scaffold(body: Text('TARGET'));
+              },
+            ),
+        ],
+      );
+      await tester.pumpWidget(
+        buildApp(authController: auth, disableAnimations: true, router: router),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TbSectionCard), findsNWidgets(2));
+      expect(
+        find.descendant(
+          of: find.byType(TbSectionCard),
+          matching: find.text('Entities'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Account'), findsOneWidget);
+      expect(find.byType(TbListRow), findsNWidgets(6));
+
+      const targets = {
+        'Tenant': AppRoutes.tenant,
+        'Customers': AppRoutes.customers,
+        'Assets': AppRoutes.assets,
+        'Audit Logs': AppRoutes.auditLogs,
+        'Notifications': AppRoutes.notifications,
+        'Profile & Settings': AppRoutes.profile,
+      };
+      for (final entry in targets.entries) {
+        await tester.ensureVisible(find.text(entry.key));
+        await tester.tap(find.text(entry.key));
+        await tester.pumpAndSettle();
+        expect(visited.last, entry.value, reason: entry.key);
+        router.pop();
+        await tester.pumpAndSettle();
+      }
+    });
 
     testWidgets('SYS_ADMIN sees Tenants & profiles entry', (tester) async {
       final auth = _StubAuthController(

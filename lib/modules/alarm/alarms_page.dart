@@ -4,7 +4,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_democloud_app/config/routes/router.dart';
 import 'package:thingsboard_democloud_app/config/themes/design_tokens.dart';
 import 'package:thingsboard_democloud_app/config/themes/tb_status_colors.dart';
-import 'package:thingsboard_democloud_app/config/themes/tb_text_styles.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/alarm_controller.dart';
 import 'package:thingsboard_democloud_app/core/models/alarm_models.dart';
 import 'package:thingsboard_democloud_app/core/models/entity_id.dart';
@@ -15,6 +14,7 @@ import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_search_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_list_row.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_motion.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_shimmer.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_status_badge.dart';
@@ -426,7 +426,6 @@ class _AlarmRowCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final statusColors = TbStatusColors.of(context);
     final accent = alarm.cleared
         ? statusColors.cleared
@@ -438,131 +437,92 @@ class _AlarmRowCard extends StatelessWidget {
       color: accent,
       semanticLabel: '${alarm.severity.label} alarm',
     );
-
-    final heroOrIcon = enableHero
+    final leading = enableHero
         ? Hero(tag: 'alarm-${alarm.id}', child: iconWidget)
         : iconWidget;
 
-    return Material(
-      color: selected
-          ? scheme.primaryContainer.withValues(alpha: 0.45)
-          : scheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
+    final hasAssignee =
+        alarm.assigneeName != null && alarm.assigneeName!.isNotEmpty;
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: selected
+            ? scheme.primaryContainer.withValues(alpha: 0.45)
+            : scheme.surfaceContainerLow,
         borderRadius: DesignTokens.borderRadiusLarge,
-        side: BorderSide(
+        border: Border.all(
           color: selected ? scheme.primary : scheme.outlineVariant,
         ),
       ),
-      clipBehavior: Clip.antiAlias,
-      child: TbPressScale(
-        onTap: onTap,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border(left: BorderSide(color: accent, width: 4)),
-          ),
-          child: Padding(
-            padding: DesignTokens.cardPadding,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: DesignTokens.spacing8,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TbListRow(
+            leading: leading,
+            title: alarm.type,
+            meta:
+                '${alarm.displayOriginator} · ${_relativeTime(alarm.createdTime)}',
+            onTap: onTap,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Line 1: Severity icon + Alarm type + 1-word badge
-                Row(
-                  children: [
-                    heroOrIcon,
-                    const SizedBox(width: DesignTokens.spacing8),
-                    Expanded(
-                      child: Text(
-                        alarm.type,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: DesignTokens.spacing8),
-                    alarm.cleared
-                        ? TbStatusBadge.cleared(compact: true)
-                        : TbStatusBadge.severity(alarm.severity, compact: true),
-                  ],
-                ),
-                // Line 2: Originator + relative time + assignee avatar
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${alarm.displayOriginator} · ${alarm.acknowledged ? 'ACK' : 'UNACK'}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: DesignTokens.spacing8),
-                    Text(
-                      _relativeTime(alarm.createdTime),
-                      style: TbTextStyles.tabular(
-                        textTheme.labelSmall ?? TbTextStyles.labelSmall,
-                      ).copyWith(color: scheme.onSurfaceVariant),
-                    ),
-                    if (alarm.assigneeName != null &&
-                        alarm.assigneeName!.isNotEmpty) ...[
-                      const SizedBox(width: DesignTokens.spacing8),
-                      UserInfoAvatarWidget(
-                        shortName: _initials(alarm.assigneeName!),
-                        size: 24,
-                        semanticLabel: 'Assigned to ${alarm.assigneeName}',
-                      ),
-                    ],
-                  ],
-                ),
-                // Line 3: Quick Ack / Clear actions (>=48dp touch targets)
-                if (onAck != null || onClear != null)
-                  Wrap(
-                    spacing: DesignTokens.spacing8,
-                    runSpacing: DesignTokens.spacing4,
-                    children: [
-                      if (onAck != null)
-                        TextButton.icon(
-                          key: Key('quick-ack-${alarm.id}'),
-                          style: TextButton.styleFrom(
-                            minimumSize: const Size(
-                              DesignTokens.minTouchTarget,
-                              DesignTokens.minTouchTarget,
-                            ),
-                          ),
-                          onPressed: onAck,
-                          icon: const Icon(
-                            Icons.check,
-                            size: DesignTokens.iconSmall,
-                          ),
-                          label: const Text('Ack'),
-                        ),
-                      if (onClear != null)
-                        TextButton.icon(
-                          key: Key('quick-clear-${alarm.id}'),
-                          style: TextButton.styleFrom(
-                            minimumSize: const Size(
-                              DesignTokens.minTouchTarget,
-                              DesignTokens.minTouchTarget,
-                            ),
-                          ),
-                          onPressed: onClear,
-                          icon: const Icon(
-                            Icons.done_all,
-                            size: DesignTokens.iconSmall,
-                          ),
-                          label: const Text('Clear'),
-                        ),
-                    ],
+                alarm.cleared
+                    ? TbStatusBadge.cleared(compact: true)
+                    : TbStatusBadge.severity(alarm.severity, compact: true),
+                if (hasAssignee) ...[
+                  const SizedBox(width: DesignTokens.spacing4),
+                  UserInfoAvatarWidget(
+                    shortName: _initials(alarm.assigneeName!),
+                    size: 24,
+                    semanticLabel: 'Assigned to ${alarm.assigneeName}',
                   ),
+                ],
               ],
             ),
           ),
-        ),
+          // Quick actions on their own wrapping line so narrow rows never overflow.
+          if (onAck != null || onClear != null)
+            Padding(
+              padding: const EdgeInsets.only(
+                right: DesignTokens.spacing8,
+                bottom: DesignTokens.spacing4,
+              ),
+              child: Wrap(
+                alignment: WrapAlignment.end,
+                children: [
+                  if (onAck != null)
+                    IconButton(
+                      key: Key('quick-ack-${alarm.id}'),
+                      tooltip: 'Ack',
+                      constraints: const BoxConstraints(
+                        minWidth: DesignTokens.minTouchTarget,
+                        minHeight: DesignTokens.minTouchTarget,
+                      ),
+                      onPressed: onAck,
+                      icon: const Icon(
+                        Icons.check,
+                        size: DesignTokens.iconSmall,
+                      ),
+                    ),
+                  if (onClear != null)
+                    IconButton(
+                      key: Key('quick-clear-${alarm.id}'),
+                      tooltip: 'Clear',
+                      constraints: const BoxConstraints(
+                        minWidth: DesignTokens.minTouchTarget,
+                        minHeight: DesignTokens.minTouchTarget,
+                      ),
+                      onPressed: onClear,
+                      icon: const Icon(
+                        Icons.done_all,
+                        size: DesignTokens.iconSmall,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }

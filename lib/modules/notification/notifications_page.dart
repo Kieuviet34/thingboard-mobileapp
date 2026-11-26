@@ -10,8 +10,10 @@ import 'package:thingsboard_democloud_app/core/models/tb_failure.dart';
 import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_list_row.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_motion.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_shimmer.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_status_badge.dart';
 
 /// Notifications inbox screen with All/Unread filter, mark-all-read action,
 /// multi-select delete/mark-read, Dismissible swipe delete, and live WS sync.
@@ -224,17 +226,14 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                         child: ListView.separated(
                           controller: _scrollController,
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(
-                            DesignTokens.spacing16,
-                            DesignTokens.spacing16,
-                            DesignTokens.spacing16,
-                            84.0,
-                          ),
+                          padding: const EdgeInsets.only(bottom: 84.0),
                           itemCount:
                               pagedState.items.length +
                               (pagedState.isLoadingMore ? 1 : 0),
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(height: DesignTokens.spacing8),
+                          separatorBuilder: (_, _) => const Divider(
+                            height: 1,
+                            indent: DesignTokens.spacing16,
+                          ),
                           itemBuilder: (context, index) {
                             if (index >= pagedState.items.length) {
                               return const Center(
@@ -262,11 +261,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                                   padding: const EdgeInsets.only(
                                     right: DesignTokens.spacing20,
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: scheme.error,
-                                    borderRadius:
-                                        DesignTokens.borderRadiusLarge,
-                                  ),
+                                  color: scheme.error,
                                   child: Icon(
                                     Icons.delete_outline,
                                     color: scheme.onError,
@@ -336,14 +331,17 @@ class _NotificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final statusColors = TbStatusColors.of(context);
 
     final formattedTime = notification.createdTime > 0
-        ? DateFormat.yMMMd().add_jm().format(
+        ? DateFormat.MMMd().add_jm().format(
             DateTime.fromMillisecondsSinceEpoch(notification.createdTime),
           )
         : '';
+    final meta = [
+      formattedTime,
+      notification.deliveryMethod,
+    ].where((e) => e.isNotEmpty).join(' · ');
 
     final (accentColor, iconKind) = notification.severity != null
         ? switch (notification.severity!) {
@@ -377,37 +375,18 @@ class _NotificationCard extends StatelessWidget {
       child: Material(
         color: isSelected
             ? scheme.primaryContainer.withValues(alpha: 0.3)
-            : notification.isRead
-            ? scheme.surfaceContainerLow
-            : scheme.surfaceContainer,
-        shape: RoundedRectangleBorder(
-          borderRadius: DesignTokens.borderRadiusLarge,
-          side: BorderSide(
-            color: isSelected
-                ? scheme.primary
-                : notification.isRead
-                ? scheme.outlineVariant
-                : scheme.outline,
-            width: isSelected ? 1.5 : 1.0,
-          ),
-        ),
-        clipBehavior: Clip.antiAlias,
+            : scheme.surface,
         child: InkWell(
-          borderRadius: DesignTokens.borderRadiusLarge,
           onTap: onTap,
           onLongPress: onLongPress,
-          child: Padding(
-            padding: DesignTokens.cardPadding,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (isSelectionMode) ...[
-                  Checkbox(value: isSelected, onChanged: (_) => onTap()),
-                  const SizedBox(width: DesignTokens.spacing8),
-                ] else ...[
-                  Container(
-                    width: 38,
-                    height: 38,
+          child: TbListRow(
+            title: notification.subject,
+            meta: meta,
+            leading: isSelectionMode
+                ? Checkbox(value: isSelected, onChanged: (_) => onTap())
+                : Container(
+                    width: DesignTokens.minTouchTarget - 10,
+                    height: DesignTokens.minTouchTarget - 10,
                     decoration: BoxDecoration(
                       color: accentColor.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
@@ -420,65 +399,15 @@ class _NotificationCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: DesignTokens.spacing12),
-                ],
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              notification.subject,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: textTheme.titleSmall?.copyWith(
-                                color: scheme.onSurface,
-                                fontWeight: notification.isRead
-                                    ? FontWeight.w500
-                                    : FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          if (!notification.isRead) ...[
-                            const SizedBox(width: DesignTokens.spacing8),
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: scheme.primary,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      if (notification.text.isNotEmpty) ...[
-                        const SizedBox(height: DesignTokens.spacing4),
-                        Text(
-                          notification.text,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: textTheme.bodySmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                      if (formattedTime.isNotEmpty) ...[
-                        const SizedBox(height: DesignTokens.spacing4),
-                        Text(
-                          formattedTime,
-                          style: textTheme.labelSmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ],
+            trailing: notification.isRead
+                ? null
+                : TbStatusBadge(
+                    key: ValueKey('notification-unread-${notification.id}'),
+                    label: 'NEW',
+                    icon: TbIconKind.notificationInbox,
+                    tone: TbStatusTone.indeterminate,
+                    compact: true,
                   ),
-                ),
-              ],
-            ),
           ),
         ),
       ),

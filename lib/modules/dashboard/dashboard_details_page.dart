@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_democloud_app/config/themes/design_tokens.dart';
@@ -58,11 +59,10 @@ class DashboardDetailsPage extends ConsumerStatefulWidget {
 }
 
 class _DashboardDetailsPageState extends ConsumerState<DashboardDetailsPage> {
-  static const List<String> _allKeys = <String>[];
-
   bool _isFullscreen = false;
   DashboardTimeWindow _timeWindow = DashboardTimeWindow.h24;
   String? _lastVisitedId;
+  List<String> _liveKeys = const <String>[];
 
   @override
   void initState() {
@@ -76,7 +76,15 @@ class _DashboardDetailsPageState extends ConsumerState<DashboardDetailsPage> {
     if (oldWidget.dashboardId != widget.dashboardId) {
       _isFullscreen = false;
       _timeWindow = DashboardTimeWindow.h24;
+      _liveKeys = const <String>[];
       _recordVisit(widget.dashboardId);
+    }
+  }
+
+  void _syncStableKeys(Iterable<String> nextKeys) {
+    final sorted = nextKeys.toList()..sort();
+    if (!listEquals(_liveKeys, sorted)) {
+      _liveKeys = List<String>.unmodifiable(sorted);
     }
   }
 
@@ -98,44 +106,13 @@ class _DashboardDetailsPageState extends ConsumerState<DashboardDetailsPage> {
     });
   }
 
-  EntityId _resolveTelemetryEntity(TbDashboard dashboard) {
-    final aliases = dashboard.configuration['entityAliases'];
-    if (aliases is Map<String, dynamic>) {
-      for (final rawAlias in aliases.values) {
-        if (rawAlias is! Map<String, dynamic>) continue;
-        final filter = rawAlias['filter'];
-        if (filter is! Map<String, dynamic>) continue;
-        final single = EntityId.maybeFromJson(filter['singleEntity']);
-        if (single != null) return single;
-        final entityType = EntityType.fromWire(filter['entityType'] as String?);
-        final list = filter['entityList'];
-        if (list is List && list.isNotEmpty && list.first is String) {
-          return EntityId(entityType: entityType, id: list.first as String);
-        }
-      }
-    }
-
-    const demoDeviceMap = <String, String>{
-      'dash-1': 'dev-1',
-      'dash-2': 'dev-4',
-      'dash-3': 'dev-5',
-      'dash-4': 'dev-6',
-      'dash-5': 'dev-3',
-      'dash-6': 'dev-4',
-    };
-    final mappedDeviceId = demoDeviceMap[dashboard.info.id];
-    if (mappedDeviceId != null) {
-      return EntityId(entityType: EntityType.device, id: mappedDeviceId);
-    }
-    return EntityId(entityType: EntityType.dashboard, id: dashboard.info.id);
-  }
-
   Future<void> _selectTimeWindow(
     DashboardTimeWindow next,
-    EntityId entityId,
+    EntityId? entityId,
   ) async {
     if (next == _timeWindow) return;
     setState(() => _timeWindow = next);
+    if (entityId == null) return;
     final now = DateTime.now().millisecondsSinceEpoch;
     final startTs = now - next.duration.inMilliseconds;
     await ref
@@ -143,7 +120,7 @@ class _DashboardDetailsPageState extends ConsumerState<DashboardDetailsPage> {
         .loadRange(
           TbTsHistoryQuery(
             entityId: entityId,
-            keys: _allKeys,
+            keys: _liveKeys,
             startTs: startTs,
             endTs: now,
           ),
@@ -261,20 +238,54 @@ class _DashboardDetailsPageState extends ConsumerState<DashboardDetailsPage> {
                 ref.invalidate(dashboardDetailsProvider(widget.dashboardId)),
           ),
           data: (dashboard) {
-            final entityId = _resolveTelemetryEntity(dashboard);
-            final liveTelemetry = ref
-                .watch(
-                  liveEntityTelemetryProvider((id: entityId, keys: _allKeys)),
-                )
-                .valueOrNull;
+            final EntityId? entityId = isDemo
+                ? (dashboard.resolveStaticTelemetryEntity() ??
+                      EntityId(
+                        entityType: EntityType.dashboard,
+                        id: dashboard.info.id,
+                      ))
+                : ref
+                      .watch(
+                        dashboardTelemetryEntityProvider(widget.dashboardId),
+                      )
+                      .valueOrNull;
+
+            if (entityId == null) {
+              return const SingleChildScrollView(
+                padding: DesignTokens.paddingMedium,
+                child: TbShimmerList(itemCount: 3),
+              );
+            }
+
+            final latestAsync = ref.watch(
+              entityLatestTelemetryProvider(entityId),
+            );
+            final latestTelemetry = latestAsync.valueOrNull;
             final historyAsync = ref.watch(
               entityTelemetryHistoryProvider(entityId),
             );
             final history =
                 historyAsync.valueOrNull ?? const <String, List<TbTsPoint>>{};
 
+            _syncStableKeys(<String>{
+              ...?latestTelemetry?.keys,
+              ...history.keys,
+            });
+
+            final liveTelemetry = (isDemo || _liveKeys.isNotEmpty)
+                ? ref
+                      .watch(
+                        liveEntityTelemetryProvider((
+                          id: entityId,
+                          keys: _liveKeys,
+                        )),
+                      )
+                      .valueOrNull
+                : null;
+
             final metricCards = _buildMetricEntries(
               dashboard: dashboard,
+              latestTelemetry: latestTelemetry,
               liveTelemetry: liveTelemetry,
               history: history,
             );
@@ -313,7 +324,9 @@ class _DashboardDetailsPageState extends ConsumerState<DashboardDetailsPage> {
                         onSelectWindow: (w) => _selectTimeWindow(w, entityId),
                       ),
                       const SizedBox(height: DesignTokens.spacing16),
-                      if (metricCards.isEmpty)
+                      if (metricCards.isEmpty && latestAsync.isLoading)
+                        const TbShimmerList(itemCount: 2)
+                      else if (metricCards.isEmpty)
                         TbEmptyState(
                           icon: TbIconKind.dashboardTile,
                           title: 'Web dashboard',
@@ -362,6 +375,7 @@ class _DashboardDetailsPageState extends ConsumerState<DashboardDetailsPage> {
 
   List<_DashboardMetricVm> _buildMetricEntries({
     required TbDashboard dashboard,
+    required Map<String, TbTsPoint>? latestTelemetry,
     required Map<String, TbTsPoint>? liveTelemetry,
     required Map<String, List<TbTsPoint>> history,
   }) {
@@ -383,23 +397,25 @@ class _DashboardDetailsPageState extends ConsumerState<DashboardDetailsPage> {
       );
     }
 
-    // Merge live WebSocket telemetry points not already shown.
-    if (liveTelemetry != null) {
-      for (final entry in liveTelemetry.entries) {
-        final norm = entry.key.toLowerCase();
-        if (seenKeys.any((k) => k.contains(norm) || norm.contains(k))) {
-          continue;
-        }
-        seenKeys.add(norm);
-        result.add(
-          _DashboardMetricVm(
-            key: entry.key,
-            label: entry.key,
-            value: entry.value.displayValue,
-            series: _findMatchingSeries(norm, history),
-          ),
-        );
+    // Merge REST latest telemetry overridden by live WebSocket telemetry points.
+    final combinedTelemetry = <String, TbTsPoint>{
+      ...?latestTelemetry,
+      ...?liveTelemetry,
+    };
+    for (final entry in combinedTelemetry.entries) {
+      final norm = entry.key.toLowerCase();
+      if (seenKeys.any((k) => k.contains(norm) || norm.contains(k))) {
+        continue;
       }
+      seenKeys.add(norm);
+      result.add(
+        _DashboardMetricVm(
+          key: entry.key,
+          label: entry.key,
+          value: entry.value.displayValue,
+          series: _findMatchingSeries(norm, history),
+        ),
+      );
     }
 
     // Fallback: surface history keys directly if live/static metrics are empty.

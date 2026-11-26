@@ -68,6 +68,7 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
 
   TbDeviceQuery get _query => TbDeviceQuery(
     deviceProfileId: _profileId,
+    deviceType: _profileTitle,
     active: _activeFilter,
     textSearch: _searchText.isEmpty ? null : _searchText,
   );
@@ -106,7 +107,10 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
     final scheme = Theme.of(context).colorScheme;
 
     final hasFilters =
-        _profileId != null || _activeFilter != null || _searchText.isNotEmpty;
+        _profileId != null ||
+        _profileTitle != null ||
+        _activeFilter != null ||
+        _searchText.isNotEmpty;
 
     final PreferredSizeWidget appBar = _isSearching
         ? TbAppSearchBar(
@@ -188,7 +192,7 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
             onSelected: (selected) =>
                 setState(() => _activeFilter = selected ? false : null),
           ),
-          if (_profileId != null)
+          if (_profileId != null || _profileTitle != null)
             InputChip(
               key: const Key('device-profile-filter-chip'),
               label: Text(_profileTitle ?? _profileId!),

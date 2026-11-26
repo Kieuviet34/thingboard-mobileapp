@@ -41,18 +41,18 @@ final class RestAssetRepository implements AssetRepository {
     TbAssetQuery filter, {
     CancelToken? cancelToken,
   }) async {
-    final params = <String, dynamic>{
+    final search = (filter.textSearch ?? query.textSearch ?? '').trim();
+    final peParams = <String, dynamic>{
       ...query.toQueryParameters(),
       'includeCustomers': true,
       if (filter.assetProfileId != null && filter.assetProfileId!.isNotEmpty)
         'assetProfileId': filter.assetProfileId,
-      if (filter.textSearch != null && filter.textSearch!.trim().isNotEmpty)
-        'textSearch': filter.textSearch!.trim(),
+      if (search.isNotEmpty) 'textSearch': search,
     };
     try {
       final response = await _client.get<Map<String, dynamic>>(
         '/api/assetInfos/all',
-        queryParameters: params,
+        queryParameters: peParams,
         cancelToken: cancelToken,
       );
       return PageData<TbAssetInfo>.fromJson(
@@ -72,15 +72,85 @@ final class RestAssetRepository implements AssetRepository {
           ? '/api/customer/$customerId/assetInfos'
           : '/api/tenant/assetInfos';
 
+      final fallbackParams = <String, dynamic>{
+        ...query.toQueryParameters(),
+        if (search.isNotEmpty) 'textSearch': search,
+      };
       final fallback = await _client.get<Map<String, dynamic>>(
         fallbackPath,
-        queryParameters: params,
+        queryParameters: fallbackParams,
         cancelToken: cancelToken,
       );
       return PageData<TbAssetInfo>.fromJson(
         fallback.data ?? const <String, dynamic>{},
         TbAssetInfo.fromJson,
       );
+    }
+  }
+
+  /// Direct `GET /api/tenant/assetInfos` (falls back to `GET /api/tenant/assets` on PE 4.4 404).
+  Future<PageData<TbAssetInfo>> getTenantAssetInfos(
+    PageQuery query, {
+    String? type,
+    CancelToken? cancelToken,
+  }) async {
+    final params = <String, dynamic>{
+      ...query.toQueryParameters(),
+      if (type != null && type.isNotEmpty) 'type': type,
+    };
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        '/api/tenant/assetInfos',
+        queryParameters: params,
+        cancelToken: cancelToken,
+      );
+      return PageData<TbAssetInfo>.fromJson(
+        response.data ?? const <String, dynamic>{},
+        TbAssetInfo.fromJson,
+      );
+    } on TbFailure catch (e) {
+      if (e.type != TbFailureType.notFound) rethrow;
+      return getTenantAssets(query, type: type, cancelToken: cancelToken);
+    }
+  }
+
+  /// Direct `GET /api/tenant/assets`.
+  Future<PageData<TbAssetInfo>> getTenantAssets(
+    PageQuery query, {
+    String? type,
+    CancelToken? cancelToken,
+  }) async {
+    final response = await _client.get<Map<String, dynamic>>(
+      '/api/tenant/assets',
+      queryParameters: <String, dynamic>{
+        ...query.toQueryParameters(),
+        if (type != null && type.isNotEmpty) 'type': type,
+      },
+      cancelToken: cancelToken,
+    );
+    return PageData<TbAssetInfo>.fromJson(
+      response.data ?? const <String, dynamic>{},
+      TbAssetInfo.fromJson,
+    );
+  }
+
+  /// Direct `GET /api/tenant/asset?assetName=...` (PE 4.4) with fallback to
+  /// `GET /api/tenant/assets?assetName=...` (TB 3.3).
+  Future<TbAssetInfo> getTenantAssetByName(String assetName) async {
+    final params = <String, dynamic>{'assetName': assetName};
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        '/api/tenant/asset',
+        queryParameters: params,
+      );
+      return TbAssetInfo.fromJson(response.data ?? const <String, dynamic>{});
+    } on TbFailure catch (e) {
+      if (e.type != TbFailureType.notFound) rethrow;
+      final fallback = await _client.get<Map<String, dynamic>>(
+        '/api/tenant/assets',
+        queryParameters: params,
+      );
+      return TbAssetInfo.fromJson(fallback.data ?? const <String, dynamic>{});
     }
   }
 

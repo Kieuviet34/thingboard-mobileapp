@@ -89,14 +89,10 @@ final class RestDashboardRepository implements DashboardRepository {
       }
 
       try {
-        final tenantResp = await _client.get<Map<String, dynamic>>(
-          '/api/tenant/dashboards',
-          queryParameters: mobileParams,
+        return await getTenantDashboards(
+          query,
+          mobile: true,
           cancelToken: cancelToken,
-        );
-        return PageData<TbDashboardInfo>.fromJson(
-          tenantResp.data ?? const <String, dynamic>{},
-          TbDashboardInfo.fromJson,
         );
       } on TbFailure catch (tenantErr) {
         if (tenantErr.type != TbFailureType.notFound) rethrow;
@@ -114,6 +110,65 @@ final class RestDashboardRepository implements DashboardRepository {
         );
       }
     }
+  }
+
+  /// Direct `GET /api/tenant/dashboards` (`TENANT_ADMIN`).
+  Future<PageData<TbDashboardInfo>> getTenantDashboards(
+    PageQuery query, {
+    bool? mobile,
+    CancelToken? cancelToken,
+  }) async {
+    final response = await _client.get<Map<String, dynamic>>(
+      '/api/tenant/dashboards',
+      queryParameters: <String, dynamic>{
+        ...query.toQueryParameters(),
+        if (mobile != null) 'mobile': mobile,
+      },
+      cancelToken: cancelToken,
+    );
+    return PageData<TbDashboardInfo>.fromJson(
+      response.data ?? const <String, dynamic>{},
+      TbDashboardInfo.fromJson,
+    );
+  }
+
+  /// Direct `GET /api/tenant/{tenantId}/dashboards` (`SYS_ADMIN`).
+  Future<PageData<TbDashboardInfo>> getTenantDashboardsByTenantId(
+    String tenantId,
+    PageQuery query, {
+    CancelToken? cancelToken,
+  }) async {
+    final response = await _client.get<Map<String, dynamic>>(
+      '/api/tenant/${tenantId.trim()}/dashboards',
+      queryParameters: query.toQueryParameters(),
+      cancelToken: cancelToken,
+    );
+    return PageData<TbDashboardInfo>.fromJson(
+      response.data ?? const <String, dynamic>{},
+      TbDashboardInfo.fromJson,
+    );
+  }
+
+  /// Direct `GET /api/tenant/dashboard/home/info` (`TENANT_ADMIN`).
+  Future<TbHomeDashboardInfo?> getTenantHomeDashboardInfo() async {
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        '/api/tenant/dashboard/home/info',
+      );
+      final data = response.data;
+      return data != null ? TbHomeDashboardInfo.fromJson(data) : null;
+    } on TbFailure catch (e) {
+      if (e.type == TbFailureType.notFound) return null;
+      rethrow;
+    }
+  }
+
+  /// Direct `POST /api/tenant/dashboard/home/info` (`TENANT_ADMIN`).
+  Future<void> setTenantHomeDashboardInfo(TbHomeDashboardInfo info) async {
+    await _client.post<void>(
+      '/api/tenant/dashboard/home/info',
+      data: info.toJson(),
+    );
   }
 
   @override

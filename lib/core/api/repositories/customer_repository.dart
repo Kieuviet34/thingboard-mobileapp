@@ -55,6 +55,15 @@ final class RestCustomerRepository implements CustomerRepository {
     }
   }
 
+  /// Direct `GET /api/tenant/customers?customerTitle=...` (`TENANT_ADMIN`).
+  Future<TbCustomerInfo> getTenantCustomerByTitle(String customerTitle) async {
+    final response = await _client.get<Map<String, dynamic>>(
+      '/api/tenant/customers',
+      queryParameters: <String, dynamic>{'customerTitle': customerTitle},
+    );
+    return TbCustomerInfo.fromJson(response.data ?? const <String, dynamic>{});
+  }
+
   @override
   Future<TbCustomerInfo> getCustomerInfo(String customerId) async {
     try {

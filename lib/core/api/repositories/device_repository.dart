@@ -229,12 +229,6 @@ final class RestDeviceRepository implements DeviceRepository {
         ? '/api/customer/$customerId/deviceInfos'
         : '/api/tenant/deviceInfos';
 
-    // Exact TB 3.3 / Angular web UI parameter contract:
-    // - `deviceProfileId` and `type` are mutually exclusive (`DeviceController`
-    //   throws 400 if both are sent).
-    // - When neither is filtered, pass `deviceProfileId: ''` (matching
-    //   `getTenantDeviceInfosByDeviceProfileId`).
-    // - Omit PE-only `includeCustomers` and `active` query params.
     final hasProfileId =
         filter.deviceProfileId != null && filter.deviceProfileId!.isNotEmpty;
     final hasDeviceType =
@@ -257,7 +251,101 @@ final class RestDeviceRepository implements DeviceRepository {
       queryParameters: fallbackParams,
       cancelToken: cancelToken,
     );
-    final rawMap = fallback.data ?? const <String, dynamic>{};
+    return _parseAndEnrichDevicePage(
+      fallback.data ?? const <String, dynamic>{},
+      cancelToken: cancelToken,
+    );
+  }
+
+  /// Direct `GET /api/tenant/deviceInfos` (falls back to `GET /api/tenant/devices` on PE 4.4 404).
+  Future<PageData<TbDeviceInfo>> getTenantDeviceInfos(
+    PageQuery query, {
+    String? deviceProfileId,
+    String? type,
+    CancelToken? cancelToken,
+  }) async {
+    final hasProfile = deviceProfileId != null && deviceProfileId.isNotEmpty;
+    final hasType = type != null && type.isNotEmpty;
+    final params = <String, dynamic>{
+      ...query.toQueryParameters(),
+      if (hasProfile)
+        'deviceProfileId': deviceProfileId
+      else if (hasType)
+        'type': type
+      else
+        'deviceProfileId': '',
+    };
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        '/api/tenant/deviceInfos',
+        queryParameters: params,
+        cancelToken: cancelToken,
+      );
+      return _parseAndEnrichDevicePage(
+        response.data ?? const <String, dynamic>{},
+        cancelToken: cancelToken,
+      );
+    } on TbFailure catch (e) {
+      if (e.type != TbFailureType.notFound) rethrow;
+      return getTenantDevices(query, type: type, cancelToken: cancelToken);
+    }
+  }
+
+  /// Direct `GET /api/tenant/devices`.
+  Future<PageData<TbDeviceInfo>> getTenantDevices(
+    PageQuery query, {
+    String? type,
+    CancelToken? cancelToken,
+  }) async {
+    final response = await _client.get<Map<String, dynamic>>(
+      '/api/tenant/devices',
+      queryParameters: <String, dynamic>{
+        ...query.toQueryParameters(),
+        if (type != null && type.isNotEmpty) 'type': type,
+      },
+      cancelToken: cancelToken,
+    );
+    return _parseAndEnrichDevicePage(
+      response.data ?? const <String, dynamic>{},
+      cancelToken: cancelToken,
+    );
+  }
+
+  /// Direct `GET /api/tenant/device?deviceName=...` (PE 4.4) with fallback to
+  /// `GET /api/tenant/devices?deviceName=...` (TB 3.3).
+  Future<TbDeviceInfo> getTenantDeviceByName(String deviceName) async {
+    final params = <String, dynamic>{'deviceName': deviceName};
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        '/api/tenant/device',
+        queryParameters: params,
+      );
+      return TbDeviceInfo.fromJson(response.data ?? const <String, dynamic>{});
+    } on TbFailure catch (e) {
+      if (e.type != TbFailureType.notFound) rethrow;
+      final fallback = await _client.get<Map<String, dynamic>>(
+        '/api/tenant/devices',
+        queryParameters: params,
+      );
+      return TbDeviceInfo.fromJson(fallback.data ?? const <String, dynamic>{});
+    }
+  }
+
+  /// Direct `POST /api/tenant/{tenantId}/device/{deviceId}` (assign device to tenant).
+  Future<TbDeviceInfo> assignDeviceToTenant(
+    String tenantId,
+    String deviceId,
+  ) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      '/api/tenant/${tenantId.trim()}/device/${deviceId.trim()}',
+    );
+    return TbDeviceInfo.fromJson(response.data ?? const <String, dynamic>{});
+  }
+
+  Future<PageData<TbDeviceInfo>> _parseAndEnrichDevicePage(
+    Map<String, dynamic> rawMap, {
+    CancelToken? cancelToken,
+  }) async {
     final rawItems = rawMap['data'] as List<dynamic>? ?? const <dynamic>[];
     final parsedPage = PageData<TbDeviceInfo>.fromJson(
       rawMap,
@@ -295,7 +383,11 @@ final class RestDeviceRepository implements DeviceRepository {
 
     Future<Response<Map<String, dynamic>>> postFind({required bool legacy}) {
       final entityFilter = hasType
-          ? _deviceTypeEntityFilter(filter.deviceType!, search, legacy: legacy)
+          ? _deviceTypeEntityFilter(
+              filter.deviceType!,
+              search,
+              legacy: legacy,
+            )
           : <String, dynamic>{'type': 'entityType', 'entityType': 'DEVICE'};
       return _client.post<Map<String, dynamic>>(
         '/api/entitiesQuery/find',

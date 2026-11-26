@@ -333,8 +333,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                       return _page(
                         state,
                         DevicesListPage(
-                          deviceProfileId: q['deviceProfileId'],
-                          deviceType: q['deviceType'],
+                          deviceProfileId:
+                              q['deviceProfileId'] ?? q['profileId'],
+                          deviceType: q['deviceType'] ?? q['title'],
                           active: active,
                           searchMode: q['search'] == 'true',
                         ),

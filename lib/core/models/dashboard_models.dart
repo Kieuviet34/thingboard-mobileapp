@@ -330,7 +330,8 @@ class TbDashboard {
   }
 }
 
-/// Home dashboard assignment returned by `GET /api/dashboard/home/info`.
+/// Home dashboard assignment returned by `GET /api/dashboard/home/info`
+/// and `GET/POST /api/tenant/dashboard/home/info`.
 @immutable
 class TbHomeDashboardInfo {
   const TbHomeDashboardInfo({
@@ -348,6 +349,13 @@ class TbHomeDashboardInfo {
 
   final String? dashboardId;
   final bool hideDashboardToolbar;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'dashboardId': (dashboardId != null && dashboardId!.isNotEmpty)
+        ? <String, dynamic>{'entityType': 'DASHBOARD', 'id': dashboardId}
+        : null,
+    'hideDashboardToolbar': hideDashboardToolbar,
+  };
 }
 
 /// Last-visited and starred dashboard entry in `UserDashboardsInfo`.

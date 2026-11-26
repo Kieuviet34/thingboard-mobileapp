@@ -10,4 +10,5 @@ export 'notification_models.dart';
 export 'pagination.dart';
 export 'tb_failure.dart';
 export 'telemetry_models.dart';
+export 'tenant_models.dart';
 export 'user_models.dart';

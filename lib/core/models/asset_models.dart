@@ -67,6 +67,8 @@ class TbAssetInfo {
     final idObj = EntityId.maybeFromJson(json['id']);
     final profileObj = EntityId.maybeFromJson(json['assetProfileId']);
     final customerObj = EntityId.maybeFromJson(json['customerId']);
+    final owner = json['ownerName'] as String?;
+    final customerTitle = json['customerTitle'] as String?;
     return TbAssetInfo(
       id: idObj?.id ?? (json['id'] as String? ?? ''),
       name: json['name'] as String? ?? '',
@@ -74,7 +76,9 @@ class TbAssetInfo {
       label: json['label'] as String? ?? '',
       assetProfileId: profileObj?.id,
       customerId: customerObj?.id,
-      ownerName: json['ownerName'] as String? ?? '',
+      ownerName: (owner != null && owner.isNotEmpty)
+          ? owner
+          : (customerTitle ?? ''),
       createdTime: (json['createdTime'] as num?)?.toInt() ?? 0,
       additionalInfo:
           json['additionalInfo'] as Map<String, dynamic>? ?? const {},

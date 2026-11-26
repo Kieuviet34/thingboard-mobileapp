@@ -60,7 +60,12 @@ void main() {
           const entity = EntityId(entityType: EntityType.device, id: 'dev-1');
           final slowGate = Completer<void>();
 
-          // Initial build call
+          // Initial build discovers timeseries keys before querying history
+          adapter.on(
+            'GET',
+            '/api/plugins/telemetry/DEVICE/dev-1/keys/timeseries',
+            (_) => MockDioAdapter.jsonResponse(['temperature']),
+          );
           adapter.enqueue(
             'GET',
             '/api/plugins/telemetry/DEVICE/dev-1/values/timeseries/history',

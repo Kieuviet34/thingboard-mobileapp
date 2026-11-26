@@ -3,9 +3,15 @@ import 'dart:async';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_democloud_app/core/api/client/tb_secure_storage.dart';
+import 'package:thingsboard_democloud_app/core/api/controllers/server_config_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/ws/telemetry_ws_service.dart';
 import 'package:thingsboard_democloud_app/core/models/tb_failure.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../../helpers/fake_app_preferences.dart';
+import '../../helpers/fake_secure_storage.dart';
 import '../../helpers/fake_ws_channel.dart';
 
 void main() {
@@ -362,6 +368,102 @@ void main() {
         expect(service.currentState, WsConnectionState.authenticated);
 
         await sub.cancel();
+      },
+    );
+
+    test(
+      'falls back to legacy /api/ws/plugins/telemetry?token=... with TelemetryPluginCmdsWrapper when /api/ws rejects handshake',
+      () async {
+        final attemptedUris = <Uri>[];
+        late FakeWebSocketChannel legacyChannel;
+
+        final service = TbWebSocketService(
+          wsUriProvider: () =>
+              Uri.parse('wss://thingsboard.democloud.xyz/api/ws'),
+          tokenProvider: () async => 'jwt-legacy-1',
+          channelFactory: (uri) {
+            attemptedUris.add(uri);
+            if (uri.path == '/api/ws') {
+              return FakeWebSocketChannel(
+                readyFuture: Future<void>.error(
+                  WebSocketChannelException('HTTP 401'),
+                ),
+              );
+            }
+            legacyChannel = FakeWebSocketChannel();
+            return legacyChannel;
+          },
+        );
+        addTearDown(service.dispose);
+
+        await service.connect();
+
+        expect(service.currentState, WsConnectionState.authenticated);
+        expect(attemptedUris.first.path, '/api/ws');
+        expect(attemptedUris.last.path, '/api/ws/plugins/telemetry');
+        expect(attemptedUris.last.queryParameters['token'], 'jwt-legacy-1');
+        // No authCmd frame sent on query-authenticated legacy socket.
+        expect(legacyChannel.decodedSentFrames, isEmpty);
+
+        final sub = service
+            .subscribe(
+              type: WsCommandType.entityData,
+              payload: <String, dynamic>{
+                'query': {'entityFilter': {}},
+              },
+            )
+            .listen((_) {});
+        await Future<void>.delayed(Duration.zero);
+
+        expect(
+          legacyChannel.decodedSentFrames.single['entityDataCmds'],
+          isA<List<dynamic>>(),
+        );
+
+        await sub.cancel();
+        await Future<void>.delayed(Duration.zero);
+        expect(
+          legacyChannel.decodedSentFrames.last['entityDataUnsubscribeCmds'],
+          isA<List<dynamic>>(),
+        );
+      },
+    );
+
+    test(
+      'wsConnectionStateProvider yields current authenticated state immediately and switchServerUrl normalizes bare hostnames',
+      () async {
+        final storage = FakeSecureStorage(
+          initial: {TbStorageKeys.accessToken: 'jwt-1'},
+        );
+        final prefs = FakeAppPreferences();
+
+        final container = ProviderContainer(
+          overrides: [
+            tbStorageProvider.overrideWithValue(storage),
+            tbAppPreferencesProvider.overrideWithValue(prefs),
+            wsChannelFactoryProvider.overrideWithValue(
+              (_) => FakeWebSocketChannel(),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await container.read(telemetryWsServiceProvider).connect();
+        expect(
+          container.read(telemetryWsServiceProvider).currentState,
+          WsConnectionState.authenticated,
+        );
+
+        final state = await container.read(wsConnectionStateProvider.future);
+        expect(state, WsConnectionState.authenticated);
+
+        await container
+            .read(serverConfigProvider.notifier)
+            .switchServerUrl('thingsboard.democloud.xyz');
+        expect(
+          container.read(serverConfigProvider).baseUrl,
+          'https://thingsboard.democloud.xyz/',
+        );
       },
     );
   });

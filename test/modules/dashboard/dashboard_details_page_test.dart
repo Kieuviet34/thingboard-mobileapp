@@ -7,12 +7,15 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_democloud_app/config/themes/design_tokens.dart';
 import 'package:thingsboard_democloud_app/config/themes/tb_theme.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/dashboard_controller.dart';
+import 'package:thingsboard_democloud_app/core/api/controllers/device_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/server_config_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/telemetry_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/repositories/dashboard_repository.dart';
+import 'package:thingsboard_democloud_app/core/api/repositories/device_repository.dart';
 import 'package:thingsboard_democloud_app/core/api/repositories/telemetry_repository.dart';
 import 'package:thingsboard_democloud_app/core/models/auth_models.dart';
 import 'package:thingsboard_democloud_app/core/models/dashboard_models.dart';
+import 'package:thingsboard_democloud_app/core/models/device_models.dart';
 import 'package:thingsboard_democloud_app/core/models/entity_id.dart';
 import 'package:thingsboard_democloud_app/core/models/pagination.dart';
 import 'package:thingsboard_democloud_app/core/models/tb_failure.dart';
@@ -29,10 +32,15 @@ import '../../helpers/fake_secure_storage.dart';
 import '../../helpers/fake_ws_channel.dart';
 
 class _DetailDashboardRepo implements DashboardRepository {
-  _DetailDashboardRepo({this.completer, this.shouldThrow = false});
+  _DetailDashboardRepo({
+    this.completer,
+    this.shouldThrow = false,
+    this.customDashboard,
+  });
 
   Completer<TbDashboard>? completer;
   bool shouldThrow;
+  TbDashboard? customDashboard;
   final List<(String, String)> reportedActions = [];
 
   @override
@@ -44,6 +52,7 @@ class _DetailDashboardRepo implements DashboardRepository {
         message: 'Failed to load dashboard',
       );
     }
+    if (customDashboard != null) return customDashboard!;
     return const TbDashboard(
       info: TbDashboardInfo(
         id: 'dash-1',
@@ -89,7 +98,15 @@ class _DetailDashboardRepo implements DashboardRepository {
 }
 
 class _SpyTelemetryRepo implements TelemetryRepository {
+  _SpyTelemetryRepo({
+    this.notFoundEntityIds = const <String>{},
+    this.emptyEntityIds = const <String>{},
+  });
+
+  final Set<String> notFoundEntityIds;
+  final Set<String> emptyEntityIds;
   final List<TbTsHistoryQuery> historyQueries = [];
+  final List<EntityId> latestQueries = [];
 
   @override
   Future<List<TbAttributeEntry>> getAttributes(
@@ -116,6 +133,16 @@ class _SpyTelemetryRepo implements TelemetryRepository {
     EntityId entityId, {
     List<String>? keys,
   }) async {
+    latestQueries.add(entityId);
+    if (notFoundEntityIds.contains(entityId.id)) {
+      throw const TbFailure(
+        type: TbFailureType.notFound,
+        message: "Device with requested id wasn't found!",
+      );
+    }
+    if (emptyEntityIds.contains(entityId.id)) {
+      return const <String, TbTsPoint>{};
+    }
     final now = DateTime.now().millisecondsSinceEpoch;
     return {
       'temperature': TbTsPoint(
@@ -133,6 +160,10 @@ class _SpyTelemetryRepo implements TelemetryRepository {
     CancelToken? cancelToken,
   }) async {
     historyQueries.add(query);
+    if (notFoundEntityIds.contains(query.entityId.id) ||
+        emptyEntityIds.contains(query.entityId.id)) {
+      return const <String, List<TbTsPoint>>{};
+    }
     return {
       'temperature': [
         TbTsPoint(ts: query.startTs, rawValue: 21.0, numericValue: 21.0),
@@ -146,6 +177,59 @@ class _SpyTelemetryRepo implements TelemetryRepository {
   }
 }
 
+class _StubDeviceRepo implements DeviceRepository {
+  @override
+  Future<PageData<TbDeviceInfo>> getDevices(
+    PageQuery query,
+    TbDeviceQuery filter, {
+    CancelToken? cancelToken,
+  }) async {
+    return const PageData<TbDeviceInfo>(
+      data: [
+        TbDeviceInfo(
+          id: 'resolved-dev-99',
+          name: 'Flood Sensor B-7B05',
+          type: 'Bringter Flood',
+          active: true,
+        ),
+      ],
+      totalPages: 1,
+      totalElements: 1,
+      hasNext: false,
+    );
+  }
+
+  @override
+  Future<PageData<TbDeviceProfileSummary>> getDeviceProfiles(
+    PageQuery query, {
+    CancelToken? cancelToken,
+  }) async => const PageData<TbDeviceProfileSummary>(
+    data: [],
+    totalPages: 0,
+    totalElements: 0,
+    hasNext: false,
+  );
+
+  @override
+  Future<TbDeviceInfo> getDeviceInfo(String deviceId) async =>
+      const TbDeviceInfo(id: 'resolved-dev-99', name: 'Flood', type: 'Sensor');
+
+  @override
+  Future<TbDeviceCredentials> getDeviceCredentials(String deviceId) async =>
+      const TbDeviceCredentials(
+        id: 'c-1',
+        deviceId: 'resolved-dev-99',
+        credentialsType: 'ACCESS_TOKEN',
+        credentialsId: 'tok',
+      );
+
+  @override
+  Future<TbClaimResult> claimDevice(
+    String deviceName, {
+    String? secretKey,
+  }) async => const TbClaimResult(response: 'SUCCESS');
+}
+
 class _DemoConfigController extends ServerConfigController {
   @override
   ServerConfigState build() => const ServerConfigState(
@@ -154,10 +238,21 @@ class _DemoConfigController extends ServerConfigController {
   );
 }
 
+class _LiveConfigController extends ServerConfigController {
+  @override
+  ServerConfigState build() => const ServerConfigState(
+    baseUrl: 'https://thingsboard.democloud.xyz/',
+    mode: SessionMode.live,
+  );
+}
+
 void main() {
   Widget buildApp({
     required DashboardRepository dashboardRepo,
     required TelemetryRepository telemetryRepo,
+    DeviceRepository? deviceRepo,
+    SessionMode mode = SessionMode.demo,
+    String dashboardId = 'dash-1',
     ThemeData? theme,
     double textScale = 1.0,
     bool disableAnimations = false,
@@ -168,14 +263,20 @@ void main() {
       overrides: [
         tbStorageProvider.overrideWithValue(FakeSecureStorage()),
         tbAppPreferencesProvider.overrideWithValue(
-          FakeAppPreferences(sessionMode: SessionMode.demo),
+          FakeAppPreferences(sessionMode: mode),
         ),
         wsChannelFactoryProvider.overrideWithValue(
           (_) => FakeWebSocketChannel(),
         ),
-        serverConfigProvider.overrideWith(_DemoConfigController.new),
+        serverConfigProvider.overrideWith(
+          mode == SessionMode.live
+              ? _LiveConfigController.new
+              : _DemoConfigController.new,
+        ),
         dashboardRepositoryProvider.overrideWithValue(dashboardRepo),
         telemetryRepositoryProvider.overrideWithValue(telemetryRepo),
+        if (deviceRepo != null)
+          deviceRepositoryProvider.overrideWithValue(deviceRepo),
       ],
       child: MediaQuery(
         data: MediaQueryData(
@@ -186,7 +287,7 @@ void main() {
         child: MaterialApp(
           theme: theme ?? tbLightTheme(),
           home: DashboardDetailsPage(
-            dashboardId: 'dash-1',
+            dashboardId: dashboardId,
             embedded: embedded,
             onOpenExternal: onOpenExternal,
           ),
@@ -292,6 +393,167 @@ void main() {
         await tester.tap(find.byTooltip('Exit fullscreen'));
         await tester.pumpAndSettle();
         expect(find.byType(TbAppBar), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'resolves dynamic deviceType alias in Live mode and renders REST latest telemetry pills',
+      (tester) async {
+        final repo = _DetailDashboardRepo(
+          customDashboard: const TbDashboard(
+            info: TbDashboardInfo(
+              id: '5f1b2c30-0000-11ee-be56-0242ac120002',
+              title: 'Flood Monitoring',
+            ),
+            configuration: {
+              'entityAliases': {
+                'a1': {
+                  'alias': 'Flood Sensors',
+                  'filter': {
+                    'type': 'deviceType',
+                    'deviceType': 'Bringter Flood',
+                  },
+                },
+              },
+            },
+          ),
+        );
+        final telRepo = _SpyTelemetryRepo();
+        final devRepo = _StubDeviceRepo();
+
+        await tester.pumpWidget(
+          buildApp(
+            dashboardRepo: repo,
+            telemetryRepo: telRepo,
+            deviceRepo: devRepo,
+            mode: SessionMode.live,
+            dashboardId: '5f1b2c30-0000-11ee-be56-0242ac120002',
+            disableAnimations: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          telRepo.latestQueries,
+          contains(
+            const EntityId(
+              entityType: EntityType.device,
+              id: 'resolved-dev-99',
+            ),
+          ),
+        );
+        expect(find.text('22.4 °C'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'skips orphaned/deleted static entityAliases (404) and resolves widget-referenced active device telemetry',
+      (tester) async {
+        final repo = _DetailDashboardRepo(
+          customDashboard: const TbDashboard(
+            info: TbDashboardInfo(
+              id: '115fbd20-df2f-11f1-991a-2ba0e9cc8ebb',
+              title: 'Bringter_flood_test_5DVC',
+            ),
+            configuration: {
+              'entityAliases': {
+                'orphaned-alias': {
+                  'id': 'orphaned-alias',
+                  'alias': 'bringter_flood_deleted',
+                  'filter': {
+                    'type': 'singleEntity',
+                    'singleEntity': {
+                      'entityType': 'DEVICE',
+                      'id': '4fcc1870-b1a2-11f1-8553-d97f9e4a8828',
+                    },
+                  },
+                },
+                'alias-004-empty': {
+                  'id': 'alias-004-empty',
+                  'alias': 'Bringter_flood_004',
+                  'filter': {
+                    'type': 'singleEntity',
+                    'singleEntity': {
+                      'entityType': 'DEVICE',
+                      'id': '380b3b80-df1a-11f1-991a-2ba0e9cc8ebb',
+                    },
+                  },
+                },
+                'alias-003-live': {
+                  'id': 'alias-003-live',
+                  'alias': 'Bringter_flood_003',
+                  'filter': {
+                    'type': 'singleEntity',
+                    'singleEntity': {
+                      'entityType': 'DEVICE',
+                      'id': '321a1570-df1a-11f1-991a-2ba0e9cc8ebb',
+                    },
+                  },
+                },
+              },
+              'widgets': {
+                'w1': {
+                  'config': {
+                    'datasources': [
+                      {
+                        'type': 'entity',
+                        'entityAliasId': 'alias-004-empty',
+                        'dataKeys': [
+                          {'name': 'battery_mv', 'type': 'timeseries'},
+                        ],
+                      },
+                    ],
+                  },
+                },
+                'w2': {
+                  'config': {
+                    'datasources': [
+                      {
+                        'type': 'entity',
+                        'entityAliasId': 'alias-003-live',
+                        'dataKeys': [
+                          {'name': 'water_level_cm', 'type': 'timeseries'},
+                        ],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          ),
+        );
+        final telRepo = _SpyTelemetryRepo(
+          notFoundEntityIds: const {'4fcc1870-b1a2-11f1-8553-d97f9e4a8828'},
+          emptyEntityIds: const {'380b3b80-df1a-11f1-991a-2ba0e9cc8ebb'},
+        );
+        final devRepo = _StubDeviceRepo();
+
+        await tester.pumpWidget(
+          buildApp(
+            dashboardRepo: repo,
+            telemetryRepo: telRepo,
+            deviceRepo: devRepo,
+            mode: SessionMode.live,
+            dashboardId: '115fbd20-df2f-11f1-991a-2ba0e9cc8ebb',
+            disableAnimations: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Orphaned alias must never be queried when widgets reference valid aliases!
+        expect(
+          telRepo.latestQueries,
+          isNot(
+            contains(
+              const EntityId(
+                entityType: EntityType.device,
+                id: '4fcc1870-b1a2-11f1-8553-d97f9e4a8828',
+              ),
+            ),
+          ),
+        );
+        // Active widget-referenced device 003 with non-empty telemetry is selected and rendered!
+        expect(find.text('22.4 °C'), findsOneWidget);
       },
     );
 

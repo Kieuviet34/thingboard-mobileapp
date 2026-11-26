@@ -233,10 +233,8 @@ void main() {
         adapter.on(
           'GET',
           '/api/tenant/subscription',
-          (_) => MockDioAdapter.jsonResponse({
-            'plan': 'Maker',
-            'state': 'ACTIVE',
-          }),
+          (_) =>
+              MockDioAdapter.jsonResponse({'plan': 'Maker', 'state': 'ACTIVE'}),
         );
         adapter.on(
           'GET',
@@ -330,167 +328,174 @@ void main() {
     );
   });
 
-  group('/api/tenant/* entity sub-routes on Device, Asset, Customer & Dashboard repos', () {
-    test(
-      'Device, Asset, Customer, and Dashboard /api/tenant/* methods map PE 4.4 & TB 3.3 cleanly',
-      () async {
-        final devRepo = RestDeviceRepository(client: client);
-        final assetRepo = RestAssetRepository(client: client);
-        final custRepo = RestCustomerRepository(client: client);
-        final dashRepo = RestDashboardRepository(client: client);
+  group(
+    '/api/tenant/* entity sub-routes on Device, Asset, Customer & Dashboard repos',
+    () {
+      test(
+        'Device, Asset, Customer, and Dashboard /api/tenant/* methods map PE 4.4 & TB 3.3 cleanly',
+        () async {
+          final devRepo = RestDeviceRepository(client: client);
+          final assetRepo = RestAssetRepository(client: client);
+          final custRepo = RestCustomerRepository(client: client);
+          final dashRepo = RestDashboardRepository(client: client);
 
-        // Device: /api/tenant/devices, /api/tenant/device -> fallback /api/tenant/devices?deviceName=..., POST /api/tenant/{tenantId}/device/{deviceId}
-        adapter.on('GET', '/api/tenant/devices', (opts) {
-          if (opts.queryParameters.containsKey('deviceName')) {
-            return MockDioAdapter.jsonResponse({
-              'id': {'entityType': 'DEVICE', 'id': 'd-named'},
-              'name': opts.queryParameters['deviceName'],
-              'type': 'Bringter Flood',
-            });
-          }
-          return MockDioAdapter.jsonResponse({
-            'data': [
-              {
-                'id': {'entityType': 'DEVICE', 'id': 'd-1'},
-                'name': 'Bringter_flood_005',
+          // Device: /api/tenant/devices, /api/tenant/device -> fallback /api/tenant/devices?deviceName=..., POST /api/tenant/{tenantId}/device/{deviceId}
+          adapter.on('GET', '/api/tenant/devices', (opts) {
+            if (opts.queryParameters.containsKey('deviceName')) {
+              return MockDioAdapter.jsonResponse({
+                'id': {'entityType': 'DEVICE', 'id': 'd-named'},
+                'name': opts.queryParameters['deviceName'],
                 'type': 'Bringter Flood',
-              },
-            ],
-            'totalPages': 1,
-            'totalElements': 1,
-            'hasNext': false,
-          });
-        });
-        adapter.on(
-          'POST',
-          '/api/tenant/t-2/device/d-1',
-          (_) => MockDioAdapter.jsonResponse({
-            'id': {'entityType': 'DEVICE', 'id': 'd-1'},
-            'tenantId': {'entityType': 'TENANT', 'id': 't-2'},
-            'name': 'Bringter_flood_005',
-            'type': 'Bringter Flood',
-          }),
-        );
-
-        expect(
-          (await devRepo.getTenantDevices(const PageQuery())).data.single.name,
-          'Bringter_flood_005',
-        );
-        expect(
-          (await devRepo.getTenantDeviceByName('SensorX')).id,
-          'd-named',
-        );
-        expect(
-          (await devRepo.assignDeviceToTenant('t-2', 'd-1')).tenantId,
-          't-2',
-        );
-
-        // Asset: /api/tenant/assets, /api/tenant/asset -> fallback /api/tenant/assets?assetName=...
-        adapter.on('GET', '/api/tenant/assets', (opts) {
-          if (opts.queryParameters.containsKey('assetName')) {
+              });
+            }
             return MockDioAdapter.jsonResponse({
-              'id': {'entityType': 'ASSET', 'id': 'a-named'},
-              'name': opts.queryParameters['assetName'],
-              'type': 'Building',
+              'data': [
+                {
+                  'id': {'entityType': 'DEVICE', 'id': 'd-1'},
+                  'name': 'Bringter_flood_005',
+                  'type': 'Bringter Flood',
+                },
+              ],
+              'totalPages': 1,
+              'totalElements': 1,
+              'hasNext': false,
             });
-          }
-          return MockDioAdapter.jsonResponse({
-            'data': [
-              {
-                'id': {'entityType': 'ASSET', 'id': 'a-1'},
-                'name': 'Station HQ',
+          });
+          adapter.on(
+            'POST',
+            '/api/tenant/t-2/device/d-1',
+            (_) => MockDioAdapter.jsonResponse({
+              'id': {'entityType': 'DEVICE', 'id': 'd-1'},
+              'tenantId': {'entityType': 'TENANT', 'id': 't-2'},
+              'name': 'Bringter_flood_005',
+              'type': 'Bringter Flood',
+            }),
+          );
+
+          expect(
+            (await devRepo.getTenantDevices(
+              const PageQuery(),
+            )).data.single.name,
+            'Bringter_flood_005',
+          );
+          expect(
+            (await devRepo.getTenantDeviceByName('SensorX')).id,
+            'd-named',
+          );
+          expect(
+            (await devRepo.assignDeviceToTenant('t-2', 'd-1')).tenantId,
+            't-2',
+          );
+
+          // Asset: /api/tenant/assets, /api/tenant/asset -> fallback /api/tenant/assets?assetName=...
+          adapter.on('GET', '/api/tenant/assets', (opts) {
+            if (opts.queryParameters.containsKey('assetName')) {
+              return MockDioAdapter.jsonResponse({
+                'id': {'entityType': 'ASSET', 'id': 'a-named'},
+                'name': opts.queryParameters['assetName'],
                 'type': 'Building',
-              },
-            ],
-            'totalPages': 1,
-            'totalElements': 1,
-            'hasNext': false,
+              });
+            }
+            return MockDioAdapter.jsonResponse({
+              'data': [
+                {
+                  'id': {'entityType': 'ASSET', 'id': 'a-1'},
+                  'name': 'Station HQ',
+                  'type': 'Building',
+                },
+              ],
+              'totalPages': 1,
+              'totalElements': 1,
+              'hasNext': false,
+            });
           });
-        });
-        expect(
-          (await assetRepo.getTenantAssets(const PageQuery())).data.single.name,
-          'Station HQ',
-        );
-        expect((await assetRepo.getTenantAssetByName('HQ')).id, 'a-named');
+          expect(
+            (await assetRepo.getTenantAssets(
+              const PageQuery(),
+            )).data.single.name,
+            'Station HQ',
+          );
+          expect((await assetRepo.getTenantAssetByName('HQ')).id, 'a-named');
 
-        // Customer: GET /api/tenant/customers?customerTitle=...
-        adapter.on('GET', '/api/tenant/customers', (opts) {
-          expect(opts.queryParameters['customerTitle'], 'Acme Corp');
-          return MockDioAdapter.jsonResponse({
-            'id': {'entityType': 'CUSTOMER', 'id': 'c-1'},
-            'title': 'Acme Corp',
+          // Customer: GET /api/tenant/customers?customerTitle=...
+          adapter.on('GET', '/api/tenant/customers', (opts) {
+            expect(opts.queryParameters['customerTitle'], 'Acme Corp');
+            return MockDioAdapter.jsonResponse({
+              'id': {'entityType': 'CUSTOMER', 'id': 'c-1'},
+              'title': 'Acme Corp',
+            });
           });
-        });
-        expect(
-          (await custRepo.getTenantCustomerByTitle('Acme Corp')).id,
-          'c-1',
-        );
+          expect(
+            (await custRepo.getTenantCustomerByTitle('Acme Corp')).id,
+            'c-1',
+          );
 
-        // Dashboard: GET /api/tenant/{tenantId}/dashboards & GET/POST /api/tenant/dashboard/home/info
-        adapter.on(
-          'GET',
-          '/api/tenant/t-1/dashboards',
-          (_) => MockDioAdapter.jsonResponse({
-            'data': [
-              {
-                'id': {'entityType': 'DASHBOARD', 'id': 'dash-1'},
-                'title': 'Tenant Flood Overview',
-              },
-            ],
-            'totalPages': 1,
-            'totalElements': 1,
-            'hasNext': false,
-          }),
-        );
-        adapter.on(
-          'GET',
-          '/api/tenant/dashboard/home/info',
-          (_) => MockDioAdapter.jsonResponse({
-            'dashboardId': {'entityType': 'DASHBOARD', 'id': 'dash-1'},
-            'hideDashboardToolbar': false,
-          }),
-        );
-        Map<String, dynamic>? postedHome;
-        adapter.on('POST', '/api/tenant/dashboard/home/info', (opts) {
-          postedHome = opts.data as Map<String, dynamic>;
-          return MockDioAdapter.emptyResponse();
-        });
+          // Dashboard: GET /api/tenant/{tenantId}/dashboards & GET/POST /api/tenant/dashboard/home/info
+          adapter.on(
+            'GET',
+            '/api/tenant/t-1/dashboards',
+            (_) => MockDioAdapter.jsonResponse({
+              'data': [
+                {
+                  'id': {'entityType': 'DASHBOARD', 'id': 'dash-1'},
+                  'title': 'Tenant Flood Overview',
+                },
+              ],
+              'totalPages': 1,
+              'totalElements': 1,
+              'hasNext': false,
+            }),
+          );
+          adapter.on(
+            'GET',
+            '/api/tenant/dashboard/home/info',
+            (_) => MockDioAdapter.jsonResponse({
+              'dashboardId': {'entityType': 'DASHBOARD', 'id': 'dash-1'},
+              'hideDashboardToolbar': false,
+            }),
+          );
+          Map<String, dynamic>? postedHome;
+          adapter.on('POST', '/api/tenant/dashboard/home/info', (opts) {
+            postedHome = opts.data as Map<String, dynamic>;
+            return MockDioAdapter.emptyResponse();
+          });
 
-        final tDash = await dashRepo.getTenantDashboardsByTenantId(
-          't-1',
-          const PageQuery(),
-        );
-        expect(tDash.data.single.title, 'Tenant Flood Overview');
+          final tDash = await dashRepo.getTenantDashboardsByTenantId(
+            't-1',
+            const PageQuery(),
+          );
+          expect(tDash.data.single.title, 'Tenant Flood Overview');
 
-        final homeInfo = await dashRepo.getTenantHomeDashboardInfo();
-        expect(homeInfo?.dashboardId, 'dash-1');
-        expect(homeInfo?.hideDashboardToolbar, isFalse);
+          final homeInfo = await dashRepo.getTenantHomeDashboardInfo();
+          expect(homeInfo?.dashboardId, 'dash-1');
+          expect(homeInfo?.hideDashboardToolbar, isFalse);
 
-        await dashRepo.setTenantHomeDashboardInfo(
-          const TbHomeDashboardInfo(
-            dashboardId: 'dash-1',
-            hideDashboardToolbar: true,
-          ),
-        );
-        expect(postedHome?['hideDashboardToolbar'], isTrue);
-      },
-    );
-
-    test('DemoTenantRepository works completely offline', () async {
-      final demo = DemoTenantRepository();
-      final current = await demo.getTenantInfo('demo-tenant-1');
-      expect(current.title, isNotEmpty);
-
-      final updated = await demo.saveTenant(
-        current.copyWith(title: 'Demo Smart City'),
+          await dashRepo.setTenantHomeDashboardInfo(
+            const TbHomeDashboardInfo(
+              dashboardId: 'dash-1',
+              hideDashboardToolbar: true,
+            ),
+          );
+          expect(postedHome?['hideDashboardToolbar'], isTrue);
+        },
       );
-      expect(updated.title, 'Demo Smart City');
 
-      final views = await demo.getTenantEntityViews(const PageQuery());
-      expect(views.data, isNotEmpty);
+      test('DemoTenantRepository works completely offline', () async {
+        final demo = DemoTenantRepository();
+        final current = await demo.getTenantInfo('demo-tenant-1');
+        expect(current.title, isNotEmpty);
 
-      final edges = await demo.getTenantEdges(const PageQuery());
-      expect(edges.data, isNotEmpty);
-    });
-  });
+        final updated = await demo.saveTenant(
+          current.copyWith(title: 'Demo Smart City'),
+        );
+        expect(updated.title, 'Demo Smart City');
+
+        final views = await demo.getTenantEntityViews(const PageQuery());
+        expect(views.data, isNotEmpty);
+
+        final edges = await demo.getTenantEdges(const PageQuery());
+        expect(edges.data, isNotEmpty);
+      });
+    },
+  );
 }

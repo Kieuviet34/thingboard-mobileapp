@@ -93,7 +93,7 @@ void main() {
 
   group('MorePage', () {
     testWidgets(
-      'Tenant Admin sees Customers, Assets, Audit Logs, Notifications badge, and Demo badge',
+      'Tenant Admin sees Tenant, Customers, Assets, Audit Logs, Notifications badge, and Demo badge',
       (tester) async {
         final auth = _StubAuthController(
           _buildAuth(authority: Authority.tenantAdmin, mode: SessionMode.demo),
@@ -103,6 +103,7 @@ void main() {
 
         expect(find.text('Alex Chen'), findsOneWidget);
         expect(find.text('DEMO'), findsOneWidget);
+        expect(find.text('Tenant'), findsOneWidget);
         expect(find.text('Customers'), findsOneWidget);
         expect(find.text('Assets'), findsOneWidget);
         expect(find.text('Audit Logs'), findsOneWidget);
@@ -111,6 +112,10 @@ void main() {
         expect(find.text('Profile & Settings'), findsOneWidget);
         expect(find.byType(TbIcon), findsWidgets);
 
+        await tester.scrollUntilVisible(
+          find.byKey(const Key('more_logout_button')),
+          200,
+        );
         final logoutRect = tester.getRect(
           find.byKey(const Key('more_logout_button')),
         );
@@ -121,7 +126,20 @@ void main() {
       },
     );
 
-    testWidgets('CUSTOMER_USER hides Customers entry', (tester) async {
+    testWidgets('SYS_ADMIN sees Tenants & profiles entry', (tester) async {
+      final auth = _StubAuthController(
+        _buildAuth(authority: Authority.sysAdmin, mode: SessionMode.live),
+      );
+      await tester.pumpWidget(buildApp(authController: auth, unreadCount: 0));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Tenants'), findsOneWidget);
+      expect(find.text('Tenants & profiles'), findsOneWidget);
+    });
+
+    testWidgets('CUSTOMER_USER hides Tenant and Customers entries', (
+      tester,
+    ) async {
       final auth = _StubAuthController(
         _buildAuth(authority: Authority.customerUser, mode: SessionMode.live),
       );
@@ -129,6 +147,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('LIVE'), findsOneWidget);
+      expect(find.text('Tenant'), findsNothing);
+      expect(find.text('Tenants'), findsNothing);
       expect(find.text('Customers'), findsNothing);
       expect(find.text('Assets'), findsOneWidget);
       expect(find.text('Audit Logs'), findsOneWidget);
@@ -177,6 +197,7 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('More'), findsOneWidget);
+      expect(find.text('Tenant'), findsOneWidget);
       expect(find.text('Customers'), findsOneWidget);
     });
   });

@@ -3,6 +3,116 @@ import 'package:thingsboard_democloud_app/core/models/models.dart';
 
 void main() {
   group('Domain models JSON parsing & immutability', () {
+    group('TbDeviceInfo', () {
+      Map<String, dynamic> json([Map<String, dynamic> extra = const {}]) =>
+          <String, dynamic>{
+            'id': {'entityType': 'DEVICE', 'id': 'dev-1'},
+            'name': 'Pump-1',
+            'type': 'pump-type',
+            ...extra,
+          };
+
+      test('deviceProfileName comes from deviceProfileName, not type', () {
+        final d = TbDeviceInfo.fromJson(
+          json({'deviceProfileName': 'Pump Profile'}),
+        );
+        expect(d.type, 'pump-type');
+        expect(d.deviceProfileName, 'Pump Profile');
+      });
+
+      test('deviceProfileName falls back to type when absent', () {
+        expect(TbDeviceInfo.fromJson(json()).deviceProfileName, 'pump-type');
+      });
+
+      test('active parses bool, string and missing', () {
+        expect(TbDeviceInfo.fromJson(json({'active': true})).active, isTrue);
+        expect(TbDeviceInfo.fromJson(json({'active': 'true'})).active, isTrue);
+        expect(
+          TbDeviceInfo.fromJson(json({'active': 'false'})).active,
+          isFalse,
+        );
+        expect(TbDeviceInfo.fromJson(json()).active, isFalse);
+      });
+
+      test('ownerName wins over customerTitle, which is the fallback', () {
+        final both = TbDeviceInfo.fromJson(
+          json({'ownerName': 'Owner Inc', 'customerTitle': 'Cust Ltd'}),
+        );
+        final onlyTitle = TbDeviceInfo.fromJson(
+          json({'customerTitle': 'Cust Ltd'}),
+        );
+        expect(both.ownerName, 'Owner Inc');
+        expect(onlyTitle.ownerName, 'Cust Ltd');
+        expect(TbDeviceInfo.fromJson(json()).ownerName, '');
+      });
+
+      test('null-uuid customerId normalizes to null', () {
+        final nullCustomer = TbDeviceInfo.fromJson(
+          json({
+            'customerId': {
+              'entityType': 'CUSTOMER',
+              'id': TbDeviceInfo.nullUuid,
+            },
+          }),
+        );
+        final realCustomer = TbDeviceInfo.fromJson(
+          json({
+            'customerId': {'entityType': 'CUSTOMER', 'id': 'cust-1'},
+          }),
+        );
+        expect(nullCustomer.customerId, isNull);
+        expect(realCustomer.customerId, 'cust-1');
+      });
+
+      test('createdTime parses num to int, missing is 0', () {
+        expect(
+          TbDeviceInfo.fromJson(
+            json({'createdTime': 1704067200000.0}),
+          ).createdTime,
+          1704067200000,
+        );
+        expect(TbDeviceInfo.fromJson(json()).createdTime, 0);
+      });
+
+      test('copyWith(active:) keeps profile name, owner and created', () {
+        final d = TbDeviceInfo.fromJson(
+          json({
+            'deviceProfileName': 'Pump Profile',
+            'ownerName': 'Owner Inc',
+            'createdTime': 1704067200000,
+            'label': 'Boiler room',
+            'active': false,
+          }),
+        );
+        final c = d.copyWith(active: true);
+        expect(c.active, isTrue);
+        expect(c.deviceProfileName, 'Pump Profile');
+        expect(c.ownerName, 'Owner Inc');
+        expect(c.createdTime, 1704067200000);
+        expect(c.label, 'Boiler room');
+        expect(c.type, 'pump-type');
+      });
+
+      test('equality changes when profile name, owner or label change', () {
+        final base = <String, dynamic>{
+          'deviceProfileName': 'A',
+          'ownerName': 'O',
+          'label': 'L',
+        };
+        final d = TbDeviceInfo.fromJson(json(base));
+        expect(TbDeviceInfo.fromJson(json(base)), d);
+        expect(TbDeviceInfo.fromJson(json(base)).hashCode, d.hashCode);
+        for (final change in <Map<String, dynamic>>[
+          {'deviceProfileName': 'B'},
+          {'ownerName': 'P'},
+          {'label': 'M'},
+          {'createdTime': 5},
+        ]) {
+          expect(TbDeviceInfo.fromJson(json({...base, ...change})), isNot(d));
+        }
+      });
+    });
+
     test('PageData parses items and pagination metadata', () {
       final page = PageData<TbDeviceInfo>.fromJson(<String, dynamic>{
         'data': [

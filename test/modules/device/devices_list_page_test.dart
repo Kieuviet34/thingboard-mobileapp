@@ -24,8 +24,10 @@ import 'package:thingsboard_democloud_app/core/models/telemetry_models.dart';
 import 'package:thingsboard_democloud_app/modules/device/devices_list_page.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_search_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_list_row.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_metric_pill.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_shimmer.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_status_badge.dart';
 
 import '../../helpers/fake_app_preferences.dart';
 import '../../helpers/fake_secure_storage.dart';
@@ -323,6 +325,38 @@ void main() {
         expect(find.text('220.1'), findsOneWidget);
       },
     );
+
+    testWidgets('rows use TbListRow with meta line and online badge', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(buildTestWidget(tester));
+      await tester.pumpAndSettle();
+
+      final row = find.byKey(const Key('device-row-dev-1'));
+      final listRow = find.descendant(
+        of: row,
+        matching: find.byType(TbListRow),
+      );
+      expect(listRow, findsOneWidget);
+      expect(
+        find.descendant(
+          of: listRow,
+          matching: find.text('Thermometer · Floor 1 Room 101'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: listRow, matching: find.byType(TbStatusBadge)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('device-row-dev-2')),
+          matching: find.text('OFFLINE'),
+        ),
+        findsOneWidget,
+      );
+    });
 
     testWidgets('toggles search bar and filters devices by query', (
       WidgetTester tester,

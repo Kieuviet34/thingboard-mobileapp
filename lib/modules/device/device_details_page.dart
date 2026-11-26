@@ -21,6 +21,7 @@ import 'package:thingsboard_democloud_app/widgets/tb_app_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_metric_pill.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_motion.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_section_card.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_shimmer.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_status_badge.dart';
 
@@ -591,6 +592,7 @@ class _AttributesSection extends ConsumerWidget {
   }) async {
     final saved = await showModalBottomSheet<({String key, Object value})>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       builder: (sheetCtx) =>
           _AttributeEditorSheet(scope: scope, existing: existing),
@@ -1319,243 +1321,205 @@ class _DeviceInfoSection extends ConsumerWidget {
           )
         : '—';
 
-    return ListView.builder(
+    final combinedRelations = <({TbEntityRelationInfo rel, bool outgoing})>[
+      if (outgoingAsync.valueOrNull != null)
+        for (final r in outgoingAsync.valueOrNull!) (rel: r, outgoing: true),
+      if (incomingAsync.valueOrNull != null)
+        for (final r in incomingAsync.valueOrNull!) (rel: r, outgoing: false),
+    ];
+
+    return ListView(
       padding: const EdgeInsets.fromLTRB(
         DesignTokens.spacing16,
         0,
         DesignTokens.spacing16,
         DesignTokens.spacing24,
       ),
-      itemCount: 3,
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return Container(
-            margin: const EdgeInsets.only(bottom: DesignTokens.spacing12),
-            padding: DesignTokens.cardPadding,
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainerLow,
-              borderRadius: DesignTokens.borderRadiusLarge,
-              border: Border.all(color: scheme.outlineVariant),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: DesignTokens.spacing8,
-              children: [
-                Text(
-                  'Device metadata',
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                _InfoKvRow(label: 'Profile', value: device.type),
-                _InfoKvRow(
-                  label: 'Label',
-                  value: device.label.isNotEmpty ? device.label : '—',
-                ),
-                _InfoKvRow(
-                  label: 'Owner',
-                  value: device.ownerName.isNotEmpty ? device.ownerName : '—',
-                ),
-                _InfoKvRow(label: 'Created', value: createdStr),
-              ],
-            ),
-          );
-        }
-
-        if (index == 1) {
-          return Container(
-            margin: const EdgeInsets.only(bottom: DesignTokens.spacing12),
-            padding: DesignTokens.cardPadding,
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainerLow,
-              borderRadius: DesignTokens.borderRadiusLarge,
-              border: Border.all(color: scheme.outlineVariant),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: DesignTokens.spacing8,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Credentials',
-                        style: textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      key: const Key('toggle-credentials-button'),
-                      style: TextButton.styleFrom(
-                        minimumSize: const Size(
-                          DesignTokens.minTouchTarget,
-                          DesignTokens.minTouchTarget,
-                        ),
-                      ),
-                      onPressed: onToggleCredentials,
-                      child: Text(showCredentials ? 'Hide' : 'Show'),
-                    ),
-                  ],
-                ),
-                if (credsAsync != null)
-                  credsAsync.when(
-                    loading: () => const TbShimmer(height: 24),
-                    error: (err, _) {
-                      final isForbidden =
-                          err is TbFailure &&
-                          err.type == TbFailureType.permissionDenied;
-                      return Container(
-                        key: const Key('credentials-error-notice'),
-                        padding: DesignTokens.paddingSmall,
-                        decoration: BoxDecoration(
-                          color: scheme.errorContainer,
-                          borderRadius: DesignTokens.borderRadiusMedium,
-                        ),
-                        child: Text(
-                          isForbidden
-                              ? 'Restricted — insufficient permissions'
-                              : (err is TbFailure
-                                    ? err.message
-                                    : err.toString()),
-                          style: textTheme.bodySmall?.copyWith(
-                            color: scheme.onErrorContainer,
-                          ),
-                        ),
-                      );
-                    },
-                    data: (creds) => Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                creds.credentialsType,
-                                style: textTheme.labelSmall?.copyWith(
-                                  color: scheme.onSurfaceVariant,
-                                ),
-                              ),
-                              Text(
-                                creds.credentialsId,
-                                key: const Key('credentials-id-text'),
-                                style: TbTextStyles.tabular(
-                                  textTheme.bodyMedium ??
-                                      TbTextStyles.bodyMedium,
-                                ).copyWith(fontWeight: FontWeight.w600),
-                              ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: 'Copy credentials',
-                          constraints: const BoxConstraints(
-                            minWidth: DesignTokens.minTouchTarget,
-                            minHeight: DesignTokens.minTouchTarget,
-                          ),
-                          icon: const Icon(Icons.copy_outlined),
-                          onPressed: () async {
-                            await Clipboard.setData(
-                              ClipboardData(text: creds.credentialsId),
-                            );
-                            if (!context.mounted) return;
-                            ScaffoldMessenger.of(context)
-                              ..hideCurrentSnackBar()
-                              ..showSnackBar(
-                                const SnackBar(
-                                  content: Text('Credentials copied'),
-                                ),
-                              );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          );
-        }
-
-        final combinedRelations = <({TbEntityRelationInfo rel, bool outgoing})>[
-          if (outgoingAsync.valueOrNull != null)
-            for (final r in outgoingAsync.valueOrNull!)
-              (rel: r, outgoing: true),
-          if (incomingAsync.valueOrNull != null)
-            for (final r in incomingAsync.valueOrNull!)
-              (rel: r, outgoing: false),
-        ];
-
-        return Material(
-          color: scheme.surfaceContainerLow,
-          shape: RoundedRectangleBorder(
-            borderRadius: DesignTokens.borderRadiusLarge,
-            side: BorderSide(color: scheme.outlineVariant),
+      children: [
+        TbSectionCard(
+          title: 'Overview',
+          trailing: TbStatusBadge.online(
+            device.active,
+            key: const Key('info-status-badge'),
+            compact: true,
           ),
-          clipBehavior: Clip.antiAlias,
-          child: Padding(
-            padding: DesignTokens.cardPadding,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: DesignTokens.spacing8,
-              children: [
-                Text(
-                  'Relations',
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
+          child: Column(
+            children: [
+              TbKvRow(
+                label: 'Profile',
+                value: device.deviceProfileName,
+                valueKey: const Key('info-profile-value'),
+              ),
+              TbKvRow(
+                label: 'Label',
+                value: device.label,
+                valueKey: const Key('info-label-value'),
+              ),
+              if (device.additionalInfo['gateway'] case true || 'true')
+                const TbKvRow(
+                  label: 'Gateway',
+                  value: 'Yes',
+                  valueKey: Key('info-gateway-value'),
+                ),
+              TbKvRow(
+                label: 'Owner',
+                value: device.ownerName,
+                valueKey: const Key('info-owner-value'),
+              ),
+              TbKvRow(
+                label: 'Created',
+                value: createdStr,
+                valueKey: const Key('info-created-value'),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: DesignTokens.spacing12),
+        TbSectionCard(
+          title: 'Credentials',
+          trailing: TextButton(
+            key: const Key('toggle-credentials-button'),
+            style: TextButton.styleFrom(
+              minimumSize: const Size(
+                DesignTokens.minTouchTarget,
+                DesignTokens.minTouchTarget,
+              ),
+            ),
+            onPressed: onToggleCredentials,
+            child: Text(showCredentials ? 'Hide' : 'Show'),
+          ),
+          child: credsAsync == null
+              ? const SizedBox.shrink()
+              : credsAsync.when(
+                  loading: () => const TbShimmer(height: 24),
+                  error: (err, _) => _credentialsError(scheme, textTheme, err),
+                  data: (creds) =>
+                      _credentialsRow(context, textTheme, scheme, creds),
+                ),
+        ),
+        const SizedBox(height: DesignTokens.spacing12),
+        TbSectionCard(
+          title: 'Relations',
+          child: outgoingAsync.isLoading && incomingAsync.isLoading
+              ? const TbShimmerList(itemCount: 2)
+              : combinedRelations.isEmpty
+              ? Text(
+                  'No linked entities',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                )
+              : Material(
+                  type: MaterialType.transparency,
+                  child: Column(
+                    children: [
+                      for (final item in combinedRelations)
+                        _relationTile(context, scheme, item),
+                    ],
                   ),
                 ),
-                if (outgoingAsync.isLoading && incomingAsync.isLoading)
-                  const TbShimmerList(itemCount: 2)
-                else if (combinedRelations.isEmpty)
-                  Text(
-                    'No linked entities',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  )
-                else
-                  for (final item in combinedRelations)
-                    ListTile(
-                      key: Key(
-                        'relation-${item.outgoing ? item.rel.to.id : item.rel.from.id}',
-                      ),
-                      contentPadding: EdgeInsets.zero,
-                      minTileHeight: DesignTokens.minTouchTarget,
-                      leading: TbIcon(
-                        _iconForEntity(
-                          item.outgoing
-                              ? item.rel.to.entityType
-                              : item.rel.from.entityType,
-                        ),
-                        color: scheme.primary,
-                      ),
-                      title: Text(
-                        item.outgoing
-                            ? (item.rel.toName.isNotEmpty
-                                  ? item.rel.toName
-                                  : item.rel.to.id)
-                            : (item.rel.fromName.isNotEmpty
-                                  ? item.rel.fromName
-                                  : item.rel.from.id),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Text(
-                        '${item.outgoing ? '→' : '←'} ${item.rel.type}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => _navigateToEntity(
-                        context,
-                        item.outgoing ? item.rel.to : item.rel.from,
-                      ),
-                    ),
-              ],
-            ),
+        ),
+      ],
+    );
+  }
+
+  Widget _credentialsError(
+    ColorScheme scheme,
+    TextTheme textTheme,
+    Object err,
+  ) {
+    final isForbidden =
+        err is TbFailure && err.type == TbFailureType.permissionDenied;
+    return Container(
+      key: const Key('credentials-error-notice'),
+      padding: DesignTokens.paddingSmall,
+      decoration: BoxDecoration(
+        color: scheme.errorContainer,
+        borderRadius: DesignTokens.borderRadiusMedium,
+      ),
+      child: Text(
+        isForbidden
+            ? 'Restricted — insufficient permissions'
+            : (err is TbFailure ? err.message : err.toString()),
+        style: textTheme.bodySmall?.copyWith(color: scheme.onErrorContainer),
+      ),
+    );
+  }
+
+  Widget _credentialsRow(
+    BuildContext context,
+    TextTheme textTheme,
+    ColorScheme scheme,
+    TbDeviceCredentials creds,
+  ) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                creds.credentialsType,
+                style: textTheme.labelSmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              Text(
+                creds.credentialsId,
+                key: const Key('credentials-id-text'),
+                style: TbTextStyles.tabular(
+                  textTheme.bodyMedium ?? TbTextStyles.bodyMedium,
+                ).copyWith(fontWeight: FontWeight.w600),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+        IconButton(
+          tooltip: 'Copy credentials',
+          constraints: const BoxConstraints(
+            minWidth: DesignTokens.minTouchTarget,
+            minHeight: DesignTokens.minTouchTarget,
+          ),
+          icon: const Icon(Icons.copy_outlined),
+          onPressed: () async {
+            final messenger = ScaffoldMessenger.of(context);
+            await Clipboard.setData(ClipboardData(text: creds.credentialsId));
+            messenger
+              ..hideCurrentSnackBar()
+              ..showSnackBar(
+                const SnackBar(content: Text('Credentials copied')),
+              );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _relationTile(
+    BuildContext context,
+    ColorScheme scheme,
+    ({TbEntityRelationInfo rel, bool outgoing}) item,
+  ) {
+    final rel = item.rel;
+    final target = item.outgoing ? rel.to : rel.from;
+    final name = item.outgoing ? rel.toName : rel.fromName;
+    return ListTile(
+      key: Key('relation-${target.id}'),
+      contentPadding: EdgeInsets.zero,
+      minTileHeight: DesignTokens.minTouchTarget,
+      leading: TbIcon(_iconForEntity(target.entityType), color: scheme.primary),
+      title: Text(
+        name.isNotEmpty ? name : target.id,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Text(
+        '${item.outgoing ? '→' : '←'} ${rel.type}',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => _navigateToEntity(context, target),
     );
   }
 }
@@ -1655,45 +1619,6 @@ class _AttributeEditorSheetState extends State<_AttributeEditorSheet> {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _InfoKvRow extends StatelessWidget {
-  const _InfoKvRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    return Row(
-      children: [
-        Expanded(
-          flex: 2,
-          child: Text(
-            label,
-            style: textTheme.bodySmall?.copyWith(
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-        const SizedBox(width: DesignTokens.spacing8),
-        Expanded(
-          flex: 3,
-          child: Text(
-            value,
-            textAlign: TextAlign.end,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TbTextStyles.tabular(
-              textTheme.bodyMedium ?? TbTextStyles.bodyMedium,
-            ).copyWith(fontWeight: FontWeight.w500),
-          ),
-        ),
-      ],
     );
   }
 }

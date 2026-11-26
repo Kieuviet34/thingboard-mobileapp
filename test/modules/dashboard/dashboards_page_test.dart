@@ -381,5 +381,29 @@ void main() {
         expect(find.text('Smart Office Monitoring'), findsOneWidget);
       },
     );
+
+    testWidgets('row shows title plus one meta line at 2.0x text scale', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildApp(
+          repo: _PagedDashboardRepo(),
+          textScale: 2.0,
+          disableAnimations: true,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final card = find.byKey(const Key('dashboard-card-dash-1'));
+      expect(
+        find.descendant(of: card, matching: find.byType(Text)),
+        findsNWidgets(2),
+      );
+      expect(
+        tester.getSize(card).height,
+        greaterThanOrEqualTo(DesignTokens.minTouchTarget),
+      );
+      expect(tester.takeException(), isNull);
+    });
   });
 }

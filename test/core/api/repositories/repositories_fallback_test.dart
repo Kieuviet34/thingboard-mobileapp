@@ -481,6 +481,101 @@ void main() {
       },
     );
 
+    group('DeviceRepository.getDeviceInfo', () {
+      const infoPath = '/api/device/info/dev-1';
+      const attrPath =
+          '/api/plugins/telemetry/DEVICE/dev-1/values/attributes/SERVER_SCOPE';
+      final body = <String, dynamic>{
+        'id': {'entityType': 'DEVICE', 'id': 'dev-1'},
+        'name': 'Pump-1',
+        'type': 'pump-type',
+        'deviceProfileName': 'Pump Profile',
+        'ownerName': 'Acme',
+        'createdTime': 1700000000000,
+      };
+
+      test('keeps server active value and skips the attribute call', () async {
+        adapter.on(
+          'GET',
+          infoPath,
+          (_) => MockDioAdapter.jsonResponse({...body, 'active': false}),
+        );
+        adapter.on(
+          'GET',
+          attrPath,
+          (_) => MockDioAdapter.jsonResponse([
+            {'key': 'active', 'value': true},
+          ]),
+        );
+
+        final d = await RestDeviceRepository(
+          client: client,
+        ).getDeviceInfo('dev-1');
+
+        expect(d.active, isFalse);
+        expect(d.deviceProfileName, 'Pump Profile');
+        expect(d.type, 'pump-type');
+        expect(d.ownerName, 'Acme');
+        expect(d.createdTime, 1700000000000);
+        expect(adapter.capturedRequests.map((r) => r.path), [infoPath]);
+      });
+
+      test('missing active falls back to string attribute value', () async {
+        adapter.on('GET', infoPath, (_) => MockDioAdapter.jsonResponse(body));
+        adapter.on(
+          'GET',
+          attrPath,
+          (_) => MockDioAdapter.jsonResponse([
+            {'key': 'active', 'value': 'true'},
+          ]),
+        );
+
+        final d = await RestDeviceRepository(
+          client: client,
+        ).getDeviceInfo('dev-1');
+
+        expect(d.active, isTrue);
+        expect(d.deviceProfileName, 'Pump Profile');
+        expect(d.ownerName, 'Acme');
+        expect(d.createdTime, 1700000000000);
+      });
+
+      test('attribute lookup failure keeps info with active false', () async {
+        adapter.on('GET', infoPath, (_) => MockDioAdapter.jsonResponse(body));
+        adapter.on(
+          'GET',
+          attrPath,
+          (_) => MockDioAdapter.jsonResponse({'status': 500}, statusCode: 500),
+        );
+
+        final d = await RestDeviceRepository(
+          client: client,
+        ).getDeviceInfo('dev-1');
+
+        expect(d.active, isFalse);
+        expect(d.name, 'Pump-1');
+      });
+
+      test('info endpoint failure surfaces as TbFailure', () async {
+        adapter.on(
+          'GET',
+          infoPath,
+          (_) => MockDioAdapter.jsonResponse({'status': 404}, statusCode: 404),
+        );
+
+        await expectLater(
+          RestDeviceRepository(client: client).getDeviceInfo('dev-1'),
+          throwsA(
+            isA<TbFailure>().having(
+              (f) => f.type,
+              'type',
+              TbFailureType.notFound,
+            ),
+          ),
+        );
+      });
+    });
+
     test(
       'AlarmRepository formats CSV lists per PE 4.4 OpenAPI and falls back to /api/alarms on 404',
       () async {

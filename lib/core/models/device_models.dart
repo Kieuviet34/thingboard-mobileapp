@@ -209,10 +209,26 @@ class TbDeviceInfo {
           runtimeType == other.runtimeType &&
           id == other.id &&
           name == other.name &&
-          active == other.active;
+          type == other.type &&
+          label == other.label &&
+          deviceProfileName == other.deviceProfileName &&
+          active == other.active &&
+          ownerName == other.ownerName &&
+          customerId == other.customerId &&
+          createdTime == other.createdTime;
 
   @override
-  int get hashCode => Object.hash(id, name, active);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    type,
+    label,
+    deviceProfileName,
+    active,
+    ownerName,
+    customerId,
+    createdTime,
+  );
 }
 
 /// Device transport credentials from `GET /api/device/{deviceId}/credentials`.

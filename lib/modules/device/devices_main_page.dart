@@ -12,6 +12,7 @@ import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_motion.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_section_card.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_shimmer.dart';
 
 /// Material 3 Device Profiles hub with synced "All devices" summary tile
@@ -201,85 +202,45 @@ class _AllDevicesSummaryTile extends StatelessWidget {
     final statusColors = TbStatusColors.of(context);
     final total = activeCount + inactiveCount;
 
-    return Material(
-      key: const Key('all-devices-summary-card'),
-      color: scheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
-        borderRadius: DesignTokens.borderRadiusLarge,
-        side: BorderSide(color: scheme.outlineVariant),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: TbPressScale(
-        onTap: onOpenAll,
-        child: Padding(
-          padding: DesignTokens.cardPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: DesignTokens.spacing12,
+    return TbPressScale(
+      onTap: onOpenAll,
+      child: KeyedSubtree(
+        key: const Key('all-devices-summary-card'),
+        child: TbSectionCard(
+          title: 'All devices',
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: scheme.primaryContainer,
-                      borderRadius: DesignTokens.borderRadiusMedium,
-                    ),
-                    alignment: Alignment.center,
-                    child: TbIcon(
-                      TbIconKind.navDevices,
-                      color: scheme.onPrimaryContainer,
-                    ),
-                  ),
-                  const SizedBox(width: DesignTokens.spacing12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'All devices',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          '$total total',
-                          style: TbTextStyles.tabular(
-                            textTheme.bodySmall ?? TbTextStyles.bodySmall,
-                          ).copyWith(color: scheme.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
-                ],
+              Text(
+                '$total total',
+                style: TbTextStyles.tabular(
+                  textTheme.bodySmall ?? TbTextStyles.bodySmall,
+                ).copyWith(color: scheme.onSurfaceVariant),
               ),
-              Wrap(
-                spacing: DesignTokens.spacing8,
-                runSpacing: DesignTokens.spacing8,
-                children: [
-                  _CountFilterButton(
-                    key: const Key('all-devices-online-pill'),
-                    icon: TbIconKind.livePulse,
-                    label: '$activeCount Online',
-                    bg: statusColors.onlineContainer,
-                    fg: statusColors.onOnlineContainer,
-                    accent: statusColors.online,
-                    onTap: onOpenOnline,
-                  ),
-                  _CountFilterButton(
-                    key: const Key('all-devices-offline-pill'),
-                    icon: TbIconKind.offlineNode,
-                    label: '$inactiveCount Offline',
-                    bg: statusColors.offlineContainer,
-                    fg: statusColors.onOfflineContainer,
-                    accent: statusColors.offline,
-                    onTap: onOpenOffline,
-                  ),
-                ],
+              Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
+            ],
+          ),
+          child: Wrap(
+            spacing: DesignTokens.spacing8,
+            runSpacing: DesignTokens.spacing8,
+            children: [
+              _CountFilterButton(
+                key: const Key('all-devices-online-pill'),
+                icon: TbIconKind.livePulse,
+                label: '$activeCount Online',
+                bg: statusColors.onlineContainer,
+                fg: statusColors.onOnlineContainer,
+                accent: statusColors.online,
+                onTap: onOpenOnline,
+              ),
+              _CountFilterButton(
+                key: const Key('all-devices-offline-pill'),
+                icon: TbIconKind.offlineNode,
+                label: '$inactiveCount Offline',
+                bg: statusColors.offlineContainer,
+                fg: statusColors.onOfflineContainer,
+                accent: statusColors.offline,
+                onTap: onOpenOffline,
               ),
             ],
           ),

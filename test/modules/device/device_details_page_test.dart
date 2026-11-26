@@ -2,8 +2,12 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:thingsboard_democloud_app/config/routes/router.dart';
 import 'package:thingsboard_democloud_app/config/themes/tb_theme.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/alarm_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/asset_controller.dart';
@@ -25,6 +29,7 @@ import 'package:thingsboard_democloud_app/core/models/tb_failure.dart';
 import 'package:thingsboard_democloud_app/core/models/telemetry_models.dart';
 import 'package:thingsboard_democloud_app/modules/device/device_details_page.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_section_card.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_shimmer.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_status_badge.dart';
 
@@ -41,6 +46,8 @@ class _ControlledDeviceDetailsRepo implements DeviceRepository {
         label: 'Facility Plant #2',
         active: true,
         deviceProfileId: 'prof-hvac',
+        deviceProfileName: 'Chiller Profile',
+        ownerName: 'Acme Corp',
         createdTime: 1700000000000,
         telemetry: {'temperature': '7.4', 'flowRate': '120.5'},
       );
@@ -370,6 +377,8 @@ class _ControlledAlarmRepo implements AlarmRepository {
 }
 
 class _ControlledAssetRepo implements AssetRepository {
+  bool emptyRelations = false;
+
   @override
   Future<PageData<TbAssetProfileInfo>> getAssetProfiles(PageQuery query) async {
     return const PageData(
@@ -403,6 +412,7 @@ class _ControlledAssetRepo implements AssetRepository {
     EntityId entity, {
     bool outgoing = true,
   }) async {
+    if (emptyRelations) return const [];
     return [
       TbEntityRelationInfo(
         from: entity,
@@ -479,6 +489,224 @@ void main() {
   }
 
   group('DeviceDetailsPage Widget Tests', () {
+    group('Info tab', () {
+      final createdText = DateFormat(
+        'yyyy-MM-dd HH:mm',
+      ).format(DateTime.fromMillisecondsSinceEpoch(1700000000000));
+
+      Future<void> openInfo(WidgetTester tester) async {
+        await tester.pumpWidget(buildTestWidget(tester));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('Info'));
+        await tester.tap(find.text('Info'));
+        await tester.pumpAndSettle();
+      }
+
+      String textOf(WidgetTester tester, String key) =>
+          tester.widget<Text>(find.byKey(Key(key))).data!;
+
+      testWidgets('Overview shows profile name (not type), owner, created', (
+        tester,
+      ) async {
+        await openInfo(tester);
+
+        expect(textOf(tester, 'info-profile-value'), 'Chiller Profile');
+        expect(textOf(tester, 'info-label-value'), 'Facility Plant #2');
+        expect(textOf(tester, 'info-owner-value'), 'Acme Corp');
+        expect(textOf(tester, 'info-created-value'), createdText);
+      });
+
+      testWidgets('Overview shows em dash for missing owner and created', (
+        tester,
+      ) async {
+        deviceRepo.device = const TbDeviceInfo(
+          id: 'dev-detail-1',
+          name: 'Production Chiller A',
+          type: 'HVAC Chiller',
+          active: true,
+        );
+        await openInfo(tester);
+
+        expect(textOf(tester, 'info-owner-value'), '—');
+        expect(textOf(tester, 'info-created-value'), '—');
+        expect(textOf(tester, 'info-label-value'), '—');
+        expect(textOf(tester, 'info-profile-value'), 'HVAC Chiller');
+      });
+
+      testWidgets('Gateway row shows Yes for bool or string true', (
+        tester,
+      ) async {
+        for (final flag in <Object>[true, 'true']) {
+          deviceRepo.device = TbDeviceInfo(
+            id: 'dev-detail-1',
+            name: 'Production Chiller A',
+            type: 'HVAC Chiller',
+            active: true,
+            additionalInfo: {'gateway': flag},
+          );
+          await openInfo(tester);
+
+          expect(textOf(tester, 'info-gateway-value'), 'Yes');
+          expect(find.text('Gateway'), findsOneWidget);
+          await tester.pumpWidget(const SizedBox());
+        }
+      });
+
+      testWidgets('Gateway row is hidden when absent or false', (tester) async {
+        for (final info in <Map<String, dynamic>>[
+          const {},
+          const {'gateway': false},
+          const {'gateway': 'false'},
+        ]) {
+          deviceRepo.device = TbDeviceInfo(
+            id: 'dev-detail-1',
+            name: 'Production Chiller A',
+            type: 'HVAC Chiller',
+            active: true,
+            additionalInfo: info,
+          );
+          await openInfo(tester);
+
+          expect(find.text('Gateway'), findsNothing);
+          expect(find.byKey(const Key('info-gateway-value')), findsNothing);
+          await tester.pumpWidget(const SizedBox());
+        }
+      });
+
+      testWidgets('status badge shows ONLINE when active', (tester) async {
+        await openInfo(tester);
+
+        expect(
+          find.descendant(
+            of: find.byKey(const Key('info-status-badge')),
+            matching: find.text('ONLINE'),
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('status badge shows OFFLINE when inactive', (tester) async {
+        deviceRepo.device = deviceRepo.device.copyWith(active: false);
+        await openInfo(tester);
+
+        expect(
+          find.descendant(
+            of: find.byKey(const Key('info-status-badge')),
+            matching: find.text('OFFLINE'),
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets(
+        'uses three TbSectionCards: Overview, Credentials, Relations',
+        (tester) async {
+          await openInfo(tester);
+
+          expect(find.byType(TbSectionCard), findsNWidgets(3));
+          for (final title in ['Overview', 'Credentials', 'Relations']) {
+            expect(find.text(title), findsOneWidget);
+          }
+        },
+      );
+
+      testWidgets('credentials Show, Copy and Hide work', (tester) async {
+        String? clipboard;
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          (call) async {
+            if (call.method == 'Clipboard.setData') {
+              clipboard =
+                  (call.arguments as Map<dynamic, dynamic>)['text'] as String?;
+            }
+            return null;
+          },
+        );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            SystemChannels.platform,
+            null,
+          ),
+        );
+        await openInfo(tester);
+
+        expect(find.byKey(const Key('credentials-id-text')), findsNothing);
+        await tester.tap(find.byKey(const Key('toggle-credentials-button')));
+        await tester.pumpAndSettle();
+        expect(find.text('token-chiller-xyz-987'), findsOneWidget);
+
+        await tester.tap(find.byTooltip('Copy credentials'));
+        await tester.pumpAndSettle();
+        expect(clipboard, 'token-chiller-xyz-987');
+        expect(find.text('Credentials copied'), findsOneWidget);
+
+        await tester.tap(find.byKey(const Key('toggle-credentials-button')));
+        await tester.pumpAndSettle();
+        expect(find.text('Show'), findsOneWidget);
+        expect(find.byKey(const Key('credentials-id-text')), findsNothing);
+      });
+
+      testWidgets('empty relations show No linked entities', (tester) async {
+        assetRepo.emptyRelations = true;
+        await openInfo(tester);
+
+        expect(find.text('No linked entities'), findsOneWidget);
+      });
+
+      testWidgets('relation tap navigates to the linked entity', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(800, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (_, _) =>
+                  const DeviceDetailsPage(deviceId: 'dev-detail-1'),
+            ),
+            GoRoute(
+              path: AppRoutes.assetDetails,
+              builder: (_, state) =>
+                  Text('asset-route-${state.pathParameters['id']}'),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: buildOverrides(),
+            child: MediaQuery(
+              data: const MediaQueryData(
+                size: Size(800, 1200),
+                disableAnimations: true,
+              ),
+              child: MaterialApp.router(
+                theme: tbLightTheme(),
+                routerConfig: router,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('Info'));
+        await tester.tap(find.text('Info'));
+        await tester.pumpAndSettle();
+
+        final tile = find.byKey(const Key('relation-asset-plant-2'));
+        await tester.ensureVisible(tile);
+        await tester.tap(tile);
+        await tester.pumpAndSettle();
+
+        expect(find.text('asset-route-asset-plant-2'), findsOneWidget);
+      });
+    });
+
     testWidgets('renders shimmer loader when fetching device info', (
       WidgetTester tester,
     ) async {

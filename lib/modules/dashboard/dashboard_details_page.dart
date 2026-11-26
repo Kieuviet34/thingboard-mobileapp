@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:thingsboard_democloud_app/config/themes/design_tokens.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/dashboard_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/server_config_controller.dart';
@@ -18,6 +19,7 @@ import 'package:thingsboard_democloud_app/widgets/tb_app_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_metric_pill.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_motion.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_section_card.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_shimmer.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_status_badge.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -296,32 +298,25 @@ class _DashboardDetailsPageState extends ConsumerState<DashboardDetailsPage> {
                   padding: DesignTokens.paddingMedium,
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
-                      if (widget.embedded && !_isFullscreen) ...[
-                        Row(
-                          children: [
-                            titleBadge,
-                            const SizedBox(width: DesignTokens.spacing8),
-                            Expanded(
-                              child: Text(
-                                dashboard.info.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: textTheme.titleMedium?.copyWith(
-                                  color: scheme.onSurface,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                      _DashboardSummaryCard(
+                        title: dashboard.info.title,
+                        targetName: isDemo
+                            ? null
+                            : ref.watch(
+                                dashboardTargetNameProvider(widget.dashboardId),
                               ),
-                            ),
-                            ...actionButtons,
-                          ],
-                        ),
-                        const SizedBox(height: DesignTokens.spacing12),
-                      ],
-                      _StatusAndWindowBar(
                         isDemo: isDemo,
                         isLiveActive: isLiveActive,
+                        metricCount: metricCards.length,
+                        lastUpdateTs: _lastUpdateTs(<TbTsPoint>[
+                          ...?latestTelemetry?.values,
+                          ...?liveTelemetry?.values,
+                        ]),
                         timeWindow: _timeWindow,
                         onSelectWindow: (w) => _selectTimeWindow(w, entityId),
+                        actions: widget.embedded && !_isFullscreen
+                            ? actionButtons
+                            : const <Widget>[],
                       ),
                       const SizedBox(height: DesignTokens.spacing16),
                       if (metricCards.isEmpty && latestAsync.isLoading)
@@ -464,58 +459,104 @@ class _DashboardDetailsPageState extends ConsumerState<DashboardDetailsPage> {
   }
 }
 
-class _StatusAndWindowBar extends StatelessWidget {
-  const _StatusAndWindowBar({
+int? _lastUpdateTs(Iterable<TbTsPoint> points) {
+  final times = points.map((p) => p.ts).where((t) => t > 0);
+  return times.isEmpty ? null : times.reduce((a, b) => a > b ? a : b);
+}
+
+class _DashboardSummaryCard extends StatelessWidget {
+  const _DashboardSummaryCard({
+    required this.title,
+    required this.targetName,
     required this.isDemo,
     required this.isLiveActive,
+    required this.metricCount,
+    required this.lastUpdateTs,
     required this.timeWindow,
     required this.onSelectWindow,
+    required this.actions,
   });
 
+  static final DateFormat _timeFormat = DateFormat('yyyy-MM-dd HH:mm');
+
+  final String title;
+  final String? targetName;
   final bool isDemo;
   final bool isLiveActive;
+  final int metricCount;
+  final int? lastUpdateTs;
   final DashboardTimeWindow timeWindow;
   final ValueChanged<DashboardTimeWindow> onSelectWindow;
+  final List<Widget> actions;
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: DesignTokens.spacing12,
-      runSpacing: DesignTokens.spacing8,
-      alignment: WrapAlignment.spaceBetween,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            LivePulseDot(
-              active: isLiveActive,
-              semanticLabel: isLiveActive ? 'Stream active' : 'Stream offline',
+    return TbSectionCard(
+      key: const Key('dashboard-summary'),
+      title: title,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          LivePulseDot(
+            active: isLiveActive,
+            semanticLabel: isLiveActive ? 'Stream active' : 'Stream offline',
+          ),
+          const SizedBox(width: DesignTokens.spacing8),
+          if (isDemo)
+            TbStatusBadge.demo(compact: true)
+          else
+            TbStatusBadge(
+              label: isLiveActive ? 'LIVE' : 'OFFLINE',
+              icon: isLiveActive
+                  ? TbIconKind.livePulse
+                  : TbIconKind.offlineNode,
+              tone: isLiveActive ? TbStatusTone.online : TbStatusTone.offline,
+              compact: true,
             ),
-            const SizedBox(width: DesignTokens.spacing8),
-            if (isDemo)
-              TbStatusBadge.demo(compact: true)
-            else
-              TbStatusBadge.online(isLiveActive, compact: true),
-          ],
-        ),
-        SegmentedButton<DashboardTimeWindow>(
-          showSelectedIcon: false,
-          selected: {timeWindow},
-          onSelectionChanged: (selection) {
-            if (selection.isNotEmpty) {
-              onSelectWindow(selection.first);
-            }
-          },
-          segments: [
-            for (final preset in DashboardTimeWindow.values)
-              ButtonSegment<DashboardTimeWindow>(
-                value: preset,
-                label: Text(preset.label),
+          ...actions,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (targetName != null && targetName!.isNotEmpty)
+            TbKvRow(
+              label: 'Target',
+              value: targetName!,
+              valueKey: const Key('dashboard-summary-target'),
+            ),
+          TbKvRow(
+            label: 'Metrics',
+            value: '$metricCount',
+            valueKey: const Key('dashboard-summary-metrics'),
+          ),
+          if (lastUpdateTs != null)
+            TbKvRow(
+              label: 'Updated',
+              value: _timeFormat.format(
+                DateTime.fromMillisecondsSinceEpoch(lastUpdateTs!),
               ),
-          ],
-        ),
-      ],
+              valueKey: const Key('dashboard-summary-updated'),
+            ),
+          const SizedBox(height: DesignTokens.spacing8),
+          SegmentedButton<DashboardTimeWindow>(
+            showSelectedIcon: false,
+            selected: {timeWindow},
+            onSelectionChanged: (selection) {
+              if (selection.isNotEmpty) {
+                onSelectWindow(selection.first);
+              }
+            },
+            segments: [
+              for (final preset in DashboardTimeWindow.values)
+                ButtonSegment<DashboardTimeWindow>(
+                  value: preset,
+                  label: Text(preset.label),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -545,32 +586,26 @@ class _TelemetryMetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: DesignTokens.cardPadding,
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
-        borderRadius: DesignTokens.borderRadiusXl,
-        border: Border.all(color: scheme.outlineVariant),
-      ),
+    return TbSectionCard(
+      title: entry.label,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           TbMetricPill(
             icon: TbIcons.kindForTelemetryKey(entry.key),
-            label: entry.label,
             value: entry.value,
           ),
-          const SizedBox(height: DesignTokens.spacing12),
-          if (isLoadingHistory)
-            const TbShimmer(height: 52)
-          else if (entry.series.isNotEmpty)
+          if (isLoadingHistory) ...[
+            const SizedBox(height: DesignTokens.spacing12),
+            const TbShimmer(height: 52),
+          ] else if (entry.series.isNotEmpty) ...[
+            const SizedBox(height: DesignTokens.spacing12),
             TbSparklineChart(
               values: entry.series,
               height: 52,
               semanticLabel: '${entry.label} trend',
             ),
+          ],
         ],
       ),
     );

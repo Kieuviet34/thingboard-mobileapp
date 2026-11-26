@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_democloud_app/config/routes/router.dart';
 import 'package:thingsboard_democloud_app/config/themes/design_tokens.dart';
+import 'package:thingsboard_democloud_app/config/themes/tb_text_styles.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/dashboard_controller.dart';
 import 'package:thingsboard_democloud_app/core/models/dashboard_models.dart';
 import 'package:thingsboard_democloud_app/core/models/pagination.dart';
@@ -12,7 +13,6 @@ import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_search_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
-import 'package:thingsboard_democloud_app/widgets/tb_metric_pill.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_motion.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_shimmer.dart';
 
@@ -219,8 +219,7 @@ class _DashboardsPageState extends ConsumerState<DashboardsPage> {
     required bool isTwoPane,
     required String? selectedId,
   }) {
-    final columns = isTwoPane ? 1 : 2;
-    final rowCount = (items.length / columns).ceil();
+    final rowCount = items.length;
     final hasFooter = paged.isLoadingMore || paged.loadMoreError != null;
 
     return RefreshIndicator(
@@ -249,75 +248,20 @@ class _DashboardsPageState extends ConsumerState<DashboardsPage> {
             );
           }
 
-          if (columns == 1) {
-            final item = items[rowIndex];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: DesignTokens.spacing12),
-              child: TbStaggeredEntry(
-                index: rowIndex,
-                child: _DashboardGalleryCard(
-                  dashboard: item,
-                  selected: item.id == selectedId,
-                  enableHero: !isTwoPane,
-                  onTap: () => _onOpenDashboard(item, isTwoPane: isTwoPane),
-                  onToggleStar: () => ref
-                      .read(dashboardsListProvider(_searchQuery).notifier)
-                      .toggleStar(item.id),
-                ),
-              ),
-            );
-          }
-
-          final leftIndex = rowIndex * 2;
-          final rightIndex = leftIndex + 1;
-          final leftItem = items[leftIndex];
-          final rightItem = rightIndex < items.length
-              ? items[rightIndex]
-              : null;
-
+          final item = items[rowIndex];
           return Padding(
-            padding: const EdgeInsets.only(bottom: DesignTokens.spacing12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: TbStaggeredEntry(
-                    index: leftIndex,
-                    child: _DashboardGalleryCard(
-                      dashboard: leftItem,
-                      selected: false,
-                      enableHero: true,
-                      onTap: () =>
-                          _onOpenDashboard(leftItem, isTwoPane: isTwoPane),
-                      onToggleStar: () => ref
-                          .read(dashboardsListProvider(_searchQuery).notifier)
-                          .toggleStar(leftItem.id),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: DesignTokens.spacing12),
-                Expanded(
-                  child: rightItem == null
-                      ? const SizedBox.shrink()
-                      : TbStaggeredEntry(
-                          index: rightIndex,
-                          child: _DashboardGalleryCard(
-                            dashboard: rightItem,
-                            selected: false,
-                            enableHero: true,
-                            onTap: () => _onOpenDashboard(
-                              rightItem,
-                              isTwoPane: isTwoPane,
-                            ),
-                            onToggleStar: () => ref
-                                .read(
-                                  dashboardsListProvider(_searchQuery).notifier,
-                                )
-                                .toggleStar(rightItem.id),
-                          ),
-                        ),
-                ),
-              ],
+            padding: const EdgeInsets.only(bottom: DesignTokens.spacing8),
+            child: TbStaggeredEntry(
+              index: rowIndex,
+              child: _DashboardGalleryCard(
+                dashboard: item,
+                selected: item.id == selectedId,
+                enableHero: !isTwoPane,
+                onTap: () => _onOpenDashboard(item, isTwoPane: isTwoPane),
+                onToggleStar: () => ref
+                    .read(dashboardsListProvider(_searchQuery).notifier)
+                    .toggleStar(item.id),
+              ),
             ),
           );
         },
@@ -377,12 +321,20 @@ class _DashboardGalleryCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onToggleStar;
 
+  /// Single meta line: first two metric values, else first assigned customer.
+  String? get _meta {
+    if (dashboard.metrics.isNotEmpty) {
+      return dashboard.metrics.values.take(2).join(' · ');
+    }
+    return dashboard.assignedCustomers.firstOrNull;
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final disableAnimations = MediaQuery.disableAnimationsOf(context);
-    final metrics = dashboard.metrics.entries.take(2).toList(growable: false);
+    final meta = _meta;
 
     final badge = Container(
       padding: DesignTokens.paddingSmall,
@@ -397,6 +349,11 @@ class _DashboardGalleryCard extends StatelessWidget {
       ),
     );
 
+    final starIcon = Icon(
+      dashboard.isStarred ? Icons.star_rounded : Icons.star_outline_rounded,
+      color: dashboard.isStarred ? scheme.tertiary : scheme.onSurfaceVariant,
+    );
+
     return Semantics(
       button: true,
       selected: selected,
@@ -406,7 +363,14 @@ class _DashboardGalleryCard extends StatelessWidget {
         borderRadius: DesignTokens.borderRadiusLarge,
         child: Container(
           key: Key('dashboard-card-${dashboard.id}'),
-          padding: DesignTokens.cardPadding,
+          constraints: const BoxConstraints(
+            minHeight: DesignTokens.minTouchTarget,
+          ),
+          padding: const EdgeInsets.only(
+            left: DesignTokens.spacing12,
+            top: DesignTokens.spacing4,
+            bottom: DesignTokens.spacing4,
+          ),
           decoration: BoxDecoration(
             color: selected
                 ? scheme.secondaryContainer.withValues(alpha: 0.65)
@@ -416,84 +380,56 @@ class _DashboardGalleryCard extends StatelessWidget {
               color: selected ? scheme.primary : scheme.outlineVariant,
             ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Row(
-                children: [
-                  if (enableHero)
-                    Hero(tag: 'dashboard-${dashboard.id}', child: badge)
-                  else
-                    badge,
-                  const Spacer(),
-                  IconButton(
-                    key: Key('dashboard-star-${dashboard.id}'),
-                    tooltip: dashboard.isStarred ? 'Unstar' : 'Star',
-                    constraints: const BoxConstraints(
-                      minWidth: DesignTokens.minTouchTarget,
-                      minHeight: DesignTokens.minTouchTarget,
-                    ),
-                    padding: DesignTokens.paddingZero,
-                    icon: disableAnimations
-                        ? Icon(
-                            dashboard.isStarred
-                                ? Icons.star_rounded
-                                : Icons.star_outline_rounded,
-                            color: dashboard.isStarred
-                                ? scheme.tertiary
-                                : scheme.onSurfaceVariant,
-                          )
-                        : AnimatedScale(
-                            scale: dashboard.isStarred ? 1.1 : 1.0,
-                            duration: DesignTokens.motionFast,
-                            curve: Curves.easeOutBack,
-                            child: Icon(
-                              dashboard.isStarred
-                                  ? Icons.star_rounded
-                                  : Icons.star_outline_rounded,
-                              color: dashboard.isStarred
-                                  ? scheme.tertiary
-                                  : scheme.onSurfaceVariant,
-                            ),
-                          ),
-                    onPressed: onToggleStar,
-                  ),
-                ],
-              ),
-              const SizedBox(height: DesignTokens.spacing8),
-              Text(
-                dashboard.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: textTheme.titleSmall?.copyWith(
-                  color: scheme.onSurface,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              if (metrics.isNotEmpty) ...[
-                const SizedBox(height: DesignTokens.spacing8),
-                Wrap(
-                  spacing: DesignTokens.spacing8,
-                  runSpacing: DesignTokens.spacing8,
+              if (enableHero)
+                Hero(tag: 'dashboard-${dashboard.id}', child: badge)
+              else
+                badge,
+              const SizedBox(width: DesignTokens.spacing12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (final entry in metrics)
-                      TbMetricPill(
-                        icon: TbIcons.kindForTelemetryKey(entry.key),
-                        value: entry.value,
+                    Text(
+                      dashboard.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.titleSmall?.copyWith(
+                        color: scheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (meta != null)
+                      Text(
+                        meta,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TbTextStyles.tabular(
+                          textTheme.bodySmall ?? TbTextStyles.bodySmall,
+                        ).copyWith(color: scheme.onSurfaceVariant),
                       ),
                   ],
                 ),
-              ] else if (dashboard.assignedCustomers.isNotEmpty) ...[
-                const SizedBox(height: DesignTokens.spacing8),
-                Text(
-                  dashboard.assignedCustomers.first,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: textTheme.labelSmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
+              ),
+              IconButton(
+                key: Key('dashboard-star-${dashboard.id}'),
+                tooltip: dashboard.isStarred ? 'Unstar' : 'Star',
+                constraints: const BoxConstraints(
+                  minWidth: DesignTokens.minTouchTarget,
+                  minHeight: DesignTokens.minTouchTarget,
                 ),
-              ],
+                padding: DesignTokens.paddingZero,
+                icon: disableAnimations
+                    ? starIcon
+                    : AnimatedScale(
+                        scale: dashboard.isStarred ? 1.1 : 1.0,
+                        duration: DesignTokens.motionFast,
+                        curve: Curves.easeOutBack,
+                        child: starIcon,
+                      ),
+                onPressed: onToggleStar,
+              ),
             ],
           ),
         ),

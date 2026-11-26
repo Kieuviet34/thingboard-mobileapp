@@ -12,6 +12,7 @@ import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_search_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_list_row.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_metric_pill.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_motion.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_shimmer.dart';
@@ -395,50 +396,24 @@ class _DeviceListRow extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: TbPressScale(
         onTap: onTap,
-        child: Padding(
-          padding: DesignTokens.cardPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: DesignTokens.spacing8,
-            children: [
-              // Line 1: Custom device icon + Name + 1-word status badge
-              Row(
-                children: [
-                  heroOrIcon,
-                  const SizedBox(width: DesignTokens.spacing12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      spacing: DesignTokens.spacing2,
-                      children: [
-                        Text(
-                          device.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: scheme.onSurface,
-                          ),
-                        ),
-                        // Line 2: Type + label/owner
-                        Text(
-                          subtitleParts.join(' · '),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: textTheme.bodySmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: DesignTokens.spacing8),
-                  TbStatusBadge.online(device.active, compact: true),
-                ],
-              ),
-              // Line 3: Compact telemetry metric pills (max 3) or relative time
-              if (telemetryEntries.isNotEmpty)
-                Wrap(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TbListRow(
+              title: device.name,
+              meta: subtitleParts.join(' · '),
+              leading: heroOrIcon,
+              trailing: TbStatusBadge.online(device.active, compact: true),
+            ),
+            if (telemetryEntries.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  DesignTokens.spacing16,
+                  0,
+                  DesignTokens.spacing16,
+                  DesignTokens.spacing12,
+                ),
+                child: Wrap(
                   spacing: DesignTokens.spacing8,
                   runSpacing: DesignTokens.spacing8,
                   children: [
@@ -448,16 +423,24 @@ class _DeviceListRow extends StatelessWidget {
                         value: entry.value,
                       ),
                   ],
-                )
-              else if (device.createdTime > 0)
-                Text(
+                ),
+              )
+            else if (device.createdTime > 0)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  DesignTokens.spacing16,
+                  0,
+                  DesignTokens.spacing16,
+                  DesignTokens.spacing12,
+                ),
+                child: Text(
                   _relativeTime(device.createdTime),
                   style: TbTextStyles.tabular(
                     textTheme.labelSmall ?? TbTextStyles.labelSmall,
                   ).copyWith(color: scheme.onSurfaceVariant),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
       ),
     );

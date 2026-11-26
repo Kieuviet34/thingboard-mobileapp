@@ -11,6 +11,7 @@ import 'package:thingsboard_democloud_app/core/api/controllers/device_controller
 import 'package:thingsboard_democloud_app/core/api/controllers/server_config_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/telemetry_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/repositories/dashboard_repository.dart';
+import 'package:thingsboard_democloud_app/core/api/ws/telemetry_ws_service.dart';
 import 'package:thingsboard_democloud_app/core/api/repositories/device_repository.dart';
 import 'package:thingsboard_democloud_app/core/api/repositories/telemetry_repository.dart';
 import 'package:thingsboard_democloud_app/core/models/auth_models.dart';
@@ -101,8 +102,11 @@ class _SpyTelemetryRepo implements TelemetryRepository {
   _SpyTelemetryRepo({
     this.notFoundEntityIds = const <String>{},
     this.emptyEntityIds = const <String>{},
+    this.latestTs,
   });
 
+  /// Fixed timestamp for latest points; 0 simulates an absent timestamp.
+  final int? latestTs;
   final Set<String> notFoundEntityIds;
   final Set<String> emptyEntityIds;
   final List<TbTsHistoryQuery> historyQueries = [];
@@ -143,7 +147,7 @@ class _SpyTelemetryRepo implements TelemetryRepository {
     if (emptyEntityIds.contains(entityId.id)) {
       return const <String, TbTsPoint>{};
     }
-    final now = DateTime.now().millisecondsSinceEpoch;
+    final now = latestTs ?? DateTime.now().millisecondsSinceEpoch;
     return {
       'temperature': TbTsPoint(
         ts: now,
@@ -178,6 +182,8 @@ class _SpyTelemetryRepo implements TelemetryRepository {
 }
 
 class _StubDeviceRepo implements DeviceRepository {
+  int infoCalls = 0;
+
   @override
   Future<PageData<TbDeviceInfo>> getDevices(
     PageQuery query,
@@ -211,8 +217,14 @@ class _StubDeviceRepo implements DeviceRepository {
   );
 
   @override
-  Future<TbDeviceInfo> getDeviceInfo(String deviceId) async =>
-      const TbDeviceInfo(id: 'resolved-dev-99', name: 'Flood', type: 'Sensor');
+  Future<TbDeviceInfo> getDeviceInfo(String deviceId) async {
+    infoCalls++;
+    return const TbDeviceInfo(
+      id: 'resolved-dev-99',
+      name: 'Flood',
+      type: 'Sensor',
+    );
+  }
 
   @override
   Future<TbDeviceCredentials> getDeviceCredentials(String deviceId) async =>
@@ -258,9 +270,11 @@ void main() {
     bool disableAnimations = false,
     bool embedded = false,
     Future<bool> Function(Uri uri)? onOpenExternal,
+    List<Override> extraOverrides = const [],
   }) {
     return ProviderScope(
       overrides: [
+        ...extraOverrides,
         tbStorageProvider.overrideWithValue(FakeSecureStorage()),
         tbAppPreferencesProvider.overrideWithValue(
           FakeAppPreferences(sessionMode: mode),
@@ -601,5 +615,281 @@ void main() {
         expect(find.text('Smart Office Monitoring'), findsWidgets);
       },
     );
+
+    testWidgets(
+      'summary header shows title, DEMO badge, metric count, last update',
+      (tester) async {
+        await tester.pumpWidget(
+          buildApp(
+            dashboardRepo: _DetailDashboardRepo(),
+            telemetryRepo: _SpyTelemetryRepo(),
+            disableAnimations: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final header = find.byKey(const Key('dashboard-summary'));
+        expect(header, findsOneWidget);
+        expect(
+          find.descendant(
+            of: header,
+            matching: find.text('Smart Office Monitoring'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(of: header, matching: find.text('DEMO')),
+          findsOneWidget,
+        );
+        expect(
+          tester
+              .widget<Text>(find.byKey(const Key('dashboard-summary-metrics')))
+              .data,
+          '3',
+        );
+        final updated = tester
+            .widget<Text>(find.byKey(const Key('dashboard-summary-updated')))
+            .data;
+        expect(updated, matches(RegExp(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$')));
+      },
+    );
+
+    testWidgets('metric values use tabular figures and keep stable order', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildApp(
+          dashboardRepo: _DetailDashboardRepo(),
+          telemetryRepo: _SpyTelemetryRepo(),
+          disableAnimations: true,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final value = tester.widget<Text>(find.text('22.4 °C'));
+      expect(
+        value.style?.fontFeatures,
+        contains(const FontFeature.tabularFigures()),
+      );
+      final ys = [
+        for (final label in ['Temperature', 'Humidity', 'CO2 Level'])
+          tester.getTopLeft(find.text(label)).dy,
+      ];
+      expect(ys, orderedEquals([...ys]..sort()));
+    });
+
+    testWidgets(
+      'embedded header with actions has no overflow at 2.0x text scale',
+      (tester) async {
+        await tester.pumpWidget(
+          buildApp(
+            dashboardRepo: _DetailDashboardRepo(),
+            telemetryRepo: _SpyTelemetryRepo(),
+            embedded: true,
+            textScale: 2.0,
+            disableAnimations: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.byTooltip('Fullscreen'), findsOneWidget);
+      },
+    );
+
+    // Live fixture: dashboard title ('Flood Monitoring') differs from the
+    // resolved device name; stream state is faked by overriding
+    // wsConnectionStateProvider with an authenticated stream.
+    final liveStreamOverride = wsConnectionStateProvider.overrideWith(
+      (ref) => Stream.value(WsConnectionState.authenticated),
+    );
+    const liveId = '5f1b2c30-0000-11ee-be56-0242ac120002';
+
+    for (final (state, badge, other) in [
+      (WsConnectionState.authenticated, 'LIVE', 'OFFLINE'),
+      (WsConnectionState.disconnected, 'OFFLINE', 'LIVE'),
+    ]) {
+      testWidgets('live header shows $badge badge when stream is $state', (
+        tester,
+      ) async {
+        final devRepo = _StubDeviceRepo();
+        await tester.pumpWidget(
+          buildApp(
+            dashboardRepo: _DetailDashboardRepo(
+              customDashboard: const TbDashboard(
+                info: TbDashboardInfo(
+                  id: '5f1b2c30-0000-11ee-be56-0242ac120002',
+                  title: 'Flood Monitoring',
+                ),
+                configuration: {
+                  'entityAliases': {
+                    'a1': {
+                      'alias': 'Flood Sensors',
+                      'filter': {
+                        'type': 'deviceType',
+                        'deviceType': 'Bringter Flood',
+                      },
+                    },
+                  },
+                },
+              ),
+            ),
+            telemetryRepo: _SpyTelemetryRepo(),
+            deviceRepo: devRepo,
+            mode: SessionMode.live,
+            dashboardId: liveId,
+            disableAnimations: true,
+            extraOverrides: [
+              wsConnectionStateProvider.overrideWith(
+                (ref) => Stream.value(state),
+              ),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final header = find.byKey(const Key('dashboard-summary'));
+        expect(header, findsOneWidget);
+        expect(
+          find.descendant(of: header, matching: find.text('Flood Monitoring')),
+          findsOneWidget,
+        );
+        // Target name comes from the already-loaded device list: no extra
+        // getDeviceInfo request, and the dashboard title stays the card title.
+        expect(devRepo.infoCalls, 0);
+        expect(
+          find.descendant(
+            of: header,
+            matching: find.byKey(const Key('dashboard-summary-target')),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: header,
+            matching: find.text('Flood Sensor B-7B05'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          tester.widget<LivePulseDot>(find.byType(LivePulseDot)).active,
+          state == WsConnectionState.authenticated,
+        );
+        expect(
+          find.descendant(of: header, matching: find.text(badge)),
+          findsOneWidget,
+        );
+        // The badge describes the stream, never the device.
+        for (final label in ['ONLINE', other, 'DEMO']) {
+          expect(
+            find.descendant(of: header, matching: find.text(label)),
+            findsNothing,
+          );
+        }
+      });
+    }
+
+    testWidgets(
+      'live update with reordered keys keeps card order, refreshes values',
+      (tester) async {
+        final updates = StreamController<Map<String, TbTsPoint>>.broadcast();
+        addTearDown(updates.close);
+        await tester.pumpWidget(
+          buildApp(
+            dashboardRepo: _DetailDashboardRepo(
+              customDashboard: const TbDashboard(
+                info: TbDashboardInfo(
+                  id: '5f1b2c30-0000-11ee-be56-0242ac120002',
+                  title: 'Flood Monitoring',
+                ),
+                configuration: {
+                  'entityAliases': {
+                    'a1': {
+                      'alias': 'Flood Sensors',
+                      'filter': {
+                        'type': 'deviceType',
+                        'deviceType': 'Bringter Flood',
+                      },
+                    },
+                  },
+                },
+              ),
+            ),
+            telemetryRepo: _SpyTelemetryRepo(),
+            deviceRepo: _StubDeviceRepo(),
+            mode: SessionMode.live,
+            dashboardId: liveId,
+            disableAnimations: true,
+            extraOverrides: [
+              liveStreamOverride,
+              liveEntityTelemetryProvider.overrideWith(
+                (ref, params) => updates.stream,
+              ),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Row-major position: cards may share a row on wide surfaces.
+        double y(String label) {
+          final o = tester.getTopLeft(find.text(label));
+          return o.dy * 10000 + o.dx;
+        }
+
+        expect(y('temperature'), lessThan(y('humidity')));
+        expect(find.text('22.4 °C'), findsOneWidget);
+
+        final ts = DateTime.now().millisecondsSinceEpoch;
+        updates.add({
+          'humidity': TbTsPoint(ts: ts, rawValue: '51 %', numericValue: 51.0),
+          'temperature': TbTsPoint(
+            ts: ts,
+            rawValue: '23.1 °C',
+            numericValue: 23.1,
+          ),
+        });
+        await tester.pumpAndSettle();
+
+        expect(y('temperature'), lessThan(y('humidity')));
+        expect(find.text('23.1 °C'), findsOneWidget);
+        expect(find.text('51 %'), findsOneWidget);
+        expect(find.text('22.4 °C'), findsNothing);
+        expect(find.text('48 %'), findsNothing);
+      },
+    );
+
+    testWidgets('last update shows exact formatted time, hidden when absent', (
+      tester,
+    ) async {
+      final known = DateTime(2026, 3, 4, 9, 7);
+      await tester.pumpWidget(
+        buildApp(
+          dashboardRepo: _DetailDashboardRepo(),
+          telemetryRepo: _SpyTelemetryRepo(
+            latestTs: known.millisecondsSinceEpoch,
+          ),
+          disableAnimations: true,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<Text>(find.byKey(const Key('dashboard-summary-updated')))
+            .data,
+        '2026-03-04 09:07',
+      );
+
+      await tester.pumpWidget(
+        buildApp(
+          dashboardRepo: _DetailDashboardRepo(),
+          telemetryRepo: _SpyTelemetryRepo(latestTs: 0),
+          disableAnimations: true,
+          dashboardId: 'dash-1',
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('dashboard-summary')), findsOneWidget);
+      expect(find.byKey(const Key('dashboard-summary-updated')), findsNothing);
+    });
   });
 }

@@ -172,11 +172,14 @@ final dashboardDetailsProvider = FutureProvider.autoDispose
       return dashboard;
     });
 
+typedef _TelemetryTarget = ({EntityId id, String? name});
+
 /// Resolves the concrete telemetry [EntityId] for a dashboard, supporting
 /// widget-referenced aliases, 404 skipping for deleted devices, active-telemetry
 /// probing across multi-device dashboards, and dynamic `deviceType` aliases.
-final dashboardTelemetryEntityProvider = FutureProvider.autoDispose
-    .family<EntityId, String>((ref, dashboardId) async {
+/// [name] is only set when a device list was already loaded (no extra request).
+final _dashboardTelemetryTargetProvider = FutureProvider.autoDispose
+    .family<_TelemetryTarget, String>((ref, dashboardId) async {
       final dashboard = await ref.watch(
         dashboardDetailsProvider(dashboardId).future,
       );
@@ -184,8 +187,12 @@ final dashboardTelemetryEntityProvider = FutureProvider.autoDispose
       final candidates = dashboard.resolveCandidateTelemetryEntities();
 
       if (mode != SessionMode.live) {
-        return candidates.firstOrNull ??
-            EntityId(entityType: EntityType.dashboard, id: dashboard.info.id);
+        return (
+          id:
+              candidates.firstOrNull ??
+              EntityId(entityType: EntityType.dashboard, id: dashboard.info.id),
+          name: null,
+        );
       }
 
       EntityId? firstExistingCandidate;
@@ -196,7 +203,7 @@ final dashboardTelemetryEntityProvider = FutureProvider.autoDispose
             final latest = await telemetryRepo.getLatestTimeseries(candidate);
             firstExistingCandidate ??= candidate;
             if (latest.isNotEmpty) {
-              return candidate;
+              return (id: candidate, name: null);
             }
           } on TbFailure catch (e) {
             if (e.type == TbFailureType.notFound) {
@@ -224,7 +231,10 @@ final dashboardTelemetryEntityProvider = FutureProvider.autoDispose
           if (page.data.isNotEmpty) {
             final chosen =
                 page.data.where((d) => d.active).firstOrNull ?? page.data.first;
-            return EntityId(entityType: EntityType.device, id: chosen.id);
+            return (
+              id: EntityId(entityType: EntityType.device, id: chosen.id),
+              name: chosen.name,
+            );
           }
         } catch (_) {
           // Fall through if dynamic device lookup fails.
@@ -232,7 +242,7 @@ final dashboardTelemetryEntityProvider = FutureProvider.autoDispose
       }
 
       if (firstExistingCandidate != null) {
-        return firstExistingCandidate;
+        return (id: firstExistingCandidate, name: null);
       }
 
       if (candidates.any((c) => c.entityType == EntityType.device)) {
@@ -246,12 +256,34 @@ final dashboardTelemetryEntityProvider = FutureProvider.autoDispose
           if (page.data.isNotEmpty) {
             final chosen =
                 page.data.where((d) => d.active).firstOrNull ?? page.data.first;
-            return EntityId(entityType: EntityType.device, id: chosen.id);
+            return (
+              id: EntityId(entityType: EntityType.device, id: chosen.id),
+              name: chosen.name,
+            );
           }
         } catch (_) {
           // Fall through to dashboard entity ID.
         }
       }
 
-      return EntityId(entityType: EntityType.dashboard, id: dashboard.info.id);
+      return (
+        id: EntityId(entityType: EntityType.dashboard, id: dashboard.info.id),
+        name: null,
+      );
+    });
+
+final dashboardTelemetryEntityProvider = FutureProvider.autoDispose
+    .family<EntityId, String>((ref, dashboardId) async {
+      return (await ref.watch(
+        _dashboardTelemetryTargetProvider(dashboardId).future,
+      )).id;
+    });
+
+/// Display name of the resolved telemetry target, or null when unknown.
+final dashboardTargetNameProvider = Provider.autoDispose
+    .family<String?, String>((ref, dashboardId) {
+      return ref
+          .watch(_dashboardTelemetryTargetProvider(dashboardId))
+          .valueOrNull
+          ?.name;
     });

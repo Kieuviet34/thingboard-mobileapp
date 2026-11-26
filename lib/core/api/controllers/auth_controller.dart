@@ -245,6 +245,39 @@ class AuthController extends AsyncNotifier<AuthState> {
     state = const AsyncData<AuthState>(AuthUnauthenticated());
   }
 
+  /// Re-reads the rotated JWT pair from storage (after `changePassword`),
+  /// refreshes the session in [AuthState] and re-authenticates the shared WS.
+  Future<void> syncSessionTokens() async {
+    final current = state.valueOrNull;
+    if (current is! AuthAuthenticated || current.mode != SessionMode.live) {
+      return;
+    }
+    final storage = ref.read(tbStorageProvider);
+    final gen = ref.read(tbApiClientProvider).sessionGeneration;
+    // Logout / host switch / invalidation during the awaits discards the result.
+    bool stale() =>
+        gen != ref.read(tbApiClientProvider).sessionGeneration ||
+        !identical(state.valueOrNull, current);
+    final access = await storage.read(TbStorageKeys.accessToken);
+    if (stale() || access == null || access.isEmpty) return;
+    final refresh =
+        await storage.read(TbStorageKeys.refreshToken) ??
+        current.session.refreshToken;
+    if (stale()) return;
+    state = AsyncData<AuthState>(
+      AuthAuthenticated(
+        session: _buildSession(
+          accessToken: access,
+          refreshToken: refresh,
+          user: current.user,
+        ),
+        user: current.user,
+        mode: current.mode,
+      ),
+    );
+    await ref.read(telemetryWsServiceProvider).reauthenticate();
+  }
+
   /// Invoked when background token refresh fails or host/mode resets.
   Future<void> handleSessionInvalidated() async {
     await ref.read(telemetryWsServiceProvider).resetSession();

@@ -1,5 +1,6 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_democloud_app/core/api/client/tb_secure_storage.dart';
+import 'package:thingsboard_democloud_app/core/api/controllers/auth_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/server_config_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/repositories/user_profile_repository.dart';
 import 'package:thingsboard_democloud_app/core/mock/mock_data.dart';
@@ -37,12 +38,14 @@ class UserProfileController extends AutoDisposeAsyncNotifier<TbUserProfile> {
     ref.invalidate(userGeneralSettingsProvider);
   }
 
-  /// Changes password and persists the returned fresh `JwtPair` in [TbStorage].
+  /// Changes password, persists the fresh `JwtPair` in [TbStorage], refreshes the
+  /// auth session and re-authenticates the shared WebSocket with the new token.
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,
   }) async {
     final mode = ref.read(serverConfigProvider).mode;
+    final auth = ref.read(authProvider.notifier);
     final pair = await ref
         .read(userProfileRepositoryProvider)
         .changePassword(
@@ -55,6 +58,7 @@ class UserProfileController extends AutoDisposeAsyncNotifier<TbUserProfile> {
       if (pair.refreshToken != null && pair.refreshToken!.isNotEmpty) {
         await storage.write(TbStorageKeys.refreshToken, pair.refreshToken!);
       }
+      await auth.syncSessionTokens();
     }
   }
 }

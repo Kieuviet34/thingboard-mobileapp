@@ -207,6 +207,20 @@ class TbWebSocketService {
     }
   }
 
+  /// Re-opens the live socket so `authCmd` carries the current stored JWT
+  /// (e.g. after `/api/auth/changePassword` rotated the pair). Subscriptions
+  /// are replayed; an idle/closed service picks up the new token on next connect.
+  Future<void> reauthenticate() async {
+    if (_disposed ||
+        _manuallyPausedOrClosed ||
+        _currentState == WsConnectionState.disconnected) {
+      return;
+    }
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    await _openSocket(isReconnect: true);
+  }
+
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;

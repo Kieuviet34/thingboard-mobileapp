@@ -14,6 +14,7 @@ import 'package:thingsboard_democloud_app/widgets/icons/tb_icons.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_app_bar.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_motion.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_section_card.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_network_inspector_dialog.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_shimmer.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_status_badge.dart';
@@ -79,16 +80,16 @@ class ProfileSettingsPage extends ConsumerWidget {
                     const SizedBox(height: DesignTokens.spacing20),
 
                     // Security & Account
-                    _SectionHeader(title: 'Security & Account'),
                     TbStaggeredEntry(
                       index: 1,
                       child: _SettingsGroup(
+                        title: 'Security & Account',
                         children: [
                           _SettingsTile(
                             icon: Icons.lock_outline_rounded,
                             title: 'Change Password',
                             subtitle: 'Update credentials with password policy',
-                            onTap: () => _openChangePasswordSheet(
+                            onTap: () => _openChangePasswordDialog(
                               context,
                               ref,
                               serverConfig.passwordPolicy,
@@ -109,6 +110,8 @@ class ProfileSettingsPage extends ConsumerWidget {
                               ),
                               child: Text(
                                 user.authority.wireValue,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: textTheme.labelSmall?.copyWith(
                                   color: scheme.onSurfaceVariant,
                                   fontWeight: FontWeight.w600,
@@ -122,76 +125,48 @@ class ProfileSettingsPage extends ConsumerWidget {
                     const SizedBox(height: DesignTokens.spacing20),
 
                     // Appearance
-                    _SectionHeader(title: 'Appearance'),
                     TbStaggeredEntry(
                       index: 2,
-                      child: Material(
-                        color: scheme.surfaceContainerLow,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: DesignTokens.borderRadiusLarge,
-                          side: BorderSide(color: scheme.outlineVariant),
-                        ),
-                        child: Padding(
-                          padding: DesignTokens.cardPadding,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Theme Mode',
-                                style: textTheme.titleSmall?.copyWith(
-                                  color: scheme.onSurface,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: DesignTokens.spacing4),
-                              Text(
-                                'Choose light, dark, or system matching theme',
-                                style: textTheme.bodySmall?.copyWith(
-                                  color: scheme.onSurfaceVariant,
-                                ),
-                              ),
-                              const SizedBox(height: DesignTokens.spacing12),
-                              SegmentedButton<ThemeMode>(
-                                segments: const [
-                                  ButtonSegment(
-                                    value: ThemeMode.system,
-                                    label: Text('System'),
-                                    icon: Icon(Icons.brightness_auto_rounded),
-                                  ),
-                                  ButtonSegment(
-                                    value: ThemeMode.light,
-                                    label: Text('Light'),
-                                    icon: Icon(Icons.light_mode_outlined),
-                                  ),
-                                  ButtonSegment(
-                                    value: ThemeMode.dark,
-                                    label: Text('Dark'),
-                                    icon: Icon(Icons.dark_mode_outlined),
-                                  ),
-                                ],
-                                selected: {themeMode},
-                                onSelectionChanged: (selected) async {
-                                  final newMode = selected.first;
-                                  ref
-                                      .read(themeModeProvider.notifier)
-                                      .setThemeMode(newMode);
-                                  await ref
-                                      .read(tbAppPreferencesProvider)
-                                      .setThemeMode(newMode);
-                                },
-                              ),
-                            ],
-                          ),
+                      child: TbSectionCard(
+                        title: 'Theme Mode',
+                        child: SegmentedButton<ThemeMode>(
+                          segments: const [
+                            ButtonSegment(
+                              value: ThemeMode.system,
+                              label: Text('System'),
+                              icon: Icon(Icons.brightness_auto_rounded),
+                            ),
+                            ButtonSegment(
+                              value: ThemeMode.light,
+                              label: Text('Light'),
+                              icon: Icon(Icons.light_mode_outlined),
+                            ),
+                            ButtonSegment(
+                              value: ThemeMode.dark,
+                              label: Text('Dark'),
+                              icon: Icon(Icons.dark_mode_outlined),
+                            ),
+                          ],
+                          selected: {themeMode},
+                          onSelectionChanged: (selected) async {
+                            final newMode = selected.first;
+                            ref
+                                .read(themeModeProvider.notifier)
+                                .setThemeMode(newMode);
+                            await ref
+                                .read(tbAppPreferencesProvider)
+                                .setThemeMode(newMode);
+                          },
                         ),
                       ),
                     ),
                     const SizedBox(height: DesignTokens.spacing20),
 
                     // Server & Session Mode
-                    _SectionHeader(title: 'Server & Connectivity'),
                     TbStaggeredEntry(
                       index: 3,
                       child: _SettingsGroup(
+                        title: 'Server & Connectivity',
                         children: [
                           _SettingsTile(
                             icon: Icons.dns_outlined,
@@ -234,7 +209,6 @@ class ProfileSettingsPage extends ConsumerWidget {
                     const SizedBox(height: DesignTokens.spacing20),
 
                     // Notification Delivery Settings
-                    _SectionHeader(title: 'Notification Delivery'),
                     TbStaggeredEntry(
                       index: 4,
                       child: notifSettingsAsync.when(
@@ -289,22 +263,22 @@ class ProfileSettingsPage extends ConsumerWidget {
   ) {
     showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (ctx) => _EditProfileSheet(user: user),
     );
   }
 
-  void _openChangePasswordSheet(
+  void _openChangePasswordDialog(
     BuildContext context,
     WidgetRef ref,
     UserPasswordPolicy? policy,
   ) {
-    showModalBottomSheet<void>(
+    showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (ctx) => _ChangePasswordSheet(policy: policy),
+      useRootNavigator: true,
+      builder: (ctx) => _ChangePasswordDialog(policy: policy),
     );
   }
 
@@ -446,141 +420,114 @@ class _ProfileHeader extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Material(
-      color: scheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
-        borderRadius: DesignTokens.borderRadiusLarge,
-        side: BorderSide(color: scheme.outlineVariant),
-      ),
-      child: Padding(
-        padding: DesignTokens.cardPadding,
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: scheme.primaryContainer,
-              foregroundColor: scheme.onPrimaryContainer,
-              child: Text(
-                user.initials,
-                style: textTheme.titleMedium?.copyWith(
-                  color: scheme.onPrimaryContainer,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const SizedBox(width: DesignTokens.spacing16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    user.displayName,
-                    style: textTheme.titleMedium?.copyWith(
-                      color: scheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    user.email,
-                    style: textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: DesignTokens.spacing8),
-                  Wrap(
-                    spacing: DesignTokens.spacing8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      if (mode == SessionMode.demo)
-                        TbStatusBadge.demo(compact: true)
-                      else
-                        const TbStatusBadge(
-                          label: 'LIVE',
-                          icon: TbIconKind.livePulse,
-                          tone: TbStatusTone.online,
-                          compact: true,
-                        ),
-                      if (user.phone.isNotEmpty)
-                        Text(
-                          user.phone,
-                          style: textTheme.labelSmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              tooltip: 'Edit profile',
-              constraints: const BoxConstraints(
-                minWidth: DesignTokens.minTouchTarget,
-                minHeight: DesignTokens.minTouchTarget,
-              ),
-              icon: const Icon(Icons.edit_outlined),
-              onPressed: onEditProfile,
-            ),
-          ],
+    return TbSectionCard(
+      title: 'Account',
+      trailing: IconButton(
+        tooltip: 'Edit profile',
+        constraints: const BoxConstraints(
+          minWidth: DesignTokens.minTouchTarget,
+          minHeight: DesignTokens.minTouchTarget,
         ),
+        icon: const Icon(Icons.edit_outlined),
+        onPressed: onEditProfile,
       ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Padding(
-      padding: const EdgeInsets.only(
-        left: DesignTokens.spacing4,
-        bottom: DesignTokens.spacing8,
-      ),
-      child: Text(
-        title,
-        style: textTheme.labelLarge?.copyWith(color: scheme.onSurfaceVariant),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: scheme.primaryContainer,
+            foregroundColor: scheme.onPrimaryContainer,
+            child: Text(
+              user.initials,
+              style: textTheme.titleMedium?.copyWith(
+                color: scheme.onPrimaryContainer,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: DesignTokens.spacing16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user.displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.titleMedium?.copyWith(
+                    color: scheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  user.email,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: DesignTokens.spacing8),
+                Wrap(
+                  spacing: DesignTokens.spacing8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    if (mode == SessionMode.demo)
+                      TbStatusBadge.demo(compact: true)
+                    else
+                      const TbStatusBadge(
+                        label: 'LIVE',
+                        icon: TbIconKind.livePulse,
+                        tone: TbStatusTone.online,
+                        compact: true,
+                      ),
+                    if (user.phone.isNotEmpty)
+                      Text(
+                        user.phone,
+                        style: textTheme.labelSmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
 class _SettingsGroup extends StatelessWidget {
-  const _SettingsGroup({required this.children});
+  const _SettingsGroup({required this.title, required this.children});
 
+  final String title;
   final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Material(
-      color: scheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
-        borderRadius: DesignTokens.borderRadiusLarge,
-        side: BorderSide(color: scheme.outlineVariant),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 0; i < children.length; i++) ...[
-            children[i],
-            if (i < children.length - 1)
-              Divider(
-                height: 1,
-                thickness: 1,
-                indent: 56,
-                color: scheme.outlineVariant,
-              ),
+    return TbSectionCard(
+      title: title,
+      child: Material(
+        type: MaterialType.transparency,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < children.length; i++) ...[
+              children[i],
+              if (i < children.length - 1)
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  indent: DesignTokens.iconMedium + DesignTokens.spacing16,
+                  color: scheme.outlineVariant,
+                ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -617,7 +564,6 @@ class _SettingsTile extends StatelessWidget {
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: DesignTokens.spacing16,
               vertical: DesignTokens.spacing12,
             ),
             child: Row(
@@ -629,6 +575,7 @@ class _SettingsTile extends StatelessWidget {
                 ),
                 const SizedBox(width: DesignTokens.spacing16),
                 Expanded(
+                  flex: 2,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -652,7 +599,7 @@ class _SettingsTile extends StatelessWidget {
                 ),
                 if (trailing != null) ...[
                   const SizedBox(width: DesignTokens.spacing8),
-                  trailing!,
+                  Flexible(child: trailing!),
                 ] else if (onTap != null) ...[
                   const SizedBox(width: DesignTokens.spacing8),
                   Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
@@ -677,8 +624,6 @@ class _NotificationDeliveryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final alarmPrefs =
         settings.prefs['ALARM'] as Map<String, dynamic>? ?? const {};
 
@@ -694,25 +639,12 @@ class _NotificationDeliveryCard extends StatelessWidget {
       onSave(TbUserNotificationSettings(prefs: updatedPrefs));
     }
 
-    return Material(
-      color: scheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
-        borderRadius: DesignTokens.borderRadiusLarge,
-        side: BorderSide(color: scheme.outlineVariant),
-      ),
-      child: Padding(
-        padding: DesignTokens.cardPadding,
+    return TbSectionCard(
+      title: 'Alarm Notification Channels',
+      child: Material(
+        type: MaterialType.transparency,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Alarm Notification Channels',
-              style: textTheme.titleSmall?.copyWith(
-                color: scheme.onSurface,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: DesignTokens.spacing12),
             SwitchListTile.adaptive(
               contentPadding: EdgeInsets.zero,
               title: const Text('In-App Web Alerts'),
@@ -864,22 +796,34 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
   }
 }
 
-class _ChangePasswordSheet extends ConsumerStatefulWidget {
-  const _ChangePasswordSheet({this.policy});
+class _ChangePasswordDialog extends ConsumerStatefulWidget {
+  const _ChangePasswordDialog({this.policy});
 
   final UserPasswordPolicy? policy;
 
   @override
-  ConsumerState<_ChangePasswordSheet> createState() =>
-      _ChangePasswordSheetState();
+  ConsumerState<_ChangePasswordDialog> createState() =>
+      _ChangePasswordDialogState();
 }
 
-class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
+class _ChangePasswordDialogState extends ConsumerState<_ChangePasswordDialog> {
   final _currentCtrl = TextEditingController();
   final _newCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
+  final _errorKey = GlobalKey();
   String? _errorText;
   bool _saving = false;
+
+  /// Shows [message] and scrolls it into view (it may be above the viewport).
+  void _showError(String message) {
+    setState(() => _errorText = message);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _errorKey.currentContext;
+      if (mounted && ctx != null) {
+        Scrollable.ensureVisible(ctx, duration: Duration.zero);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -917,23 +861,24 @@ class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
   }
 
   Future<void> _submit() async {
+    if (_saving) return;
     final current = _currentCtrl.text;
     final newPass = _newCtrl.text;
     final confirm = _confirmCtrl.text;
 
     if (current.isEmpty) {
-      setState(() => _errorText = 'Current password is required');
+      _showError('Current password is required');
       return;
     }
 
     final validationError = _validatePassword(newPass);
     if (validationError != null) {
-      setState(() => _errorText = validationError);
+      _showError(validationError);
       return;
     }
 
     if (newPass != confirm) {
-      setState(() => _errorText = 'New passwords do not match');
+      _showError('New passwords do not match');
       return;
     }
 
@@ -942,22 +887,19 @@ class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
       _saving = true;
     });
 
+    final navigator = Navigator.of(context);
+    final route = ModalRoute.of(context);
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await ref
           .read(userProfileControllerProvider.notifier)
           .changePassword(currentPassword: current, newPassword: newPass);
-      if (mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Password changed successfully')),
-        );
-      }
+      if (mounted && (route?.isCurrent ?? false)) navigator.pop();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Password changed successfully')),
+      );
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorText = e is TbFailure ? e.message : e.toString();
-        });
-      }
+      if (mounted) _showError(e is TbFailure ? e.message : e.toString());
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -968,86 +910,102 @@ class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: DesignTokens.spacing16,
-        right: DesignTokens.spacing16,
-        top: DesignTokens.spacing16,
-        bottom:
-            MediaQuery.of(context).viewInsets.bottom + DesignTokens.spacing20,
+    // Dialog already insets itself by the keyboard, so title, error and
+    // fields scroll; only the actions are pinned and always reachable.
+    return Dialog(
+      insetPadding: const EdgeInsets.all(DesignTokens.spacing16),
+      shape: RoundedRectangleBorder(
+        borderRadius: DesignTokens.borderRadiusLarge,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Change Password',
-            style: textTheme.titleMedium?.copyWith(
-              color: scheme.onSurface,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          if (_errorText != null) ...[
-            const SizedBox(height: DesignTokens.spacing8),
-            Container(
-              padding: DesignTokens.cardPadding,
-              decoration: BoxDecoration(
-                color: scheme.errorContainer,
-                borderRadius: DesignTokens.borderRadiusMedium,
-              ),
-              child: Text(
-                _errorText!,
-                style: textTheme.bodySmall?.copyWith(
-                  color: scheme.onErrorContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(DesignTokens.spacing16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Change Password',
+                      style: textTheme.titleMedium?.copyWith(
+                        color: scheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: DesignTokens.spacing12),
+                    if (_errorText != null) ...[
+                      Container(
+                        key: _errorKey,
+                        padding: DesignTokens.cardPadding,
+                        decoration: BoxDecoration(
+                          color: scheme.errorContainer,
+                          borderRadius: DesignTokens.borderRadiusMedium,
+                        ),
+                        child: Text(
+                          _errorText!,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: scheme.onErrorContainer,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: DesignTokens.spacing12),
+                    ],
+                    for (final f in [
+                      (_currentCtrl, 'Current Password'),
+                      (_newCtrl, 'New Password'),
+                      (_confirmCtrl, 'Confirm New Password'),
+                    ]) ...[
+                      TextField(
+                        controller: f.$1,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          labelText: f.$2,
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                      if (f.$1 != _confirmCtrl)
+                        const SizedBox(height: DesignTokens.spacing12),
+                    ],
+                  ],
                 ),
               ),
             ),
+            const SizedBox(height: DesignTokens.spacing16),
+            OverflowBar(
+              alignment: MainAxisAlignment.end,
+              spacing: DesignTokens.spacing8,
+              overflowSpacing: DesignTokens.spacing8,
+              overflowAlignment: OverflowBarAlignment.end,
+              overflowDirection: VerticalDirection.up,
+              children: [
+                TextButton(
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(0, DesignTokens.minTouchTarget),
+                  ),
+                  onPressed: _saving ? null : () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, DesignTokens.minTouchTarget),
+                  ),
+                  onPressed: _saving ? null : _submit,
+                  child: _saving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Update Password'),
+                ),
+              ],
+            ),
           ],
-          const SizedBox(height: DesignTokens.spacing16),
-          TextField(
-            controller: _currentCtrl,
-            obscureText: true,
-            decoration: const InputDecoration(
-              labelText: 'Current Password',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: DesignTokens.spacing12),
-          TextField(
-            controller: _newCtrl,
-            obscureText: true,
-            decoration: const InputDecoration(
-              labelText: 'New Password',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: DesignTokens.spacing12),
-          TextField(
-            controller: _confirmCtrl,
-            obscureText: true,
-            decoration: const InputDecoration(
-              labelText: 'Confirm New Password',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: DesignTokens.spacing20),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(
-                double.infinity,
-                DesignTokens.minTouchTarget,
-              ),
-            ),
-            onPressed: _saving ? null : _submit,
-            child: _saving
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Update Password'),
-          ),
-        ],
+        ),
       ),
     );
   }

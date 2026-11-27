@@ -46,6 +46,12 @@ class HomePage extends ConsumerWidget {
 
     final isDemo = mode == SessionMode.demo;
     final isWsOnline = wsState == WsConnectionState.authenticated;
+    final scrollPadding = EdgeInsets.fromLTRB(
+      DesignTokens.spacing16,
+      DesignTokens.spacing16,
+      DesignTokens.spacing16,
+      DesignTokens.bottomScrollPadding(context),
+    );
 
     return Scaffold(
       appBar: TbAppBar(
@@ -81,10 +87,11 @@ class HomePage extends ConsumerWidget {
         ],
       ),
       body: SafeArea(
+        bottom: false,
         child: dashboardsAsync.when(
-          loading: () => const SingleChildScrollView(
-            padding: DesignTokens.paddingMedium,
-            child: TbShimmerList(itemCount: 3),
+          loading: () => SingleChildScrollView(
+            padding: scrollPadding,
+            child: const TbShimmerList(itemCount: 3),
           ),
           error: (error, _) => TbEmptyState(
             icon: TbIconKind.dashboardTile,
@@ -137,7 +144,7 @@ class HomePage extends ConsumerWidget {
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
                   SliverPadding(
-                    padding: DesignTokens.paddingMedium,
+                    padding: scrollPadding,
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
                         TbStaggeredEntry(
@@ -224,7 +231,6 @@ class HomePage extends ConsumerWidget {
                               ),
                             ),
                         ],
-                        const SizedBox(height: 84),
                       ]),
                     ),
                   ),
@@ -495,6 +501,7 @@ class _StarButton extends StatelessWidget {
     return IconButton(
       key: buttonKey,
       tooltip: starred ? 'Unstar' : 'Star',
+      padding: DesignTokens.paddingZero,
       constraints: const BoxConstraints(
         minWidth: DesignTokens.minTouchTarget,
         minHeight: DesignTokens.minTouchTarget,

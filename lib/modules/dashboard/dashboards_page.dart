@@ -61,6 +61,28 @@ class _DashboardsPageState extends ConsumerState<DashboardsPage> {
     });
   }
 
+  void _maybeEnsureStarredCoverage(
+    PagedListState<TbDashboardInfo> paged,
+    int visibleStarredCount,
+  ) {
+    if (!_starredOnly ||
+        !paged.hasNext ||
+        paged.isLoadingMore ||
+        paged.loadMoreError != null) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_starredOnly) return;
+      final cannotScroll =
+          visibleStarredCount == 0 ||
+          (_scrollController.hasClients &&
+              _scrollController.position.maxScrollExtent <= 0);
+      if (cannotScroll) {
+        ref.read(dashboardsListProvider(_searchQuery).notifier).loadNextPage();
+      }
+    });
+  }
+
   void _onOpenDashboard(TbDashboardInfo dashboard, {required bool isTwoPane}) {
     if (isTwoPane) {
       setState(() => _selectedDashboardId = dashboard.id);
@@ -115,22 +137,39 @@ class _DashboardsPageState extends ConsumerState<DashboardsPage> {
             ],
           );
 
+    final filterBar = _FilterChipBar(
+      starredOnly: _starredOnly,
+      onChanged: (starred) => setState(() => _starredOnly = starred),
+    );
+
     return Scaffold(
       appBar: appBar,
       body: SafeArea(
-        child: Column(
-          children: [
-            _FilterChipBar(
-              starredOnly: _starredOnly,
-              onChanged: (starred) => setState(() => _starredOnly = starred),
-            ),
-            Expanded(
-              child: dashboardsAsync.when(
-                loading: () => const SingleChildScrollView(
-                  padding: DesignTokens.paddingMedium,
-                  child: TbShimmerList(itemCount: 4),
+        bottom: false,
+        child: dashboardsAsync.when(
+          loading: () => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              filterBar,
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(
+                    DesignTokens.spacing16,
+                    DesignTokens.spacing4,
+                    DesignTokens.spacing16,
+                    DesignTokens.bottomScrollPadding(context),
+                  ),
+                  child: const TbShimmerList(itemCount: 4),
                 ),
-                error: (error, _) => TbEmptyState(
+              ),
+            ],
+          ),
+          error: (error, _) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              filterBar,
+              Expanded(
+                child: TbEmptyState(
                   icon: TbIconKind.dashboardTile,
                   title: 'Failed to load',
                   subtitle: error is TbFailure ? error.message : null,
@@ -140,80 +179,113 @@ class _DashboardsPageState extends ConsumerState<DashboardsPage> {
                       .read(dashboardsListProvider(_searchQuery).notifier)
                       .refresh(),
                 ),
-                data: (paged) {
-                  final items = _starredOnly
-                      ? paged.items
-                            .where((d) => d.isStarred)
-                            .toList(growable: false)
-                      : paged.items;
+              ),
+            ],
+          ),
+          data: (paged) {
+            final items = _starredOnly
+                ? paged.items.where((d) => d.isStarred).toList(growable: false)
+                : paged.items;
 
-                  if (items.isEmpty) {
-                    final hasFilters = _starredOnly || _searchQuery != null;
-                    return TbEmptyState(
-                      icon: TbIconKind.dashboardTile,
-                      title: _starredOnly
-                          ? 'No starred dashboards'
-                          : 'No dashboards',
-                      actionLabel: hasFilters ? 'Clear filters' : 'Refresh',
-                      onAction: hasFilters
-                          ? _clearFilters
-                          : () => ref
-                                .read(
-                                  dashboardsListProvider(_searchQuery).notifier,
-                                )
-                                .refresh(),
-                    );
-                  }
+            _maybeEnsureStarredCoverage(paged, items.length);
 
-                  if (!isTwoPane) {
-                    return _buildCollection(
-                      paged: paged,
-                      items: items,
-                      isTwoPane: false,
-                      selectedId: null,
-                    );
-                  }
+            Widget buildEmptyState() {
+              if (_starredOnly &&
+                  paged.hasNext &&
+                  paged.loadMoreError == null) {
+                return SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(
+                    DesignTokens.spacing16,
+                    DesignTokens.spacing4,
+                    DesignTokens.spacing16,
+                    DesignTokens.bottomScrollPadding(context),
+                  ),
+                  child: const TbShimmerList(itemCount: 3),
+                );
+              }
+              final hasFilters = _starredOnly || _searchQuery != null;
+              return TbEmptyState(
+                icon: TbIconKind.dashboardTile,
+                title: _starredOnly ? 'No starred dashboards' : 'No dashboards',
+                actionLabel: hasFilters ? 'Clear filters' : 'Refresh',
+                onAction: hasFilters
+                    ? _clearFilters
+                    : () => ref
+                          .read(dashboardsListProvider(_searchQuery).notifier)
+                          .refresh(),
+              );
+            }
 
-                  final activeId =
-                      items.any((d) => d.id == _selectedDashboardId)
-                      ? _selectedDashboardId!
-                      : items.first.id;
+            if (!isTwoPane || paged.items.isEmpty) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  filterBar,
+                  Expanded(
+                    child: items.isEmpty
+                        ? buildEmptyState()
+                        : _buildCollection(
+                            context,
+                            paged: paged,
+                            items: items,
+                            isTwoPane: false,
+                            selectedId: null,
+                          ),
+                  ),
+                ],
+              );
+            }
 
-                  return Row(
+            final activeId = items.any((d) => d.id == _selectedDashboardId)
+                ? _selectedDashboardId!
+                : paged.items.any((d) => d.id == _selectedDashboardId)
+                ? _selectedDashboardId!
+                : (items.firstOrNull ?? paged.items.first).id;
+
+            return Row(
+              children: [
+                SizedBox(
+                  width: 360,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      SizedBox(
-                        width: 360,
-                        child: _buildCollection(
-                          paged: paged,
-                          items: items,
-                          isTwoPane: true,
-                          selectedId: activeId,
-                        ),
-                      ),
-                      VerticalDivider(
-                        width: 1,
-                        thickness: 1,
-                        color: scheme.outlineVariant,
-                      ),
+                      filterBar,
                       Expanded(
-                        child: DashboardDetailsPage(
-                          key: ValueKey<String>(activeId),
-                          dashboardId: activeId,
-                          embedded: true,
-                        ),
+                        child: items.isEmpty
+                            ? buildEmptyState()
+                            : _buildCollection(
+                                context,
+                                paged: paged,
+                                items: items,
+                                isTwoPane: true,
+                                selectedId: activeId,
+                              ),
                       ),
                     ],
-                  );
-                },
-              ),
-            ),
-          ],
+                  ),
+                ),
+                VerticalDivider(
+                  width: 1,
+                  thickness: 1,
+                  color: scheme.outlineVariant,
+                ),
+                Expanded(
+                  child: DashboardDetailsPage(
+                    key: ValueKey<String>(activeId),
+                    dashboardId: activeId,
+                    embedded: true,
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildCollection({
+  Widget _buildCollection(
+    BuildContext context, {
     required PagedListState<TbDashboardInfo> paged,
     required List<TbDashboardInfo> items,
     required bool isTwoPane,
@@ -228,14 +300,12 @@ class _DashboardsPageState extends ConsumerState<DashboardsPage> {
       child: ListView.builder(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: isTwoPane
-            ? DesignTokens.paddingMedium
-            : const EdgeInsets.fromLTRB(
-                DesignTokens.spacing16,
-                DesignTokens.spacing16,
-                DesignTokens.spacing16,
-                84.0,
-              ),
+        padding: EdgeInsets.fromLTRB(
+          DesignTokens.spacing16,
+          DesignTokens.spacing4,
+          DesignTokens.spacing16,
+          DesignTokens.bottomScrollPadding(context),
+        ),
         itemCount: rowCount + (hasFooter ? 1 : 0),
         itemBuilder: (context, rowIndex) {
           if (rowIndex >= rowCount) {
@@ -278,14 +348,14 @@ class _FilterChipBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        DesignTokens.spacing16,
-        DesignTokens.spacing8,
-        DesignTokens.spacing16,
-        DesignTokens.spacing4,
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(
+        horizontal: DesignTokens.spacing16,
+        vertical: DesignTokens.spacing8,
       ),
       child: Row(
+        spacing: DesignTokens.spacing8,
         children: [
           FilterChip(
             materialTapTargetSize: MaterialTapTargetSize.padded,
@@ -293,7 +363,6 @@ class _FilterChipBar extends StatelessWidget {
             selected: !starredOnly,
             onSelected: (_) => onChanged(false),
           ),
-          const SizedBox(width: DesignTokens.spacing8),
           FilterChip(
             materialTapTargetSize: MaterialTapTargetSize.padded,
             label: const Text('Starred'),
@@ -337,7 +406,9 @@ class _DashboardGalleryCard extends StatelessWidget {
     final meta = _meta;
 
     final badge = Container(
-      padding: DesignTokens.paddingSmall,
+      width: DesignTokens.iconXl,
+      height: DesignTokens.iconXl,
+      alignment: Alignment.center,
       decoration: BoxDecoration(
         color: selected ? scheme.primary : scheme.primaryContainer,
         borderRadius: DesignTokens.borderRadiusMedium,
@@ -358,79 +429,93 @@ class _DashboardGalleryCard extends StatelessWidget {
       button: true,
       selected: selected,
       label: dashboard.title,
-      child: TbPressScale(
-        onTap: onTap,
-        borderRadius: DesignTokens.borderRadiusLarge,
-        child: Container(
-          key: Key('dashboard-card-${dashboard.id}'),
-          constraints: const BoxConstraints(
-            minHeight: DesignTokens.minTouchTarget,
+      child: Material(
+        key: Key('dashboard-card-${dashboard.id}'),
+        color: selected
+            ? scheme.secondaryContainer.withValues(alpha: 0.65)
+            : scheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(
+          borderRadius: DesignTokens.borderRadiusLarge,
+          side: BorderSide(
+            color: selected ? scheme.primary : scheme.outlineVariant,
           ),
-          padding: const EdgeInsets.only(
-            left: DesignTokens.spacing12,
-            top: DesignTokens.spacing4,
-            bottom: DesignTokens.spacing4,
-          ),
-          decoration: BoxDecoration(
-            color: selected
-                ? scheme.secondaryContainer.withValues(alpha: 0.65)
-                : scheme.surfaceContainerLow,
-            borderRadius: DesignTokens.borderRadiusLarge,
-            border: Border.all(
-              color: selected ? scheme.primary : scheme.outlineVariant,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: TbPressScale(
+          onTap: onTap,
+          borderRadius: DesignTokens.borderRadiusLarge,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: DesignTokens.minTouchTarget,
             ),
-          ),
-          child: Row(
-            children: [
-              if (enableHero)
-                Hero(tag: 'dashboard-${dashboard.id}', child: badge)
-              else
-                badge,
-              const SizedBox(width: DesignTokens.spacing12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      dashboard.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: textTheme.titleSmall?.copyWith(
-                        color: scheme.onSurface,
-                        fontWeight: FontWeight.w600,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                DesignTokens.spacing16,
+                DesignTokens.spacing8,
+                DesignTokens.spacing4,
+                DesignTokens.spacing8,
+              ),
+              child: Row(
+                children: [
+                  if (enableHero)
+                    Hero(tag: 'dashboard-${dashboard.id}', child: badge)
+                  else
+                    badge,
+                  const SizedBox(width: DesignTokens.spacing12),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: DesignTokens.spacing4,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: DesignTokens.spacing2,
+                        children: [
+                          Text(
+                            dashboard.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.titleSmall?.copyWith(
+                              color: scheme.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (meta != null)
+                            Text(
+                              meta,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TbTextStyles.tabular(
+                                textTheme.bodySmall ?? TbTextStyles.bodySmall,
+                              ).copyWith(color: scheme.onSurfaceVariant),
+                            ),
+                        ],
                       ),
                     ),
-                    if (meta != null)
-                      Text(
-                        meta,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TbTextStyles.tabular(
-                          textTheme.bodySmall ?? TbTextStyles.bodySmall,
-                        ).copyWith(color: scheme.onSurfaceVariant),
-                      ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: DesignTokens.spacing4),
+                  IconButton(
+                    key: Key('dashboard-star-${dashboard.id}'),
+                    tooltip: dashboard.isStarred ? 'Unstar' : 'Star',
+                    constraints: const BoxConstraints(
+                      minWidth: DesignTokens.minTouchTarget,
+                      minHeight: DesignTokens.minTouchTarget,
+                    ),
+                    padding: DesignTokens.paddingZero,
+                    icon: disableAnimations
+                        ? starIcon
+                        : AnimatedScale(
+                            scale: dashboard.isStarred ? 1.1 : 1.0,
+                            duration: DesignTokens.motionFast,
+                            curve: Curves.easeOutBack,
+                            child: starIcon,
+                          ),
+                    onPressed: onToggleStar,
+                  ),
+                ],
               ),
-              IconButton(
-                key: Key('dashboard-star-${dashboard.id}'),
-                tooltip: dashboard.isStarred ? 'Unstar' : 'Star',
-                constraints: const BoxConstraints(
-                  minWidth: DesignTokens.minTouchTarget,
-                  minHeight: DesignTokens.minTouchTarget,
-                ),
-                padding: DesignTokens.paddingZero,
-                icon: disableAnimations
-                    ? starIcon
-                    : AnimatedScale(
-                        scale: dashboard.isStarred ? 1.1 : 1.0,
-                        duration: DesignTokens.motionFast,
-                        curve: Curves.easeOutBack,
-                        child: starIcon,
-                      ),
-                onPressed: onToggleStar,
-              ),
-            ],
+            ),
           ),
         ),
       ),

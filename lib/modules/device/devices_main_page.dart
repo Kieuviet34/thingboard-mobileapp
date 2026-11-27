@@ -53,6 +53,7 @@ class DevicesMainPage extends ConsumerWidget {
         ? 3
         : 2;
     final cardExtent = 160.0 + ((textScale - 1.0).clamp(0.0, 1.5) * 68.0);
+    final bottomPadding = DesignTokens.bottomScrollPadding(context);
 
     return Scaffold(
       appBar: TbAppBar(
@@ -81,100 +82,109 @@ class DevicesMainPage extends ConsumerWidget {
           ),
         ],
       ),
-      body: profilesAsync.when(
-        loading: () => const SingleChildScrollView(
-          padding: DesignTokens.paddingMedium,
-          child: TbShimmerList(itemCount: 4),
-        ),
-        error: (err, _) => TbEmptyState(
-          icon: TbIconKind.severityCritical,
-          title: 'Failed to load devices',
-          subtitle: err is TbFailure ? err.message : err.toString(),
-          isError: true,
-          actionLabel: 'Retry',
-          onAction: () =>
-              ref.read(deviceProfilesListProvider.notifier).refresh(),
-        ),
-        data: (paged) {
-          if (paged.items.isEmpty) {
-            return TbEmptyState(
-              icon: TbIconKind.navDevices,
-              title: 'No device profiles',
-              subtitle: 'Claim or add a device to get started',
-              actionLabel: 'Refresh',
-              onAction: () =>
-                  ref.read(deviceProfilesListProvider.notifier).refresh(),
-            );
-          }
-
-          final activeTotal = paged.items.fold<int>(
-            0,
-            (sum, p) => sum + p.activeCount,
-          );
-          final inactiveTotal = paged.items.fold<int>(
-            0,
-            (sum, p) => sum + p.inactiveCount,
-          );
-
-          return RefreshIndicator(
-            onRefresh: () =>
-                ref.read(deviceProfilesListProvider.notifier).refresh(),
-            child: CustomScrollView(
-              slivers: [
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(
-                    DesignTokens.spacing16,
-                    DesignTokens.spacing12,
-                    DesignTokens.spacing16,
-                    DesignTokens.spacing12,
-                  ),
-                  sliver: SliverToBoxAdapter(
-                    child: _AllDevicesSummaryTile(
-                      activeCount: activeTotal,
-                      inactiveCount: inactiveTotal,
-                      onOpenAll: () => _openDeviceList(context),
-                      onOpenOnline: () =>
-                          _openDeviceList(context, active: true),
-                      onOpenOffline: () =>
-                          _openDeviceList(context, active: false),
-                    ),
-                  ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(
-                    DesignTokens.spacing16,
-                    0,
-                    DesignTokens.spacing16,
-                    84.0,
-                  ),
-                  sliver: SliverGrid.builder(
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: crossAxisCount,
-                      mainAxisSpacing: DesignTokens.spacing12,
-                      crossAxisSpacing: DesignTokens.spacing12,
-                      mainAxisExtent: cardExtent,
-                    ),
-                    itemCount: paged.items.length,
-                    itemBuilder: (context, index) {
-                      final profile = paged.items[index];
-                      return TbStaggeredEntry(
-                        index: index,
-                        child: _DeviceProfileCard(
-                          profile: profile,
-                          onTap: () => _openDeviceList(
-                            context,
-                            profileId: profile.id,
-                            title: profile.name,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+      body: SafeArea(
+        bottom: false,
+        child: profilesAsync.when(
+          loading: () => SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              DesignTokens.spacing16,
+              DesignTokens.spacing16,
+              DesignTokens.spacing16,
+              bottomPadding,
             ),
-          );
-        },
+            child: const TbShimmerList(itemCount: 4),
+          ),
+          error: (err, _) => TbEmptyState(
+            icon: TbIconKind.severityCritical,
+            title: 'Failed to load devices',
+            subtitle: err is TbFailure ? err.message : err.toString(),
+            isError: true,
+            actionLabel: 'Retry',
+            onAction: () =>
+                ref.read(deviceProfilesListProvider.notifier).refresh(),
+          ),
+          data: (paged) {
+            if (paged.items.isEmpty) {
+              return TbEmptyState(
+                icon: TbIconKind.navDevices,
+                title: 'No device profiles',
+                subtitle: 'Claim or add a device to get started',
+                actionLabel: 'Refresh',
+                onAction: () =>
+                    ref.read(deviceProfilesListProvider.notifier).refresh(),
+              );
+            }
+
+            final activeTotal = paged.items.fold<int>(
+              0,
+              (sum, p) => sum + p.activeCount,
+            );
+            final inactiveTotal = paged.items.fold<int>(
+              0,
+              (sum, p) => sum + p.inactiveCount,
+            );
+
+            return RefreshIndicator(
+              onRefresh: () =>
+                  ref.read(deviceProfilesListProvider.notifier).refresh(),
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(
+                      DesignTokens.spacing16,
+                      DesignTokens.spacing16,
+                      DesignTokens.spacing16,
+                      DesignTokens.spacing12,
+                    ),
+                    sliver: SliverToBoxAdapter(
+                      child: _AllDevicesSummaryTile(
+                        activeCount: activeTotal,
+                        inactiveCount: inactiveTotal,
+                        onOpenAll: () => _openDeviceList(context),
+                        onOpenOnline: () =>
+                            _openDeviceList(context, active: true),
+                        onOpenOffline: () =>
+                            _openDeviceList(context, active: false),
+                      ),
+                    ),
+                  ),
+                  SliverPadding(
+                    padding: EdgeInsets.fromLTRB(
+                      DesignTokens.spacing16,
+                      0,
+                      DesignTokens.spacing16,
+                      bottomPadding,
+                    ),
+                    sliver: SliverGrid.builder(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        mainAxisSpacing: DesignTokens.spacing12,
+                        crossAxisSpacing: DesignTokens.spacing12,
+                        mainAxisExtent: cardExtent,
+                      ),
+                      itemCount: paged.items.length,
+                      itemBuilder: (context, index) {
+                        final profile = paged.items[index];
+                        return TbStaggeredEntry(
+                          index: index,
+                          child: _DeviceProfileCard(
+                            profile: profile,
+                            onTap: () => _openDeviceList(
+                              context,
+                              profileId: profile.id,
+                              title: profile.name,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

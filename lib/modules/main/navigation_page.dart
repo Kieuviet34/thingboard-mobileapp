@@ -51,6 +51,7 @@ class NavigationPage extends ConsumerWidget {
     if (location.startsWith('/alarms')) return 1;
     if (location.startsWith('/devices')) return 2;
     if (location.startsWith('/more') ||
+        location.startsWith('/tenant') ||
         location.startsWith('/customers') ||
         location.startsWith('/assets') ||
         location.startsWith('/auditLogs') ||
@@ -185,15 +186,22 @@ class NavigationPage extends ConsumerWidget {
             : SafeArea(
                 top: false,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  padding: const EdgeInsets.fromLTRB(
+                    DesignTokens.spacing16,
+                    0,
+                    DesignTokens.spacing16,
+                    DesignTokens.spacing12,
+                  ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(32),
+                    borderRadius: BorderRadius.circular(DesignTokens.spacing32),
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                       child: Container(
                         decoration: BoxDecoration(
                           color: scheme.surface.withValues(alpha: 0.82),
-                          borderRadius: BorderRadius.circular(32),
+                          borderRadius: BorderRadius.circular(
+                            DesignTokens.spacing32,
+                          ),
                           border: Border.all(
                             color: scheme.outlineVariant.withValues(
                               alpha: 0.45,
@@ -202,7 +210,7 @@ class NavigationPage extends ConsumerWidget {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.12),
+                              color: scheme.shadow.withValues(alpha: 0.12),
                               blurRadius: 20,
                               offset: const Offset(0, 6),
                             ),
@@ -211,7 +219,7 @@ class NavigationPage extends ConsumerWidget {
                         child: NavigationBar(
                           backgroundColor: Colors.transparent,
                           elevation: 0,
-                          height: 64,
+                          height: DesignTokens.spacing64,
                           labelBehavior: NavigationDestinationLabelBehavior
                               .onlyShowSelected,
                           selectedIndex: currentIndex,

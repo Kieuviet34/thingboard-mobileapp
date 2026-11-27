@@ -32,6 +32,12 @@ class ProfileSettingsPage extends ConsumerWidget {
     final notifSettingsAsync = ref.watch(notificationSettingsProvider);
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final scrollPadding = EdgeInsets.fromLTRB(
+      DesignTokens.spacing16,
+      DesignTokens.spacing16,
+      DesignTokens.spacing16,
+      DesignTokens.bottomScrollPadding(context),
+    );
 
     return Scaffold(
       appBar: TbAppBar(
@@ -39,6 +45,7 @@ class ProfileSettingsPage extends ConsumerWidget {
         title: const Text('Profile & Settings'),
       ),
       body: SafeArea(
+        bottom: false,
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(
@@ -53,9 +60,9 @@ class ProfileSettingsPage extends ConsumerWidget {
                 onAction: () => ref.invalidate(userProfileControllerProvider),
                 isError: true,
               ),
-              loading: () => const SingleChildScrollView(
-                padding: DesignTokens.paddingMedium,
-                child: Column(
+              loading: () => SingleChildScrollView(
+                padding: scrollPadding,
+                child: const Column(
                   children: [
                     TbShimmer(height: 120),
                     SizedBox(height: DesignTokens.spacing16),
@@ -64,7 +71,7 @@ class ProfileSettingsPage extends ConsumerWidget {
                 ),
               ),
               data: (user) => SingleChildScrollView(
-                padding: DesignTokens.paddingMedium,
+                padding: scrollPadding,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -428,6 +435,7 @@ class _ProfileHeader extends StatelessWidget {
           minWidth: DesignTokens.minTouchTarget,
           minHeight: DesignTokens.minTouchTarget,
         ),
+        padding: DesignTokens.paddingZero,
         icon: const Icon(Icons.edit_outlined),
         onPressed: onEditProfile,
       ),
@@ -557,6 +565,7 @@ class _SettingsTile extends StatelessWidget {
       button: onTap != null,
       label: title,
       child: InkWell(
+        borderRadius: DesignTokens.borderRadiusMedium,
         onTap: onTap,
         child: ConstrainedBox(
           constraints: const BoxConstraints(

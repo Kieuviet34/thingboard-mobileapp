@@ -146,6 +146,7 @@ class _AlarmsPageState extends ConsumerState<AlarmsPage> {
     final width = MediaQuery.sizeOf(context).width;
     final useTwoPane = width >= DesignTokens.mediumMaxWidth;
     final scheme = Theme.of(context).colorScheme;
+    final bottomPadding = DesignTokens.bottomScrollPadding(context);
 
     final hasFilters =
         filter.statusList.isNotEmpty ||
@@ -242,35 +243,54 @@ class _AlarmsPageState extends ConsumerState<AlarmsPage> {
             ),
           );
 
-    final listContent = alarmsAsync.when(
-      loading: () => const SingleChildScrollView(
-        padding: DesignTokens.paddingMedium,
-        child: TbShimmerList(itemCount: 5),
+    Widget wrapWithFilters(Widget child) => Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        filterStrip,
+        Expanded(child: child),
+      ],
+    );
+
+    final bodyContent = alarmsAsync.when(
+      loading: () => wrapWithFilters(
+        SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            DesignTokens.spacing16,
+            DesignTokens.spacing4,
+            DesignTokens.spacing16,
+            bottomPadding,
+          ),
+          child: const TbShimmerList(itemCount: 5),
+        ),
       ),
-      error: (err, _) => TbEmptyState(
-        icon: TbIconKind.severityCritical,
-        title: 'Failed to load alarms',
-        subtitle: err is TbFailure ? err.message : err.toString(),
-        isError: true,
-        actionLabel: 'Retry',
-        onAction: () => ref
-            .read(alarmsListProvider(widget.originatorId).notifier)
-            .refresh(),
+      error: (err, _) => wrapWithFilters(
+        TbEmptyState(
+          icon: TbIconKind.severityCritical,
+          title: 'Failed to load alarms',
+          subtitle: err is TbFailure ? err.message : err.toString(),
+          isError: true,
+          actionLabel: 'Retry',
+          onAction: () => ref
+              .read(alarmsListProvider(widget.originatorId).notifier)
+              .refresh(),
+        ),
       ),
       data: (paged) {
         if (paged.items.isEmpty) {
-          return TbEmptyState(
-            icon: TbIconKind.statusCleared,
-            title: 'No alarms',
-            subtitle: hasFilters
-                ? 'Adjust filters to see alarms'
-                : 'All systems nominal',
-            actionLabel: hasFilters ? 'Clear filters' : 'Refresh',
-            onAction: hasFilters
-                ? _clearAllFilters
-                : () => ref
-                      .read(alarmsListProvider(widget.originatorId).notifier)
-                      .refresh(),
+          return wrapWithFilters(
+            TbEmptyState(
+              icon: TbIconKind.statusCleared,
+              title: 'No alarms',
+              subtitle: hasFilters
+                  ? 'Adjust filters to see alarms'
+                  : 'All systems nominal',
+              actionLabel: hasFilters ? 'Clear filters' : 'Refresh',
+              onAction: hasFilters
+                  ? _clearAllFilters
+                  : () => ref
+                        .read(alarmsListProvider(widget.originatorId).notifier)
+                        .refresh(),
+            ),
           );
         }
 
@@ -287,11 +307,12 @@ class _AlarmsPageState extends ConsumerState<AlarmsPage> {
               .refresh(),
           child: ListView.builder(
             controller: _scrollController,
-            padding: const EdgeInsets.fromLTRB(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(
               DesignTokens.spacing16,
               DesignTokens.spacing4,
               DesignTokens.spacing16,
-              84.0,
+              bottomPadding,
             ),
             itemCount: paged.items.length + (paged.hasNext ? 1 : 0),
             itemBuilder: (context, index) {
@@ -338,11 +359,11 @@ class _AlarmsPageState extends ConsumerState<AlarmsPage> {
           ),
         );
 
-        if (!useTwoPane) return listView;
+        if (!useTwoPane) return wrapWithFilters(listView);
 
         return Row(
           children: [
-            Expanded(flex: 4, child: listView),
+            Expanded(flex: 4, child: wrapWithFilters(listView)),
             VerticalDivider(
               width: 1,
               thickness: 1,
@@ -368,12 +389,7 @@ class _AlarmsPageState extends ConsumerState<AlarmsPage> {
 
     return Scaffold(
       appBar: appBar,
-      body: Column(
-        children: [
-          filterStrip,
-          Expanded(child: listContent),
-        ],
-      ),
+      body: SafeArea(bottom: false, child: bodyContent),
     );
   }
 }

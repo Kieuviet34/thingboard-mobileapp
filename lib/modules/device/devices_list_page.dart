@@ -106,6 +106,7 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
     final width = MediaQuery.sizeOf(context).width;
     final useTwoPane = width >= DesignTokens.mediumMaxWidth;
     final scheme = Theme.of(context).colorScheme;
+    final bottomPadding = DesignTokens.bottomScrollPadding(context);
 
     final hasFilters =
         _profileId != null ||
@@ -206,29 +207,50 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
       ),
     );
 
-    final listBody = devicesAsync.when(
-      loading: () => const SingleChildScrollView(
-        padding: DesignTokens.paddingMedium,
-        child: TbShimmerList(itemCount: 5),
+    Widget wrapWithFilters(Widget child) => Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        filterBar,
+        Expanded(child: child),
+      ],
+    );
+
+    final bodyContent = devicesAsync.when(
+      loading: () => wrapWithFilters(
+        SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            DesignTokens.spacing16,
+            DesignTokens.spacing4,
+            DesignTokens.spacing16,
+            bottomPadding,
+          ),
+          child: const TbShimmerList(itemCount: 5),
+        ),
       ),
-      error: (err, _) => TbEmptyState(
-        icon: TbIconKind.severityCritical,
-        title: 'Failed to load devices',
-        subtitle: err is TbFailure ? err.message : err.toString(),
-        isError: true,
-        actionLabel: 'Retry',
-        onAction: () => ref.read(devicesListProvider(query).notifier).refresh(),
+      error: (err, _) => wrapWithFilters(
+        TbEmptyState(
+          icon: TbIconKind.severityCritical,
+          title: 'Failed to load devices',
+          subtitle: err is TbFailure ? err.message : err.toString(),
+          isError: true,
+          actionLabel: 'Retry',
+          onAction: () =>
+              ref.read(devicesListProvider(query).notifier).refresh(),
+        ),
       ),
       data: (paged) {
         if (paged.items.isEmpty) {
-          return TbEmptyState(
-            icon: TbIconKind.navDevices,
-            title: 'No devices found',
-            subtitle: hasFilters ? 'Try clearing filters' : null,
-            actionLabel: hasFilters ? 'Clear filters' : 'Refresh',
-            onAction: hasFilters
-                ? _clearFilters
-                : () => ref.read(devicesListProvider(query).notifier).refresh(),
+          return wrapWithFilters(
+            TbEmptyState(
+              icon: TbIconKind.navDevices,
+              title: 'No devices found',
+              subtitle: hasFilters ? 'Try clearing filters' : null,
+              actionLabel: hasFilters ? 'Clear filters' : 'Refresh',
+              onAction: hasFilters
+                  ? _clearFilters
+                  : () =>
+                        ref.read(devicesListProvider(query).notifier).refresh(),
+            ),
           );
         }
 
@@ -244,11 +266,12 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
               ref.read(devicesListProvider(query).notifier).refresh(),
           child: ListView.builder(
             controller: _scrollController,
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: EdgeInsets.fromLTRB(
               DesignTokens.spacing16,
               DesignTokens.spacing4,
               DesignTokens.spacing16,
-              useTwoPane ? DesignTokens.spacing20 : 84.0,
+              bottomPadding,
             ),
             itemCount: paged.items.length + (paged.hasNext ? 1 : 0),
             itemBuilder: (context, index) {
@@ -287,11 +310,11 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
           ),
         );
 
-        if (!useTwoPane) return listView;
+        if (!useTwoPane) return wrapWithFilters(listView);
 
         return Row(
           children: [
-            Expanded(flex: 4, child: listView),
+            Expanded(flex: 4, child: wrapWithFilters(listView)),
             VerticalDivider(
               width: 1,
               thickness: 1,
@@ -317,12 +340,7 @@ class _DevicesListPageState extends ConsumerState<DevicesListPage> {
 
     return Scaffold(
       appBar: appBar,
-      body: Column(
-        children: [
-          filterBar,
-          Expanded(child: listBody),
-        ],
-      ),
+      body: SafeArea(bottom: false, child: bodyContent),
     );
   }
 }

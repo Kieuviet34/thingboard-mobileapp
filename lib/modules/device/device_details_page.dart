@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -45,6 +46,64 @@ enum _TelemetryWindow {
   const _TelemetryWindow(this.label, this.duration);
   final String label;
   final Duration duration;
+}
+
+void _showDeviceSnackBar(BuildContext context, String message) {
+  final extraBottomChrome = math.max(
+    0.0,
+    MediaQuery.paddingOf(context).bottom -
+        MediaQuery.viewPaddingOf(context).bottom,
+  );
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.fromLTRB(
+          DesignTokens.spacing16,
+          0,
+          DesignTokens.spacing16,
+          extraBottomChrome + DesignTokens.spacing12,
+        ),
+        content: Text(message),
+      ),
+    );
+}
+
+/// Centers an empty/error [TbEmptyState] in the unobstructed viewport above
+/// any floating [NavigationBar] (`MediaQuery.padding.bottom`), while remaining
+/// scrollable on compact viewports or `2.0x` text scales.
+class _BottomSafeStatePane extends StatelessWidget {
+  const _BottomSafeStatePane({required this.child, this.onRefresh});
+
+  final Widget child;
+  final Future<void> Function()? onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final scrollable = LayoutBuilder(
+      builder: (context, constraints) {
+        final minHeight = constraints.hasBoundedHeight
+            ? math.max(0.0, constraints.maxHeight - bottomInset)
+            : 0.0;
+        return SingleChildScrollView(
+          physics: onRefresh != null
+              ? const AlwaysScrollableScrollPhysics()
+              : null,
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: minHeight),
+            child: Center(child: child),
+          ),
+        );
+      },
+    );
+    if (onRefresh != null) {
+      return RefreshIndicator(onRefresh: onRefresh!, child: scrollable);
+    }
+    return scrollable;
+  }
 }
 
 /// Material 3 Device Detail screen with Hero transition and 5 tabbed sections:
@@ -130,37 +189,29 @@ class _DeviceDetailsPageState extends ConsumerState<DeviceDetailsPage> {
     final textTheme = Theme.of(context).textTheme;
     final titleText = deviceAsync.valueOrNull?.name ?? 'Device';
 
-    return Scaffold(
-      appBar: widget.embedded
-          ? null
-          : TbAppBar(
-              title: Text(titleText),
-              actions: [
-                IconButton(
-                  key: const Key('device-details-refresh-button'),
-                  tooltip: 'Refresh device',
-                  constraints: const BoxConstraints(
-                    minWidth: DesignTokens.minTouchTarget,
-                    minHeight: DesignTokens.minTouchTarget,
-                  ),
-                  icon: const Icon(Icons.refresh),
-                  onPressed: _refreshSection,
-                ),
-              ],
-            ),
-      body: deviceAsync.when(
-        loading: () => const SingleChildScrollView(
-          padding: DesignTokens.paddingMedium,
-          child: TbShimmerList(itemCount: 4),
+    final bodyContent = SafeArea(
+      top: !widget.embedded,
+      bottom: false,
+      child: deviceAsync.when(
+        loading: () => SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            DesignTokens.spacing16,
+            DesignTokens.spacing16,
+            DesignTokens.spacing16,
+            DesignTokens.bottomScrollPadding(context),
+          ),
+          child: const TbShimmerList(itemCount: 4),
         ),
-        error: (err, _) => TbEmptyState(
-          icon: TbIconKind.severityCritical,
-          title: 'Failed to load device',
-          subtitle: err is TbFailure ? err.message : err.toString(),
-          isError: true,
-          actionLabel: 'Retry',
-          onAction: () =>
-              ref.invalidate(deviceDetailsProvider(widget.deviceId)),
+        error: (err, _) => _BottomSafeStatePane(
+          child: TbEmptyState(
+            icon: TbIconKind.severityCritical,
+            title: 'Failed to load device',
+            subtitle: err is TbFailure ? err.message : err.toString(),
+            isError: true,
+            actionLabel: 'Retry',
+            onAction: () =>
+                ref.invalidate(deviceDetailsProvider(widget.deviceId)),
+          ),
         ),
         data: (device) {
           final iconBox = Container(
@@ -241,6 +292,7 @@ class _DeviceDetailsPageState extends ConsumerState<DeviceDetailsPage> {
                             minWidth: DesignTokens.minTouchTarget,
                             minHeight: DesignTokens.minTouchTarget,
                           ),
+                          padding: DesignTokens.paddingZero,
                           icon: const Icon(Icons.refresh),
                           onPressed: _refreshSection,
                         ),
@@ -309,6 +361,29 @@ class _DeviceDetailsPageState extends ConsumerState<DeviceDetailsPage> {
         },
       ),
     );
+
+    if (widget.embedded) {
+      return Material(color: scheme.surface, child: bodyContent);
+    }
+
+    return Scaffold(
+      appBar: TbAppBar(
+        title: Text(titleText),
+        actions: [
+          IconButton(
+            key: const Key('device-details-refresh-button'),
+            tooltip: 'Refresh device',
+            constraints: const BoxConstraints(
+              minWidth: DesignTokens.minTouchTarget,
+              minHeight: DesignTokens.minTouchTarget,
+            ),
+            icon: const Icon(Icons.refresh),
+            onPressed: _refreshSection,
+          ),
+        ],
+      ),
+      body: bodyContent,
+    );
   }
 }
 
@@ -369,17 +444,18 @@ class _TelemetrySection extends ConsumerWidget {
         ref.invalidate(entityTelemetryHistoryProvider(entityId));
       },
       child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(
           DesignTokens.spacing16,
           0,
           DesignTokens.spacing16,
-          DesignTokens.spacing24,
+          DesignTokens.bottomScrollPadding(context),
         ),
         itemCount: 3,
         itemBuilder: (context, index) {
           if (index == 0) {
             return Padding(
-              padding: const EdgeInsets.only(bottom: DesignTokens.spacing12),
+              padding: const EdgeInsets.only(bottom: DesignTokens.spacing4),
               child: Row(
                 children: [
                   LivePulseDot(
@@ -387,7 +463,8 @@ class _TelemetrySection extends ConsumerWidget {
                     semanticLabel: device.active ? 'Live stream' : 'Offline',
                   ),
                   const SizedBox(width: DesignTokens.spacing4),
-                  Expanded(
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 120),
                     child: Text(
                       mode == SessionMode.demo ? 'Demo stream' : 'Live stream',
                       maxLines: 1,
@@ -398,17 +475,27 @@ class _TelemetrySection extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  Wrap(
-                    spacing: DesignTokens.spacing4,
-                    children: [
-                      for (final w in _TelemetryWindow.values)
-                        ChoiceChip(
-                          key: Key('telemetry-window-${w.label}'),
-                          label: Text(w.label),
-                          selected: window == w,
-                          onSelected: (_) => onWindowSelected(w),
+                  const SizedBox(width: DesignTokens.spacing8),
+                  Expanded(
+                    child: Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          spacing: DesignTokens.spacing4,
+                          children: [
+                            for (final w in _TelemetryWindow.values)
+                              ChoiceChip(
+                                key: Key('telemetry-window-${w.label}'),
+                                label: Text(w.label),
+                                selected: window == w,
+                                onSelected: (_) => onWindowSelected(w),
+                              ),
+                          ],
                         ),
-                    ],
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -422,12 +509,9 @@ class _TelemetrySection extends ConsumerWidget {
               );
             }
             if (combinedLatest.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.only(bottom: DesignTokens.spacing12),
-                child: TbEmptyState(
-                  icon: TbIconKind.temperature,
-                  title: 'No telemetry yet',
-                ),
+              return const TbEmptyState(
+                icon: TbIconKind.temperature,
+                title: 'No telemetry yet',
               );
             }
             return Padding(
@@ -470,6 +554,9 @@ class _TelemetrySection extends ConsumerWidget {
                     ),
               ];
               if (numericSeries.isEmpty) {
+                if (combinedLatest.isEmpty) {
+                  return const SizedBox.shrink();
+                }
                 return const TbEmptyState(
                   icon: TbIconKind.temperature,
                   title: 'No chart history',
@@ -604,15 +691,11 @@ class _AttributesSection extends ConsumerWidget {
           .read(entityAttributesProvider((id: entityId, scope: scope)).notifier)
           .saveAttributes(<String, dynamic>{saved.key: saved.value});
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text('Saved ${saved.key}')));
+      _showDeviceSnackBar(context, 'Saved ${saved.key}');
     } catch (e) {
       if (!context.mounted) return;
       final msg = e is TbFailure ? e.message : e.toString();
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(msg)));
+      _showDeviceSnackBar(context, msg);
     }
   }
 
@@ -626,25 +709,24 @@ class _AttributesSection extends ConsumerWidget {
           .read(entityAttributesProvider((id: entityId, scope: scope)).notifier)
           .deleteAttributes([key]);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text('Deleted $key')));
+      _showDeviceSnackBar(context, 'Deleted $key');
     } catch (e) {
       if (!context.mounted) return;
       final msg = e is TbFailure ? e.message : e.toString();
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(msg)));
+      _showDeviceSnackBar(context, msg);
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final attrsAsync = ref.watch(
-      entityAttributesProvider((id: entityId, scope: scope)),
-    );
+    final provider = entityAttributesProvider((id: entityId, scope: scope));
+    final attrsAsync = ref.watch(provider);
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+
+    Future<void> refreshAttributes() async {
+      ref.invalidate(provider);
+    }
 
     return Column(
       children: [
@@ -675,6 +757,13 @@ class _AttributesSection extends ConsumerWidget {
                 const SizedBox(width: DesignTokens.spacing8),
                 FilledButton.tonalIcon(
                   key: const Key('attr-add-button'),
+                  style: FilledButton.styleFrom(
+                    tapTargetSize: MaterialTapTargetSize.padded,
+                    minimumSize: const Size(DesignTokens.minTouchTarget, 36),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DesignTokens.spacing12,
+                    ),
+                  ),
                   onPressed: () => _openEditor(context, ref),
                   icon: const Icon(Icons.add, size: DesignTokens.iconSmall),
                   label: const Text('Add'),
@@ -683,52 +772,72 @@ class _AttributesSection extends ConsumerWidget {
             ],
           ),
         ),
-        const SizedBox(height: DesignTokens.spacing8),
+        const SizedBox(height: DesignTokens.spacing4),
         Expanded(
           child: attrsAsync.when(
-            loading: () => const SingleChildScrollView(
-              padding: DesignTokens.paddingMedium,
-              child: TbShimmerList(itemCount: 3),
+            loading: () => SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(
+                DesignTokens.spacing16,
+                0,
+                DesignTokens.spacing16,
+                DesignTokens.bottomScrollPadding(context),
+              ),
+              child: const TbShimmerList(itemCount: 3),
             ),
-            error: (err, _) => TbEmptyState(
-              icon: TbIconKind.severityCritical,
-              title: 'Attributes unavailable',
-              subtitle: err is TbFailure ? err.message : err.toString(),
-              isError: true,
-              actionLabel: 'Retry',
-              onAction: () => ref.invalidate(
-                entityAttributesProvider((id: entityId, scope: scope)),
+            error: (err, _) => _BottomSafeStatePane(
+              onRefresh: refreshAttributes,
+              child: TbEmptyState(
+                icon: TbIconKind.severityCritical,
+                title: 'Attributes unavailable',
+                subtitle: err is TbFailure ? err.message : err.toString(),
+                isError: true,
+                actionLabel: 'Retry',
+                onAction: () => ref.invalidate(provider),
               ),
             ),
             data: (entries) {
               if (entries.isEmpty) {
-                return TbEmptyState(
-                  icon: TbIconKind.attributesTag,
-                  title: 'No ${scope.label.toLowerCase()} attributes',
-                  actionLabel: scope.isWritableViaRest ? 'Add attribute' : null,
-                  onAction: scope.isWritableViaRest
-                      ? () => _openEditor(context, ref)
-                      : null,
+                return _BottomSafeStatePane(
+                  onRefresh: refreshAttributes,
+                  child: TbEmptyState(
+                    icon: TbIconKind.attributesTag,
+                    title: 'No ${scope.label.toLowerCase()} attributes',
+                    actionLabel: scope.isWritableViaRest
+                        ? 'Add attribute'
+                        : null,
+                    onAction: scope.isWritableViaRest
+                        ? () => _openEditor(context, ref)
+                        : null,
+                  ),
                 );
               }
-              return ListView.builder(
-                padding: const EdgeInsets.fromLTRB(
-                  DesignTokens.spacing16,
-                  0,
-                  DesignTokens.spacing16,
-                  DesignTokens.spacing24,
-                ),
-                itemCount: entries.length,
-                itemBuilder: (context, index) {
-                  final entry = entries[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(
-                      bottom: DesignTokens.spacing8,
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: DesignTokens.spacing12,
-                        vertical: DesignTokens.spacing8,
+              return RefreshIndicator(
+                onRefresh: refreshAttributes,
+                child: ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(
+                    DesignTokens.spacing16,
+                    0,
+                    DesignTokens.spacing16,
+                    DesignTokens.bottomScrollPadding(context),
+                  ),
+                  itemCount: entries.length,
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(height: DesignTokens.spacing8),
+                  itemBuilder: (context, index) {
+                    final entry = entries[index];
+                    return Container(
+                      padding: EdgeInsets.fromLTRB(
+                        DesignTokens.spacing16,
+                        scope.isWritableViaRest
+                            ? DesignTokens.spacing4
+                            : DesignTokens.spacing12,
+                        scope.isWritableViaRest
+                            ? DesignTokens.spacing4
+                            : DesignTokens.spacing16,
+                        scope.isWritableViaRest
+                            ? DesignTokens.spacing4
+                            : DesignTokens.spacing12,
                       ),
                       decoration: BoxDecoration(
                         color: scheme.surfaceContainerLow,
@@ -740,6 +849,7 @@ class _AttributesSection extends ConsumerWidget {
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
+                              spacing: DesignTokens.spacing2,
                               children: [
                                 Text(
                                   entry.key,
@@ -769,6 +879,7 @@ class _AttributesSection extends ConsumerWidget {
                                 minWidth: DesignTokens.minTouchTarget,
                                 minHeight: DesignTokens.minTouchTarget,
                               ),
+                              padding: DesignTokens.paddingZero,
                               icon: const Icon(Icons.edit_outlined),
                               onPressed: () =>
                                   _openEditor(context, ref, existing: entry),
@@ -780,6 +891,7 @@ class _AttributesSection extends ConsumerWidget {
                                 minWidth: DesignTokens.minTouchTarget,
                                 minHeight: DesignTokens.minTouchTarget,
                               ),
+                              padding: DesignTokens.paddingZero,
                               icon: Icon(
                                 Icons.delete_outline,
                                 color: scheme.error,
@@ -790,9 +902,9 @@ class _AttributesSection extends ConsumerWidget {
                           ],
                         ],
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               );
             },
           ),
@@ -876,11 +988,11 @@ class _RpcSectionState extends ConsumerState<_RpcSection> {
     final textTheme = Theme.of(context).textTheme;
 
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         DesignTokens.spacing16,
         0,
         DesignTokens.spacing16,
-        DesignTokens.spacing24,
+        DesignTokens.bottomScrollPadding(context),
       ),
       itemCount: 3,
       itemBuilder: (context, index) {
@@ -1052,7 +1164,12 @@ class _RpcSectionState extends ConsumerState<_RpcSection> {
                     for (final rpc in paged.items)
                       Container(
                         key: Key('persistent-rpc-${rpc.id}'),
-                        padding: DesignTokens.paddingSmall,
+                        padding: const EdgeInsets.fromLTRB(
+                          DesignTokens.spacing16,
+                          DesignTokens.spacing8,
+                          DesignTokens.spacing4,
+                          DesignTokens.spacing8,
+                        ),
                         decoration: BoxDecoration(
                           color: scheme.surfaceContainerLow,
                           borderRadius: DesignTokens.borderRadiusMedium,
@@ -1094,6 +1211,7 @@ class _RpcSectionState extends ConsumerState<_RpcSection> {
                                 minWidth: DesignTokens.minTouchTarget,
                                 minHeight: DesignTokens.minTouchTarget,
                               ),
+                              padding: DesignTokens.paddingZero,
                               icon: Icon(
                                 Icons.delete_outline,
                                 color: scheme.error,
@@ -1134,40 +1252,56 @@ class _DeviceAlarmsSection extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
+    Future<void> refreshAlarms() =>
+        ref.read(alarmsListProvider(entityId).notifier).refresh();
+
     return alarmsAsync.when(
-      loading: () => const SingleChildScrollView(
-        padding: DesignTokens.paddingMedium,
-        child: TbShimmerList(itemCount: 3),
+      loading: () => SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          DesignTokens.spacing16,
+          0,
+          DesignTokens.spacing16,
+          DesignTokens.bottomScrollPadding(context),
+        ),
+        child: const TbShimmerList(itemCount: 3),
       ),
-      error: (err, _) => TbEmptyState(
-        icon: TbIconKind.severityCritical,
-        title: 'Alarms unavailable',
-        subtitle: err is TbFailure ? err.message : err.toString(),
-        isError: true,
-        actionLabel: 'Retry',
-        onAction: () =>
-            ref.read(alarmsListProvider(entityId).notifier).refresh(),
+      error: (err, _) => _BottomSafeStatePane(
+        onRefresh: refreshAlarms,
+        child: TbEmptyState(
+          icon: TbIconKind.severityCritical,
+          title: 'Alarms unavailable',
+          subtitle: err is TbFailure ? err.message : err.toString(),
+          isError: true,
+          actionLabel: 'Retry',
+          onAction: refreshAlarms,
+        ),
       ),
       data: (paged) {
         if (paged.items.isEmpty) {
-          return const TbEmptyState(
-            icon: TbIconKind.statusCleared,
-            title: 'No device alarms',
+          return _BottomSafeStatePane(
+            onRefresh: refreshAlarms,
+            child: const TbEmptyState(
+              icon: TbIconKind.statusCleared,
+              title: 'No device alarms',
+            ),
           );
         }
-        return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(
-            DesignTokens.spacing16,
-            0,
-            DesignTokens.spacing16,
-            DesignTokens.spacing24,
-          ),
-          itemCount: paged.items.length,
-          itemBuilder: (context, index) {
-            final alarm = paged.items[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: DesignTokens.spacing8),
-              child: Material(
+        return RefreshIndicator(
+          onRefresh: refreshAlarms,
+          child: ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(
+              DesignTokens.spacing16,
+              0,
+              DesignTokens.spacing16,
+              DesignTokens.bottomScrollPadding(context),
+            ),
+            itemCount: paged.items.length,
+            separatorBuilder: (_, _) =>
+                const SizedBox(height: DesignTokens.spacing8),
+            itemBuilder: (context, index) {
+              final alarm = paged.items[index];
+              return Material(
                 color: scheme.surfaceContainerLow,
                 shape: RoundedRectangleBorder(
                   borderRadius: DesignTokens.borderRadiusLarge,
@@ -1207,6 +1341,7 @@ class _DeviceAlarmsSection extends ConsumerWidget {
                         ),
                         Wrap(
                           spacing: DesignTokens.spacing8,
+                          runSpacing: DesignTokens.spacing4,
                           children: [
                             if (!alarm.acknowledged)
                               TextButton.icon(
@@ -1250,9 +1385,9 @@ class _DeviceAlarmsSection extends ConsumerWidget {
                     ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         );
       },
     );
@@ -1329,11 +1464,11 @@ class _DeviceInfoSection extends ConsumerWidget {
     ];
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         DesignTokens.spacing16,
         0,
         DesignTokens.spacing16,
-        DesignTokens.spacing24,
+        DesignTokens.bottomScrollPadding(context),
       ),
       children: [
         TbSectionCard(
@@ -1480,15 +1615,12 @@ class _DeviceInfoSection extends ConsumerWidget {
             minWidth: DesignTokens.minTouchTarget,
             minHeight: DesignTokens.minTouchTarget,
           ),
+          padding: DesignTokens.paddingZero,
           icon: const Icon(Icons.copy_outlined),
           onPressed: () async {
-            final messenger = ScaffoldMessenger.of(context);
             await Clipboard.setData(ClipboardData(text: creds.credentialsId));
-            messenger
-              ..hideCurrentSnackBar()
-              ..showSnackBar(
-                const SnackBar(content: Text('Credentials copied')),
-              );
+            if (!context.mounted) return;
+            _showDeviceSnackBar(context, 'Credentials copied');
           },
         ),
       ],
@@ -1564,13 +1696,14 @@ class _AttributeEditorSheetState extends State<_AttributeEditorSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final viewInsetsBottom = MediaQuery.viewInsetsOf(context).bottom;
+    final safeBottom = MediaQuery.paddingOf(context).bottom;
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         DesignTokens.spacing16,
         DesignTokens.spacing16,
         DesignTokens.spacing16,
-        bottomInset + DesignTokens.spacing16,
+        viewInsetsBottom + safeBottom + DesignTokens.spacing16,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

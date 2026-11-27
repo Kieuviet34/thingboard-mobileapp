@@ -41,13 +41,19 @@ class MorePage extends ConsumerWidget {
     return Scaffold(
       appBar: TbAppBar(canGoBack: false, title: const Text('More')),
       body: SafeArea(
+        bottom: false,
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(
               maxWidth: DesignTokens.maxReadableWidth,
             ),
             child: SingleChildScrollView(
-              padding: DesignTokens.paddingMedium,
+              padding: EdgeInsets.fromLTRB(
+                DesignTokens.spacing16,
+                DesignTokens.spacing16,
+                DesignTokens.spacing16,
+                DesignTokens.bottomScrollPadding(context),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -157,7 +163,6 @@ class MorePage extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 84),
                 ],
               ),
             ),
@@ -254,6 +259,7 @@ class _UserHeaderCard extends StatelessWidget {
           borderRadius: DesignTokens.borderRadiusXl,
           side: BorderSide(color: scheme.outlineVariant),
         ),
+        clipBehavior: Clip.antiAlias,
         child: TbPressScale(
           borderRadius: DesignTokens.borderRadiusXl,
           onTap: onTap,

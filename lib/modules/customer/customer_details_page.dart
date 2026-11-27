@@ -65,7 +65,7 @@ class CustomerDetailsPage extends ConsumerWidget {
     final title = customerAsync.valueOrNull?.title ?? 'Customer Details';
     return Scaffold(
       appBar: TbAppBar(canGoBack: true, title: Text(title)),
-      body: SafeArea(child: content),
+      body: SafeArea(bottom: false, child: content),
     );
   }
 
@@ -113,7 +113,12 @@ class _CustomerDetailsBody extends StatelessWidget {
           ),
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: DesignTokens.paddingMedium,
+            padding: EdgeInsets.fromLTRB(
+              DesignTokens.spacing16,
+              DesignTokens.spacing16,
+              DesignTokens.spacing16,
+              DesignTokens.bottomScrollPadding(context),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -244,6 +249,7 @@ class _ContactRow extends StatelessWidget {
           minWidth: DesignTokens.minTouchTarget,
           minHeight: DesignTokens.minTouchTarget,
         ),
+        padding: DesignTokens.paddingZero,
         icon: const Icon(Icons.open_in_new_rounded),
         onPressed: onAction,
       ),
@@ -258,7 +264,12 @@ class _CustomerDetailsShimmer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: DesignTokens.paddingMedium,
+      padding: EdgeInsets.fromLTRB(
+        DesignTokens.spacing16,
+        DesignTokens.spacing16,
+        DesignTokens.spacing16,
+        DesignTokens.bottomScrollPadding(context),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: const [

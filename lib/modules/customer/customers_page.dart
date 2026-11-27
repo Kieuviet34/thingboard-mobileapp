@@ -125,9 +125,14 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
           isError: true,
         );
       },
-      loading: () => const SingleChildScrollView(
-        padding: DesignTokens.paddingMedium,
-        child: TbShimmerList(itemCount: 6),
+      loading: () => SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          DesignTokens.spacing16,
+          DesignTokens.spacing16,
+          DesignTokens.spacing16,
+          DesignTokens.bottomScrollPadding(context),
+        ),
+        child: const TbShimmerList(itemCount: 6),
       ),
       data: (pagedState) {
         if (pagedState.items.isEmpty) {
@@ -165,14 +170,12 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
           child: ListView.separated(
             controller: _scrollController,
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: isTwoPane
-                ? DesignTokens.paddingMedium
-                : const EdgeInsets.fromLTRB(
-                    DesignTokens.spacing16,
-                    DesignTokens.spacing16,
-                    DesignTokens.spacing16,
-                    84.0,
-                  ),
+            padding: EdgeInsets.fromLTRB(
+              DesignTokens.spacing16,
+              DesignTokens.spacing16,
+              DesignTokens.spacing16,
+              DesignTokens.bottomScrollPadding(context),
+            ),
             itemCount:
                 pagedState.items.length + (pagedState.isLoadingMore ? 1 : 0),
             separatorBuilder: (_, _) =>
@@ -223,6 +226,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
     return Scaffold(
       appBar: appBar,
       body: SafeArea(
+        bottom: false,
         child: isTwoPane
             ? Row(
                 children: [
@@ -291,35 +295,33 @@ class _CustomerListCard extends StatelessWidget {
     return Semantics(
       button: true,
       label: 'Customer ${customer.title}',
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: isSelected
-              ? scheme.primaryContainer.withValues(alpha: 0.3)
-              : scheme.surfaceContainerLow,
+      child: Material(
+        color: isSelected
+            ? scheme.primaryContainer.withValues(alpha: 0.3)
+            : scheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(
           borderRadius: DesignTokens.borderRadiusLarge,
-          border: Border.all(
+          side: BorderSide(
             color: isSelected ? scheme.primary : scheme.outlineVariant,
             width: isSelected ? 1.5 : 1.0,
           ),
         ),
-        child: ClipRRect(
-          borderRadius: DesignTokens.borderRadiusLarge,
-          child: TbListRow(
-            title: customer.title,
-            meta: customer.locationSummary.isNotEmpty
-                ? customer.locationSummary
-                : (customer.email.isNotEmpty ? customer.email : customer.phone),
-            leading: TbIcon(
-              TbIconKind.customerOrg,
-              size: DesignTokens.iconMedium,
-              color: scheme.primary,
-            ),
-            trailing: Icon(
-              Icons.chevron_right,
-              color: isSelected ? scheme.primary : scheme.onSurfaceVariant,
-            ),
-            onTap: onTap,
+        clipBehavior: Clip.antiAlias,
+        child: TbListRow(
+          title: customer.title,
+          meta: customer.locationSummary.isNotEmpty
+              ? customer.locationSummary
+              : (customer.email.isNotEmpty ? customer.email : customer.phone),
+          leading: TbIcon(
+            TbIconKind.customerOrg,
+            size: DesignTokens.iconMedium,
+            color: scheme.primary,
           ),
+          trailing: Icon(
+            Icons.chevron_right,
+            color: isSelected ? scheme.primary : scheme.onSurfaceVariant,
+          ),
+          onTap: onTap,
         ),
       ),
     );

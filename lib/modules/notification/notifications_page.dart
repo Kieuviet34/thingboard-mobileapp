@@ -148,12 +148,14 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     return Scaffold(
       appBar: appBar,
       body: SafeArea(
+        bottom: false,
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(
               maxWidth: DesignTokens.maxReadableWidth,
             ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(
@@ -200,9 +202,14 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                         isError: true,
                       );
                     },
-                    loading: () => const SingleChildScrollView(
-                      padding: DesignTokens.paddingMedium,
-                      child: TbShimmerList(itemCount: 6),
+                    loading: () => SingleChildScrollView(
+                      padding: EdgeInsets.fromLTRB(
+                        DesignTokens.spacing16,
+                        DesignTokens.spacing4,
+                        DesignTokens.spacing16,
+                        DesignTokens.bottomScrollPadding(context),
+                      ),
+                      child: const TbShimmerList(itemCount: 6),
                     ),
                     data: (pagedState) {
                       if (pagedState.items.isEmpty) {
@@ -226,7 +233,9 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                         child: ListView.separated(
                           controller: _scrollController,
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.only(bottom: 84.0),
+                          padding: EdgeInsets.only(
+                            bottom: DesignTokens.bottomScrollPadding(context),
+                          ),
                           itemCount:
                               pagedState.items.length +
                               (pagedState.isLoadingMore ? 1 : 0),

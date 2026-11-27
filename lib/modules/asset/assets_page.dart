@@ -82,6 +82,12 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
     final isTwoPane = width >= DesignTokens.mediumMaxWidth;
     final assetsAsync = ref.watch(assetsListProvider(_query));
     final profilesAsync = ref.watch(assetProfilesProvider);
+    final hasProfileChips =
+        profilesAsync.valueOrNull != null &&
+        profilesAsync.valueOrNull!.isNotEmpty;
+    final topListPadding = hasProfileChips
+        ? DesignTokens.spacing4
+        : DesignTokens.spacing16;
 
     final appBar = _isSearching
         ? TbAppSearchBar(
@@ -114,39 +120,36 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
           );
 
     final listContent = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         profilesAsync.when(
           error: (_, _) => const SizedBox.shrink(),
           loading: () => const SizedBox.shrink(),
           data: (profiles) {
             if (profiles.isEmpty) return const SizedBox.shrink();
-            return Container(
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(
                 horizontal: DesignTokens.spacing16,
                 vertical: DesignTokens.spacing8,
               ),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
+              child: Row(
+                spacing: DesignTokens.spacing8,
+                children: [
+                  FilterChip(
+                    label: const Text('All'),
+                    selected: _selectedProfileId == null,
+                    onSelected: (_) =>
+                        setState(() => _selectedProfileId = null),
+                  ),
+                  for (final profile in profiles)
                     FilterChip(
-                      label: const Text('All'),
-                      selected: _selectedProfileId == null,
+                      label: Text(profile.name),
+                      selected: _selectedProfileId == profile.id,
                       onSelected: (_) =>
-                          setState(() => _selectedProfileId = null),
+                          setState(() => _selectedProfileId = profile.id),
                     ),
-                    const SizedBox(width: DesignTokens.spacing8),
-                    for (final profile in profiles) ...[
-                      FilterChip(
-                        label: Text(profile.name),
-                        selected: _selectedProfileId == profile.id,
-                        onSelected: (_) =>
-                            setState(() => _selectedProfileId = profile.id),
-                      ),
-                      const SizedBox(width: DesignTokens.spacing8),
-                    ],
-                  ],
-                ),
+                ],
               ),
             );
           },
@@ -171,9 +174,14 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
                 isError: true,
               );
             },
-            loading: () => const SingleChildScrollView(
-              padding: DesignTokens.paddingMedium,
-              child: TbShimmerList(itemCount: 6),
+            loading: () => SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(
+                DesignTokens.spacing16,
+                topListPadding,
+                DesignTokens.spacing16,
+                DesignTokens.bottomScrollPadding(context),
+              ),
+              child: const TbShimmerList(itemCount: 6),
             ),
             data: (pagedState) {
               if (pagedState.items.isEmpty) {
@@ -216,14 +224,12 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
                 child: ListView.separated(
                   controller: _scrollController,
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: isTwoPane
-                      ? DesignTokens.paddingMedium
-                      : const EdgeInsets.fromLTRB(
-                          DesignTokens.spacing16,
-                          DesignTokens.spacing16,
-                          DesignTokens.spacing16,
-                          84.0,
-                        ),
+                  padding: EdgeInsets.fromLTRB(
+                    DesignTokens.spacing16,
+                    topListPadding,
+                    DesignTokens.spacing16,
+                    DesignTokens.bottomScrollPadding(context),
+                  ),
                   itemCount:
                       pagedState.items.length +
                       (pagedState.isLoadingMore ? 1 : 0),
@@ -278,6 +284,7 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
     return Scaffold(
       appBar: appBar,
       body: SafeArea(
+        bottom: false,
         child: isTwoPane
             ? Row(
                 children: [
@@ -346,36 +353,34 @@ class _AssetListCard extends StatelessWidget {
     return Semantics(
       button: true,
       label: 'Asset ${asset.name}',
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: isSelected
-              ? scheme.primaryContainer.withValues(alpha: 0.3)
-              : scheme.surfaceContainerLow,
+      child: Material(
+        color: isSelected
+            ? scheme.primaryContainer.withValues(alpha: 0.3)
+            : scheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(
           borderRadius: DesignTokens.borderRadiusLarge,
-          border: Border.all(
+          side: BorderSide(
             color: isSelected ? scheme.primary : scheme.outlineVariant,
             width: isSelected ? 1.5 : 1.0,
           ),
         ),
-        child: ClipRRect(
-          borderRadius: DesignTokens.borderRadiusLarge,
-          child: TbListRow(
-            title: asset.name,
-            meta: [
-              asset.type,
-              asset.ownerName,
-            ].where((s) => s.trim().isNotEmpty).join(' · '),
-            leading: TbIcon(
-              TbIconKind.assetBuilding,
-              size: DesignTokens.iconMedium,
-              color: scheme.primary,
-            ),
-            trailing: Icon(
-              Icons.chevron_right,
-              color: isSelected ? scheme.primary : scheme.onSurfaceVariant,
-            ),
-            onTap: onTap,
+        clipBehavior: Clip.antiAlias,
+        child: TbListRow(
+          title: asset.name,
+          meta: [
+            asset.type,
+            asset.ownerName,
+          ].where((s) => s.trim().isNotEmpty).join(' · '),
+          leading: TbIcon(
+            TbIconKind.assetBuilding,
+            size: DesignTokens.iconMedium,
+            color: scheme.primary,
           ),
+          trailing: Icon(
+            Icons.chevron_right,
+            color: isSelected ? scheme.primary : scheme.onSurfaceVariant,
+          ),
+          onTap: onTap,
         ),
       ),
     );

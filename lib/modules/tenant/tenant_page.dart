@@ -274,6 +274,7 @@ class _TenantPageState extends ConsumerState<TenantPage> {
       return Scaffold(
         appBar: appBar,
         body: const SafeArea(
+          bottom: false,
           child: TbEmptyState(
             icon: TbIconKind.customerOrg,
             title: 'Access Restricted',
@@ -296,6 +297,7 @@ class _TenantPageState extends ConsumerState<TenantPage> {
             )
           : null,
       body: SafeArea(
+        bottom: false,
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(
@@ -399,9 +401,9 @@ class _TenantOverviewSection extends ConsumerWidget {
     final homeDashAsync = ref.watch(tenantHomeDashboardProvider);
 
     return tenantAsync.when(
-      loading: () => const SingleChildScrollView(
-        padding: DesignTokens.paddingMedium,
-        child: TbShimmerList(itemCount: 3),
+      loading: () => SingleChildScrollView(
+        padding: _listPadding(context),
+        child: const TbShimmerList(itemCount: 3),
       ),
       error: (error, _) {
         final failure = error is TbFailure ? error : null;
@@ -437,7 +439,7 @@ class _TenantOverviewSection extends ConsumerWidget {
           },
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: _listPadding,
+            padding: _listPadding(context),
             children: [
               TbStaggeredEntry(
                 index: 0,
@@ -450,6 +452,7 @@ class _TenantOverviewSection extends ConsumerWidget {
                       minWidth: DesignTokens.minTouchTarget,
                       minHeight: DesignTokens.minTouchTarget,
                     ),
+                    padding: DesignTokens.paddingZero,
                     icon: const Icon(Icons.edit_outlined),
                     onPressed: () => onEdit(tenant),
                   ),
@@ -541,12 +544,18 @@ class _TenantOverviewSection extends ConsumerWidget {
   }
 }
 
-const _listPadding = EdgeInsets.fromLTRB(
-  DesignTokens.spacing16,
-  DesignTokens.spacing8,
-  DesignTokens.spacing16,
-  84,
-);
+EdgeInsets _listPadding(BuildContext context, {bool hasFab = false}) =>
+    EdgeInsets.fromLTRB(
+      DesignTokens.spacing16,
+      DesignTokens.spacing8,
+      DesignTokens.spacing16,
+      DesignTokens.bottomScrollPadding(
+        context,
+        extra: hasFab
+            ? DesignTokens.spacing64 + DesignTokens.spacing24
+            : DesignTokens.spacing16,
+      ),
+    );
 
 String _joinMeta(List<String> parts) =>
     parts.where((p) => p.isNotEmpty).join(' · ');
@@ -557,11 +566,13 @@ class _SectionList extends StatelessWidget {
     required this.title,
     required this.onRefresh,
     required this.children,
+    this.hasFab = false,
   });
 
   final String title;
   final Future<void> Function() onRefresh;
   final List<Widget> children;
+  final bool hasFab;
 
   @override
   Widget build(BuildContext context) {
@@ -569,7 +580,7 @@ class _SectionList extends StatelessWidget {
       onRefresh: onRefresh,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: _listPadding,
+        padding: _listPadding(context, hasFab: hasFab),
         children: [
           TbSectionCard(
             title: title,
@@ -597,9 +608,9 @@ class _TenantEntityViewsList extends ConsumerWidget {
     final viewsAsync = ref.watch(tenantEntityViewsProvider(searchQuery));
 
     return viewsAsync.when(
-      loading: () => const SingleChildScrollView(
-        padding: DesignTokens.paddingMedium,
-        child: TbShimmerList(itemCount: 4),
+      loading: () => SingleChildScrollView(
+        padding: _listPadding(context),
+        child: const TbShimmerList(itemCount: 4),
       ),
       error: (err, _) => TbEmptyState(
         icon: TbIconKind.relationsGraph,
@@ -650,9 +661,9 @@ class _TenantEdgesList extends ConsumerWidget {
     final edgesAsync = ref.watch(tenantEdgesProvider(searchQuery));
 
     return edgesAsync.when(
-      loading: () => const SingleChildScrollView(
-        padding: DesignTokens.paddingMedium,
-        child: TbShimmerList(itemCount: 4),
+      loading: () => SingleChildScrollView(
+        padding: _listPadding(context),
+        child: const TbShimmerList(itemCount: 4),
       ),
       error: (err, _) => TbEmptyState(
         icon: TbIconKind.gateway,
@@ -700,9 +711,9 @@ class _SysAdminTenantsList extends ConsumerWidget {
     final tenantsAsync = ref.watch(tenantsListProvider(searchQuery));
 
     return tenantsAsync.when(
-      loading: () => const SingleChildScrollView(
-        padding: DesignTokens.paddingMedium,
-        child: TbShimmerList(itemCount: 4),
+      loading: () => SingleChildScrollView(
+        padding: _listPadding(context, hasFab: true),
+        child: const TbShimmerList(itemCount: 4),
       ),
       error: (err, _) => TbEmptyState(
         icon: TbIconKind.customerOrg,
@@ -722,6 +733,7 @@ class _SysAdminTenantsList extends ConsumerWidget {
         }
         return _SectionList(
           title: 'Tenants',
+          hasFab: true,
           onRefresh: () =>
               ref.read(tenantsListProvider(searchQuery).notifier).refresh(),
           children: [
@@ -736,6 +748,7 @@ class _SysAdminTenantsList extends ConsumerWidget {
                     minWidth: DesignTokens.minTouchTarget,
                     minHeight: DesignTokens.minTouchTarget,
                   ),
+                  padding: DesignTokens.paddingZero,
                   icon: Icon(Icons.delete_outline, color: scheme.error),
                   onPressed: () async {
                     await ref
@@ -763,9 +776,9 @@ class _SysAdminProfilesList extends ConsumerWidget {
     final profilesAsync = ref.watch(tenantProfilesListProvider(searchQuery));
 
     return profilesAsync.when(
-      loading: () => const SingleChildScrollView(
-        padding: DesignTokens.paddingMedium,
-        child: TbShimmerList(itemCount: 4),
+      loading: () => SingleChildScrollView(
+        padding: _listPadding(context),
+        child: const TbShimmerList(itemCount: 4),
       ),
       error: (err, _) => TbEmptyState(
         icon: TbIconKind.attributesTag,

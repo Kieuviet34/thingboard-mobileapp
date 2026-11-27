@@ -191,6 +191,13 @@ class _DashboardDetailsPageState extends ConsumerState<DashboardDetailsPage> {
       ),
     ];
 
+    final scrollPadding = EdgeInsets.fromLTRB(
+      DesignTokens.spacing16,
+      DesignTokens.spacing16,
+      DesignTokens.spacing16,
+      DesignTokens.bottomScrollPadding(context),
+    );
+
     return Scaffold(
       appBar: (_isFullscreen || widget.embedded)
           ? null
@@ -225,10 +232,11 @@ class _DashboardDetailsPageState extends ConsumerState<DashboardDetailsPage> {
             )
           : null,
       body: SafeArea(
+        bottom: false,
         child: dashboardAsync.when(
-          loading: () => const SingleChildScrollView(
-            padding: DesignTokens.paddingMedium,
-            child: TbShimmerList(itemCount: 3),
+          loading: () => SingleChildScrollView(
+            padding: scrollPadding,
+            child: const TbShimmerList(itemCount: 3),
           ),
           error: (error, _) => TbEmptyState(
             icon: TbIconKind.dashboardTile,
@@ -253,9 +261,9 @@ class _DashboardDetailsPageState extends ConsumerState<DashboardDetailsPage> {
                       .valueOrNull;
 
             if (entityId == null) {
-              return const SingleChildScrollView(
-                padding: DesignTokens.paddingMedium,
-                child: TbShimmerList(itemCount: 3),
+              return SingleChildScrollView(
+                padding: scrollPadding,
+                child: const TbShimmerList(itemCount: 3),
               );
             }
 
@@ -295,7 +303,7 @@ class _DashboardDetailsPageState extends ConsumerState<DashboardDetailsPage> {
             return CustomScrollView(
               slivers: [
                 SliverPadding(
-                  padding: DesignTokens.paddingMedium,
+                  padding: scrollPadding,
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
                       _DashboardSummaryCard(

@@ -151,6 +151,7 @@ class _AuditLogsPageState extends ConsumerState<AuditLogsPage> {
                             minWidth: DesignTokens.minTouchTarget,
                             minHeight: DesignTokens.minTouchTarget,
                           ),
+                          padding: DesignTokens.paddingZero,
                           icon: const Icon(Icons.close),
                           onPressed: () =>
                               Navigator.of(bottomSheetContext).pop(),
@@ -290,40 +291,38 @@ class _AuditLogsPageState extends ConsumerState<AuditLogsPage> {
     return Scaffold(
       appBar: appBar,
       body: SafeArea(
+        bottom: false,
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(
               maxWidth: DesignTokens.maxReadableWidth,
             ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(
                     horizontal: DesignTokens.spacing16,
                     vertical: DesignTokens.spacing8,
                   ),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
+                  child: Row(
+                    spacing: DesignTokens.spacing8,
+                    children: [
+                      FilterChip(
+                        label: const Text('All Actions'),
+                        selected: _selectedAction == null,
+                        onSelected: (_) =>
+                            setState(() => _selectedAction = null),
+                      ),
+                      for (final action in _kActionTypes)
                         FilterChip(
-                          label: const Text('All Actions'),
-                          selected: _selectedAction == null,
+                          label: Text(action),
+                          selected: _selectedAction == action,
                           onSelected: (_) =>
-                              setState(() => _selectedAction = null),
+                              setState(() => _selectedAction = action),
                         ),
-                        const SizedBox(width: DesignTokens.spacing8),
-                        for (final action in _kActionTypes) ...[
-                          FilterChip(
-                            label: Text(action),
-                            selected: _selectedAction == action,
-                            onSelected: (_) =>
-                                setState(() => _selectedAction = action),
-                          ),
-                          const SizedBox(width: DesignTokens.spacing8),
-                        ],
-                      ],
-                    ),
+                    ],
                   ),
                 ),
                 Expanded(
@@ -349,9 +348,14 @@ class _AuditLogsPageState extends ConsumerState<AuditLogsPage> {
                         isError: true,
                       );
                     },
-                    loading: () => const SingleChildScrollView(
-                      padding: DesignTokens.paddingMedium,
-                      child: TbShimmerList(itemCount: 6),
+                    loading: () => SingleChildScrollView(
+                      padding: EdgeInsets.fromLTRB(
+                        DesignTokens.spacing16,
+                        DesignTokens.spacing4,
+                        DesignTokens.spacing16,
+                        DesignTokens.bottomScrollPadding(context),
+                      ),
+                      child: const TbShimmerList(itemCount: 6),
                     ),
                     data: (pagedState) {
                       if (pagedState.items.isEmpty) {
@@ -383,7 +387,9 @@ class _AuditLogsPageState extends ConsumerState<AuditLogsPage> {
                         child: ListView.separated(
                           controller: _scrollController,
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.only(bottom: 84.0),
+                          padding: EdgeInsets.only(
+                            bottom: DesignTokens.bottomScrollPadding(context),
+                          ),
                           itemCount:
                               pagedState.items.length +
                               (pagedState.isLoadingMore ? 1 : 0),

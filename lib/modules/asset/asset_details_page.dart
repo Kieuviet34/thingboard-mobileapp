@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -56,6 +58,24 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
   EntityId get _entityId =>
       EntityId(entityType: EntityType.asset, id: widget.assetId);
 
+  Widget _bottomSafeState(Widget child) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final minHeight = constraints.hasBoundedHeight
+            ? math.max(0.0, constraints.maxHeight - bottomInset)
+            : 0.0;
+        return SingleChildScrollView(
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: minHeight),
+            child: Center(child: child),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final assetAsync = ref.watch(assetDetailsProvider(widget.assetId));
@@ -67,17 +87,19 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
       error: (error, _) {
         final failure = error is TbFailure ? error : null;
         final is403 = failure?.type == TbFailureType.permissionDenied;
-        return TbEmptyState(
-          icon: TbIconKind.assetBuilding,
-          title: is403 ? 'Access Restricted' : 'Failed to load asset',
-          subtitle: is403
-              ? 'You do not have permission to view this asset.'
-              : (failure?.message ?? error.toString()),
-          actionLabel: is403 ? null : 'Retry',
-          onAction: is403
-              ? null
-              : () => ref.invalidate(assetDetailsProvider(widget.assetId)),
-          isError: true,
+        return _bottomSafeState(
+          TbEmptyState(
+            icon: TbIconKind.assetBuilding,
+            title: is403 ? 'Access Restricted' : 'Failed to load asset',
+            subtitle: is403
+                ? 'You do not have permission to view this asset.'
+                : (failure?.message ?? error.toString()),
+            actionLabel: is403 ? null : 'Retry',
+            onAction: is403
+                ? null
+                : () => ref.invalidate(assetDetailsProvider(widget.assetId)),
+            isError: true,
+          ),
         );
       },
     );
@@ -89,13 +111,16 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
     final title = assetAsync.valueOrNull?.name ?? 'Asset Details';
     return Scaffold(
       appBar: TbAppBar(canGoBack: true, title: Text(title)),
-      body: SafeArea(child: content),
+      body: SafeArea(bottom: false, child: content),
     );
   }
 
   Widget _buildAssetContent(BuildContext context, TbAssetInfo asset) {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final scrollableTabs =
+        MediaQuery.textScalerOf(context).scale(1.0) > 1.2 ||
+        MediaQuery.sizeOf(context).width < 360;
 
     return Center(
       child: ConstrainedBox(
@@ -167,6 +192,10 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
               delegate: _TabBarHeaderDelegate(
                 TabBar(
                   controller: _tabController,
+                  isScrollable: scrollableTabs,
+                  tabAlignment: scrollableTabs
+                      ? TabAlignment.startOffset
+                      : TabAlignment.fill,
                   labelColor: scheme.primary,
                   unselectedLabelColor: scheme.onSurfaceVariant,
                   indicatorColor: scheme.primary,
@@ -203,8 +232,18 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
     isError: true,
   );
 
-  Widget _tabList(List<Widget> children) =>
-      ListView(padding: DesignTokens.paddingMedium, children: children);
+  Widget _tabList(
+    List<Widget> children, {
+    double topPadding = DesignTokens.spacing16,
+  }) => ListView(
+    padding: EdgeInsets.fromLTRB(
+      DesignTokens.spacing16,
+      topPadding,
+      DesignTokens.spacing16,
+      DesignTokens.bottomScrollPadding(context),
+    ),
+    children: children,
+  );
 
   Widget _buildTelemetryTab() {
     final telemetryAsync = ref.watch(entityLatestTelemetryProvider(_entityId));
@@ -219,7 +258,12 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: DesignTokens.paddingMedium,
+        padding: EdgeInsets.fromLTRB(
+          DesignTokens.spacing16,
+          DesignTokens.spacing16,
+          DesignTokens.spacing16,
+          DesignTokens.bottomScrollPadding(context),
+        ),
         children: [
           TbSectionCard(
             title: 'Latest',
@@ -274,25 +318,31 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: DesignTokens.spacing12,
                   children: [
-                    for (final entry in history.entries) ...[
-                      Text(
-                        entry.key,
-                        style: textTheme.labelLarge?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: DesignTokens.spacing8),
-                      TbSparklineChart(
-                        values: [
-                          for (final pt in entry.value) pt.numericValue ?? 0.0,
+                    for (final entry in history.entries)
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: DesignTokens.spacing8,
+                        children: [
+                          Text(
+                            entry.key,
+                            style: textTheme.labelLarge?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                          TbSparklineChart(
+                            values: [
+                              for (final pt in entry.value)
+                                pt.numericValue ?? 0.0,
+                            ],
+                            height: 64,
+                            color: scheme.primary,
+                            semanticLabel: '${entry.key} sparkline chart',
+                          ),
                         ],
-                        height: 64,
-                        color: scheme.primary,
-                        semanticLabel: '${entry.key} sparkline chart',
                       ),
-                      const SizedBox(height: DesignTokens.spacing12),
-                    ],
                   ],
                 );
               },
@@ -311,44 +361,53 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
     final attributesAsync = ref.watch(provider);
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: DesignTokens.spacing16,
-            vertical: DesignTokens.spacing8,
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.fromLTRB(
+            DesignTokens.spacing16,
+            DesignTokens.spacing8,
+            DesignTokens.spacing16,
+            DesignTokens.spacing4,
           ),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final scope in TbAttributeScope.values) ...[
-                  FilterChip(
-                    label: Text(scope.label),
-                    selected: _attributeScope == scope,
-                    onSelected: (_) => setState(() => _attributeScope = scope),
-                  ),
-                  const SizedBox(width: DesignTokens.spacing8),
-                ],
-              ],
-            ),
+          child: Row(
+            spacing: DesignTokens.spacing8,
+            children: [
+              for (final scope in TbAttributeScope.values)
+                FilterChip(
+                  label: Text(scope.label),
+                  selected: _attributeScope == scope,
+                  onSelected: (_) => setState(() => _attributeScope = scope),
+                ),
+            ],
           ),
         ),
         Expanded(
           child: attributesAsync.when(
-            error: (e, _) => _errorState(
-              'Failed to load attributes',
-              () => ref.invalidate(provider),
+            error: (e, _) => _bottomSafeState(
+              _errorState(
+                'Failed to load attributes',
+                () => ref.invalidate(provider),
+              ),
             ),
-            loading: () => const SingleChildScrollView(
-              padding: DesignTokens.paddingMedium,
-              child: TbShimmerList(itemCount: 4),
+            loading: () => SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(
+                DesignTokens.spacing16,
+                DesignTokens.spacing4,
+                DesignTokens.spacing16,
+                DesignTokens.bottomScrollPadding(context),
+              ),
+              child: const TbShimmerList(itemCount: 4),
             ),
             data: (attributes) {
               if (attributes.isEmpty) {
-                return const TbEmptyState(
-                  icon: TbIconKind.attributesTag,
-                  title: 'No attributes in scope',
-                  subtitle: 'Select another attribute scope above.',
+                return _bottomSafeState(
+                  const TbEmptyState(
+                    icon: TbIconKind.attributesTag,
+                    title: 'No attributes in scope',
+                    subtitle: 'Select another attribute scope above.',
+                  ),
                 );
               }
               return _tabList([
@@ -362,7 +421,7 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
                     ],
                   ),
                 ),
-              ]);
+              ], topPadding: DesignTokens.spacing4);
             },
           ),
         ),
@@ -374,20 +433,29 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
     final alarmsAsync = ref.watch(alarmsListProvider(_entityId));
 
     return alarmsAsync.when(
-      error: (e, _) => _errorState(
-        'Failed to load alarms',
-        () => ref.invalidate(alarmsListProvider(_entityId)),
+      error: (e, _) => _bottomSafeState(
+        _errorState(
+          'Failed to load alarms',
+          () => ref.invalidate(alarmsListProvider(_entityId)),
+        ),
       ),
-      loading: () => const SingleChildScrollView(
-        padding: DesignTokens.paddingMedium,
-        child: TbShimmerList(itemCount: 3),
+      loading: () => SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          DesignTokens.spacing16,
+          DesignTokens.spacing16,
+          DesignTokens.spacing16,
+          DesignTokens.bottomScrollPadding(context),
+        ),
+        child: const TbShimmerList(itemCount: 3),
       ),
       data: (pagedAlarms) {
         if (pagedAlarms.items.isEmpty) {
-          return const TbEmptyState(
-            icon: TbIconKind.severityCritical,
-            title: 'No active alarms',
-            subtitle: 'This asset has no triggered alarms.',
+          return _bottomSafeState(
+            const TbEmptyState(
+              icon: TbIconKind.severityCritical,
+              title: 'No active alarms',
+              subtitle: 'This asset has no triggered alarms.',
+            ),
           );
         }
         return _tabList([
@@ -399,6 +467,7 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
                 for (final alarm in pagedAlarms.items)
                   Column(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       TbListRow(
                         title: alarm.type,
@@ -415,12 +484,12 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
                         ),
                       ),
                       if (!alarm.acknowledged || !alarm.cleared)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: DesignTokens.spacing16,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
+                        Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: Wrap(
+                            alignment: WrapAlignment.end,
+                            spacing: DesignTokens.spacing8,
+                            runSpacing: DesignTokens.spacing8,
                             children: [
                               if (!alarm.acknowledged)
                                 TextButton(
@@ -431,8 +500,7 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
                                       .acknowledge(alarm.id),
                                   child: const Text('Acknowledge'),
                                 ),
-                              if (!alarm.cleared) ...[
-                                const SizedBox(width: DesignTokens.spacing8),
+                              if (!alarm.cleared)
                                 FilledButton.tonal(
                                   onPressed: () => ref
                                       .read(
@@ -441,7 +509,6 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
                                       .clear(alarm.id),
                                   child: const Text('Clear'),
                                 ),
-                              ],
                             ],
                           ),
                         ),
@@ -464,20 +531,26 @@ class _AssetDetailsPageState extends ConsumerState<AssetDetailsPage>
     final scheme = Theme.of(context).colorScheme;
 
     return relationsAsync.when(
-      error: (e, _) => _errorState(
-        'Failed to load relations',
-        () => ref.invalidate(provider),
+      error: (e, _) => _bottomSafeState(
+        _errorState('Failed to load relations', () => ref.invalidate(provider)),
       ),
-      loading: () => const SingleChildScrollView(
-        padding: DesignTokens.paddingMedium,
-        child: TbShimmerList(itemCount: 3),
+      loading: () => SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          DesignTokens.spacing16,
+          DesignTokens.spacing16,
+          DesignTokens.spacing16,
+          DesignTokens.bottomScrollPadding(context),
+        ),
+        child: const TbShimmerList(itemCount: 3),
       ),
       data: (relations) {
         if (relations.isEmpty) {
-          return const TbEmptyState(
-            icon: TbIconKind.relationsGraph,
-            title: 'No relations found',
-            subtitle: 'Contained devices and assets will appear here.',
+          return _bottomSafeState(
+            const TbEmptyState(
+              icon: TbIconKind.relationsGraph,
+              title: 'No relations found',
+              subtitle: 'Contained devices and assets will appear here.',
+            ),
           );
         }
         return _tabList([
@@ -557,7 +630,12 @@ class _AssetDetailsShimmer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: DesignTokens.paddingMedium,
+      padding: EdgeInsets.fromLTRB(
+        DesignTokens.spacing16,
+        DesignTokens.spacing16,
+        DesignTokens.spacing16,
+        DesignTokens.bottomScrollPadding(context),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: const [

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:thingsboard_democloud_app/config/themes/design_tokens.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_section_card.dart';
 
 /// Shared compact list row for every list page: title, one meta line, optional
 /// leading icon and trailing action. Minimum 48dp height, single-line text.
@@ -11,6 +12,7 @@ class TbListRow extends StatelessWidget {
     this.leading,
     this.trailing,
     this.onTap,
+    this.contentPadding,
   });
 
   final String title;
@@ -18,20 +20,27 @@ class TbListRow extends StatelessWidget {
   final Widget? leading;
   final Widget? trailing;
   final VoidCallback? onTap;
+  final EdgeInsetsGeometry? contentPadding;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final metaText = meta?.trim() ?? '';
+    final insideSectionCard = TbSectionCardScope.isInside(context);
+    final resolvedPadding =
+        contentPadding ??
+        (insideSectionCard
+            ? const EdgeInsets.symmetric(vertical: DesignTokens.spacing8)
+            : const EdgeInsets.symmetric(
+                horizontal: DesignTokens.spacing16,
+                vertical: DesignTokens.spacing12,
+              ));
 
     final content = ConstrainedBox(
       constraints: const BoxConstraints(minHeight: DesignTokens.minTouchTarget),
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DesignTokens.spacing16,
-          vertical: DesignTokens.spacing12,
-        ),
+        padding: resolvedPadding,
         child: Row(
           children: [
             if (leading != null) ...[
@@ -42,6 +51,7 @@ class TbListRow extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: DesignTokens.spacing2,
                 children: [
                   Text(
                     title,
@@ -75,7 +85,15 @@ class TbListRow extends StatelessWidget {
 
     return Material(
       type: MaterialType.transparency,
-      child: onTap == null ? content : InkWell(onTap: onTap, child: content),
+      child: onTap == null
+          ? content
+          : InkWell(
+              onTap: onTap,
+              borderRadius: insideSectionCard
+                  ? DesignTokens.borderRadiusMedium
+                  : null,
+              child: content,
+            ),
     );
   }
 }

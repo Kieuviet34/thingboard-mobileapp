@@ -83,13 +83,15 @@ class _TbAppSearchBarState extends State<TbAppSearchBar> {
       mainAxisSize: MainAxisSize.min,
       children: [
         AppBar(
+          automaticallyImplyLeading: false,
           centerTitle: false,
           elevation: widget.elevation,
           shadowColor: widget.shadowColor,
           leadingWidth: widget.leading != null
               ? DesignTokens.minTouchTarget
-              : null,
-          leading: widget.leading,
+              : DesignTokens.spacing16,
+          titleSpacing: widget.leading != null ? DesignTokens.spacing4 : 0,
+          leading: widget.leading ?? const SizedBox.shrink(),
           title: TextField(
             controller: _filter,
             autofocus: true,
@@ -108,7 +110,6 @@ class _TbAppSearchBarState extends State<TbAppSearchBar> {
                 color: scheme.onSurfaceVariant,
               ),
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: DesignTokens.spacing8,
                 vertical: DesignTokens.spacing12,
               ),
               hintText: widget.searchHint ?? 'Search',

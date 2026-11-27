@@ -2,6 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:thingsboard_democloud_app/config/themes/design_tokens.dart';
 import 'package:thingsboard_democloud_app/config/themes/tb_text_styles.dart';
 
+/// Marks descendants as living inside a padded [TbSectionCard] so nested rows
+/// (such as `TbListRow`) do not apply duplicate horizontal padding.
+class TbSectionCardScope extends InheritedWidget {
+  const TbSectionCardScope({super.key, required super.child});
+
+  static bool isInside(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<TbSectionCardScope>() != null;
+
+  @override
+  bool updateShouldNotify(covariant TbSectionCardScope oldWidget) => false;
+}
+
 /// Shared section container for detail and settings pages.
 /// One style everywhere: surfaceContainerLow, 1px outlineVariant border.
 class TbSectionCard extends StatelessWidget {
@@ -49,7 +61,7 @@ class TbSectionCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: DesignTokens.spacing8),
-            child,
+            TbSectionCardScope(child: child),
           ],
         ),
       ),

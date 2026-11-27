@@ -71,6 +71,13 @@ class DesignTokens {
   @Deprecated('Use paddingZero instead.')
   static const EdgeInsets paddigZero = EdgeInsets.zero;
 
+  /// Bottom scroll clearance accounting for floating [NavigationBar] (`extendBody`)
+  /// and system gesture insets without hard-clipping scroll viewports.
+  static double bottomScrollPadding(
+    BuildContext context, {
+    double extra = spacing16,
+  }) => MediaQuery.paddingOf(context).bottom + extra;
+
   // Button padding
   static const EdgeInsets buttonPaddingSmall = EdgeInsets.symmetric(
     horizontal: spacing12,

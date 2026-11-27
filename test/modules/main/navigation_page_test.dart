@@ -99,7 +99,7 @@ void main() {
     );
 
     testWidgets(
-      'StatefulShellRoute switches tabs, shows Demo badges, and returns to Home on back',
+      'StatefulShellRoute switches tabs, keeps More selected on /tenant, and returns to Home on back',
       (WidgetTester tester) async {
         tester.view.physicalSize = const Size(390, 844);
         tester.view.devicePixelRatio = 1.0;
@@ -121,17 +121,29 @@ void main() {
         expect(find.byType(NavigationBar), findsOneWidget);
         expect(find.byType(Badge), findsWidgets);
 
-        await tester.tap(find.text('Alarms').last);
+        await tester.tap(find.byTooltip('Alarms'));
         await tester.pumpAndSettle();
         expect(find.text('Alarms'), findsWidgets);
 
-        await tester.tap(find.text('Devices').last);
+        await tester.tap(find.byTooltip('Devices'));
         await tester.pumpAndSettle();
         expect(find.text('Devices'), findsWidgets);
 
-        await tester.tap(find.text('More').last);
+        await tester.tap(find.byTooltip('More'));
         await tester.pumpAndSettle();
         expect(find.text('More'), findsWidgets);
+
+        // Navigating to /tenant from More keeps tab 3 (More) highlighted.
+        await tester.tap(find.text('Tenant'));
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<NavigationBar>(find.byType(NavigationBar))
+              .selectedIndex,
+          3,
+        );
+        await tester.pageBack();
+        await tester.pumpAndSettle();
 
         // System back from non-home tab returns to tab 0 (Home).
         await tester.binding.handlePopRoute();

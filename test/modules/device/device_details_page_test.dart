@@ -8,10 +8,12 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:thingsboard_democloud_app/config/routes/router.dart';
+import 'package:thingsboard_democloud_app/config/themes/design_tokens.dart';
 import 'package:thingsboard_democloud_app/config/themes/tb_theme.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/alarm_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/asset_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/device_controller.dart';
+import 'package:thingsboard_democloud_app/core/api/controllers/notification_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/rpc_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/server_config_controller.dart';
 import 'package:thingsboard_democloud_app/core/api/controllers/telemetry_controller.dart';
@@ -28,6 +30,7 @@ import 'package:thingsboard_democloud_app/core/models/pagination.dart';
 import 'package:thingsboard_democloud_app/core/models/tb_failure.dart';
 import 'package:thingsboard_democloud_app/core/models/telemetry_models.dart';
 import 'package:thingsboard_democloud_app/modules/device/device_details_page.dart';
+import 'package:thingsboard_democloud_app/modules/main/navigation_page.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_empty_state.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_section_card.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_shimmer.dart';
@@ -143,6 +146,8 @@ class _ControlledTelemetryRepo implements TelemetryRepository {
 
   final List<String> deletedKeys = [];
   final Map<String, dynamic> savedAttributes = {};
+  Map<String, TbTsPoint>? customLatest;
+  Map<String, List<TbTsPoint>>? customHistory;
 
   @override
   Future<List<TbAttributeEntry>> getAttributes(
@@ -191,6 +196,7 @@ class _ControlledTelemetryRepo implements TelemetryRepository {
     EntityId entityId, {
     List<String>? keys,
   }) async {
+    if (customLatest != null) return customLatest!;
     return {
       'temperature': const TbTsPoint(
         ts: 1700000000000,
@@ -210,6 +216,7 @@ class _ControlledTelemetryRepo implements TelemetryRepository {
     TbTsHistoryQuery query, {
     CancelToken? cancelToken,
   }) async {
+    if (customHistory != null) return customHistory!;
     return {
       'temperature': [
         const TbTsPoint(ts: 1699990000000, rawValue: 8.0, numericValue: 8.0),
@@ -455,6 +462,7 @@ void main() {
     rpcRepositoryProvider.overrideWithValue(rpcRepo),
     alarmRepositoryProvider.overrideWithValue(alarmRepo),
     assetRepositoryProvider.overrideWithValue(assetRepo),
+    unreadNotificationsCountProvider.overrideWith((ref) => Stream.value(0)),
   ];
 
   Widget buildTestWidget(
@@ -483,6 +491,35 @@ void main() {
         child: MaterialApp(
           theme: theme ?? tbLightTheme(),
           home: DeviceDetailsPage(deviceId: deviceId, embedded: embedded),
+        ),
+      ),
+    );
+  }
+
+  Widget buildMobileShellWidget(
+    WidgetTester tester, {
+    Size size = const Size(390, 844),
+    double textScale = 1.0,
+  }) {
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1.0;
+    tester.view.padding = const FakeViewPadding(top: 44, bottom: 34);
+    tester.view.viewPadding = const FakeViewPadding(top: 44, bottom: 34);
+    addTearDown(tester.view.reset);
+
+    return ProviderScope(
+      overrides: buildOverrides(),
+      child: MaterialApp(
+        theme: tbLightTheme(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(textScale),
+            disableAnimations: true,
+          ),
+          child: child!,
+        ),
+        home: const NavigationPage(
+          child: DeviceDetailsPage(deviceId: 'dev-detail-1'),
         ),
       ),
     );
@@ -1024,5 +1061,215 @@ void main() {
         expect(tester.takeException(), isNull);
       },
     );
+
+    group('Mobile NavigationPage shell bottom margins & paddings', () {
+      Finder verticalScrollableIn(Finder parent) => find.descendant(
+        of: parent,
+        matching: find.byWidgetPredicate(
+          (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+        ),
+      );
+
+      testWidgets(
+        'Telemetry tab scrolls under floating NavigationBar and clears pill by spacing16 at maxScrollExtent',
+        (WidgetTester tester) async {
+          final keys = ['temperature', 'humidity', 'pressure', 'flowRate'];
+          telemetryRepo.customLatest = {
+            for (var i = 0; i < keys.length; i++)
+              keys[i]: TbTsPoint(
+                ts: 1700000000000,
+                rawValue: 10.0 + i,
+                numericValue: 10.0 + i,
+              ),
+          };
+          telemetryRepo.customHistory = {
+            for (var i = 0; i < keys.length; i++)
+              keys[i]: [
+                TbTsPoint(
+                  ts: 1699990000000,
+                  rawValue: 9.0 + i,
+                  numericValue: 9.0 + i,
+                ),
+                TbTsPoint(
+                  ts: 1700000000000,
+                  rawValue: 10.0 + i,
+                  numericValue: 10.0 + i,
+                ),
+              ],
+          };
+
+          await tester.pumpWidget(buildMobileShellWidget(tester));
+          await tester.pumpAndSettle();
+
+          final listFinder = find.byType(ListView);
+          expect(tester.getRect(listFinder).bottom, 844.0);
+
+          // Window chips stay on a single horizontal row on 390dp phone width
+          final chip1hY = tester
+              .getCenter(find.byKey(const Key('telemetry-window-1h')))
+              .dy;
+          final chip7dY = tester
+              .getCenter(find.byKey(const Key('telemetry-window-7d')))
+              .dy;
+          expect(chip1hY, closeTo(chip7dY, 0.5));
+
+          final scrollableState = tester.state<ScrollableState>(
+            verticalScrollableIn(listFinder),
+          );
+          scrollableState.position.jumpTo(
+            scrollableState.position.maxScrollExtent,
+          );
+          await tester.pumpAndSettle();
+
+          // NavigationBar is inside a 1px-bordered floating pill container
+          final navPillTop = tester.getRect(find.byType(NavigationBar)).top - 1;
+          final lastCardRect = tester.getRect(
+            find.byKey(const Key('sparkline-card-flowRate')),
+          );
+          expect(
+            lastCardRect.bottom,
+            closeTo(navPillTop - DesignTokens.spacing16, 0.5),
+          );
+        },
+      );
+
+      testWidgets(
+        'Telemetry tab with empty data renders a single empty state cleanly above floating NavigationBar',
+        (WidgetTester tester) async {
+          deviceRepo.device = const TbDeviceInfo(
+            id: 'dev-detail-1',
+            name: 'Production Chiller A',
+            type: 'HVAC Chiller',
+            active: true,
+          );
+          telemetryRepo.customLatest = const {};
+          telemetryRepo.customHistory = const {};
+
+          await tester.pumpWidget(
+            buildMobileShellWidget(tester, size: const Size(360, 680)),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.byType(TbEmptyState), findsOneWidget);
+          final navPillTop = tester.getRect(find.byType(NavigationBar)).top - 1;
+          final emptyRect = tester.getRect(find.byType(TbEmptyState));
+          expect(emptyRect.bottom, lessThanOrEqualTo(navPillTop));
+          expect(tester.takeException(), isNull);
+        },
+      );
+
+      testWidgets(
+        'Attributes tab empty state and CTA button sit cleanly above floating NavigationBar on compact mobile screen',
+        (WidgetTester tester) async {
+          telemetryRepo.attributesByScope['SERVER_SCOPE'] = [];
+
+          await tester.pumpWidget(
+            buildMobileShellWidget(tester, size: const Size(360, 680)),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text('Attributes'));
+          await tester.pumpAndSettle();
+
+          expect(find.byType(TbEmptyState), findsOneWidget);
+          final navPillTop = tester.getRect(find.byType(NavigationBar)).top - 1;
+          final ctaRect = tester.getRect(
+            find.widgetWithText(FilledButton, 'Add attribute'),
+          );
+          expect(
+            ctaRect.bottom,
+            lessThanOrEqualTo(navPillTop - DesignTokens.spacing16),
+          );
+          expect(tester.takeException(), isNull);
+        },
+      );
+
+      testWidgets(
+        'Attributes tab list items clear floating NavigationBar by exact spacing16 without extra trailing margin, and SnackBar clears NavigationBar',
+        (WidgetTester tester) async {
+          telemetryRepo.attributesByScope['SERVER_SCOPE'] = [
+            for (var i = 0; i < 10; i++)
+              TbAttributeEntry(
+                key: 'attr_$i',
+                value: 'val_$i',
+                lastUpdateTs: 1700000000000,
+                scope: TbAttributeScope.serverScope,
+              ),
+          ];
+
+          await tester.pumpWidget(buildMobileShellWidget(tester));
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text('Attributes'));
+          await tester.pumpAndSettle();
+
+          final addBtnSize = tester.getSize(
+            find.byKey(const Key('attr-add-button')),
+          );
+          expect(
+            addBtnSize.height,
+            greaterThanOrEqualTo(DesignTokens.minTouchTarget),
+          );
+
+          final listFinder = find.byType(ListView);
+          expect(tester.getRect(listFinder).bottom, 844.0);
+
+          final scrollableState = tester.state<ScrollableState>(
+            verticalScrollableIn(listFinder),
+          );
+          scrollableState.position.jumpTo(
+            scrollableState.position.maxScrollExtent,
+          );
+          await tester.pumpAndSettle();
+
+          final navPillTop = tester.getRect(find.byType(NavigationBar)).top - 1;
+          final lastCardFinder = find.ancestor(
+            of: find.text('attr_9'),
+            matching: find.byType(Container),
+          );
+          final lastCardRect = tester.getRect(lastCardFinder.first);
+          expect(
+            lastCardRect.bottom,
+            closeTo(navPillTop - DesignTokens.spacing16, 0.5),
+          );
+
+          // Deleting an attribute shows a floating SnackBar surface above the NavigationBar
+          await tester.tap(find.byKey(const Key('attr-delete-attr_9')));
+          await tester.pumpAndSettle();
+
+          final snackSurfaceFinder = find.descendant(
+            of: find.byType(SnackBar),
+            matching: find.byType(Material),
+          );
+          final snackSurfaceRect = tester.getRect(snackSurfaceFinder.first);
+          expect(
+            snackSurfaceRect.bottom,
+            lessThanOrEqualTo(navPillTop - DesignTokens.spacing8),
+          );
+        },
+      );
+
+      testWidgets(
+        'Attribute editor modal bottom sheet respects bottom safe area when keyboard is closed',
+        (WidgetTester tester) async {
+          await tester.pumpWidget(buildMobileShellWidget(tester));
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text('Attributes'));
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.byKey(const Key('attr-add-button')));
+          await tester.pumpAndSettle();
+
+          final saveRect = tester.getRect(
+            find.byKey(const Key('attr-save-button')),
+          );
+          expect(
+            saveRect.bottom,
+            lessThanOrEqualTo(844.0 - 34.0 - DesignTokens.spacing16),
+          );
+        },
+      );
+    });
   });
 }

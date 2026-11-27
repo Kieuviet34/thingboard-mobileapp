@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:thingsboard_democloud_app/config/themes/design_tokens.dart';
 import 'package:thingsboard_democloud_app/config/themes/tb_theme.dart';
 import 'package:thingsboard_democloud_app/widgets/tb_list_row.dart';
+import 'package:thingsboard_democloud_app/widgets/tb_section_card.dart';
 
 void main() {
   Widget host(Widget child) => MaterialApp(
@@ -39,4 +40,34 @@ void main() {
     await tester.tap(find.text('Tap me'));
     expect(taps, 1);
   });
+
+  testWidgets(
+    'TbListRow applies 16dp horizontal padding standalone and avoids double padding inside TbSectionCard',
+    (tester) async {
+      await tester.pumpWidget(
+        host(
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TbListRow(title: 'Standalone row'),
+              TbSectionCard(
+                title: 'Section Header',
+                child: TbListRow(title: 'Card row'),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      final standaloneLeft = tester.getTopLeft(find.text('Standalone row')).dx;
+      final sectionHeaderLeft = tester
+          .getTopLeft(find.text('Section Header'))
+          .dx;
+      final cardRowLeft = tester.getTopLeft(find.text('Card row')).dx;
+
+      expect(standaloneLeft, DesignTokens.spacing16);
+      expect(cardRowLeft, sectionHeaderLeft);
+      expect(cardRowLeft, DesignTokens.spacing16);
+    },
+  );
 }

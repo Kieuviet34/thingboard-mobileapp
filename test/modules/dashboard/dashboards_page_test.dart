@@ -155,6 +155,7 @@ void main() {
     required DashboardRepository repo,
     ThemeData? theme,
     Size size = const Size(390, 844),
+    EdgeInsets mediaPadding = EdgeInsets.zero,
     double textScale = 1.0,
     bool disableAnimations = false,
   }) {
@@ -163,7 +164,15 @@ void main() {
       routes: [
         GoRoute(
           path: AppRoutes.dashboards,
-          builder: (_, _) => const DashboardsPage(),
+          builder: (_, _) => MediaQuery(
+            data: MediaQueryData(
+              size: size,
+              padding: mediaPadding,
+              textScaler: TextScaler.linear(textScale),
+              disableAnimations: disableAnimations,
+            ),
+            child: const DashboardsPage(),
+          ),
         ),
         GoRoute(
           path: AppRoutes.dashboardDetails,
@@ -193,16 +202,9 @@ void main() {
           DemoTelemetryRepository(mockDevices),
         ),
       ],
-      child: MediaQuery(
-        data: MediaQueryData(
-          size: size,
-          textScaler: TextScaler.linear(textScale),
-          disableAnimations: disableAnimations,
-        ),
-        child: MaterialApp.router(
-          theme: theme ?? tbLightTheme(),
-          routerConfig: router,
-        ),
+      child: MaterialApp.router(
+        theme: theme ?? tbLightTheme(),
+        routerConfig: router,
       ),
     );
   }
@@ -308,10 +310,46 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('Dashboard #14'),
         300,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: find.descendant(
+          of: find.byType(ListView),
+          matching: find.byType(Scrollable),
+        ),
       );
       expect(find.text('Dashboard #14'), findsOneWidget);
     });
+
+    testWidgets(
+      'auto-fetches subsequent pages when Starred filter has 0 matches on page 0',
+      (tester) async {
+        final items = [
+          for (var i = 1; i <= 4; i++)
+            TbDashboardInfo(
+              id: 'dash-$i',
+              title: 'Unstarred #$i',
+              isStarred: false,
+              metrics: {'Temp': '20 °C'},
+            ),
+          const TbDashboardInfo(
+            id: 'dash-5',
+            title: 'Starred On Page Two',
+            isStarred: true,
+            metrics: {'Temp': '25 °C'},
+          ),
+        ];
+        final repo = _PagedDashboardRepo(items: items, pageSizeOverride: 4);
+
+        await tester.pumpWidget(buildApp(repo: repo, disableAnimations: true));
+        await tester.pumpAndSettle();
+
+        expect(repo.requestedPages, [0]);
+
+        await tester.tap(find.widgetWithText(FilterChip, 'Starred'));
+        await tester.pumpAndSettle();
+
+        expect(repo.requestedPages, contains(1));
+        expect(find.text('Starred On Page Two'), findsOneWidget);
+      },
+    );
 
     testWidgets('shows empty state cleanly', (tester) async {
       final emptyRepo = _PagedDashboardRepo(items: const []);
@@ -335,13 +373,28 @@ void main() {
     });
 
     testWidgets(
-      'renders adaptive 2-pane master-detail on >=840dp and switches embedded detail',
+      'renders adaptive 2-pane master-detail on >=840dp, scopes filter bar to master pane, and preserves detail pane when Starred is empty',
       (tester) async {
         tester.view.physicalSize = const Size(1024, 800);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
 
-        final repo = _PagedDashboardRepo();
+        final repo = _PagedDashboardRepo(
+          items: const [
+            TbDashboardInfo(
+              id: 'dash-1',
+              title: 'Smart Office Monitoring',
+              isStarred: false,
+              metrics: {'Temperature': '22.4 °C'},
+            ),
+            TbDashboardInfo(
+              id: 'dash-2',
+              title: 'Energy Metering',
+              isStarred: false,
+              metrics: {'Voltage': '230.8 V'},
+            ),
+          ],
+        );
         await tester.pumpWidget(
           buildApp(
             repo: repo,
@@ -354,12 +407,61 @@ void main() {
         expect(find.byType(DashboardDetailsPage), findsOneWidget);
         expect(find.text('22.4 °C'), findsWidgets);
 
+        // Filter bar stays inside the 360dp master pane; detail pane starts at body top.
+        final starredChipRect = tester.getRect(
+          find.widgetWithText(FilterChip, 'Starred'),
+        );
+        final detailRect = tester.getRect(find.byType(DashboardDetailsPage));
+        expect(starredChipRect.right, lessThanOrEqualTo(360.0));
+        expect(detailRect.top, lessThanOrEqualTo(starredChipRect.top));
+
         // Select Energy Metering in master pane -> detail pane updates.
         await tester.tap(find.byKey(const Key('dashboard-card-dash-2')));
         await tester.pumpAndSettle();
-
         expect(find.text('230.8 V'), findsWidgets);
+
+        // Filtering to Starred when none are starred keeps right detail pane mounted.
+        await tester.tap(find.widgetWithText(FilterChip, 'Starred'));
+        await tester.pumpAndSettle();
+        expect(find.text('No starred dashboards'), findsOneWidget);
+        expect(find.byType(DashboardDetailsPage), findsOneWidget);
         expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'cards maintain symmetric 16dp horizontal margins and bottom scroll clearance honors floating NavigationBar inset without viewport clipping',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        const navBarBottomInset = 76.0;
+        await tester.pumpWidget(
+          buildApp(
+            repo: _PagedDashboardRepo(),
+            size: const Size(390, 844),
+            mediaPadding: const EdgeInsets.only(bottom: navBarBottomInset),
+            disableAnimations: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final cardRect = tester.getRect(
+          find.byKey(const Key('dashboard-card-dash-1')),
+        );
+        expect(cardRect.left, DesignTokens.spacing16);
+        expect(cardRect.right, 390.0 - DesignTokens.spacing16);
+
+        final listFinder = find.byType(ListView);
+        final listView = tester.widget<ListView>(listFinder);
+        final resolvedPadding = (listView.padding! as EdgeInsets);
+        expect(
+          resolvedPadding.bottom,
+          navBarBottomInset + DesignTokens.spacing16,
+        );
+        // Viewport reaches the bottom edge (scroll-under floating glass nav bar).
+        expect(tester.getRect(listFinder).bottom, 844.0);
       },
     );
 
@@ -395,13 +497,19 @@ void main() {
       await tester.pumpAndSettle();
 
       final card = find.byKey(const Key('dashboard-card-dash-1'));
+      final cardRect = tester.getRect(card);
+      final titleRect = tester.getRect(find.text('Smart Office Monitoring'));
       expect(
         find.descendant(of: card, matching: find.byType(Text)),
         findsNWidgets(2),
       );
       expect(
-        tester.getSize(card).height,
+        cardRect.height,
         greaterThanOrEqualTo(DesignTokens.minTouchTarget),
+      );
+      expect(
+        titleRect.top - cardRect.top,
+        greaterThanOrEqualTo(DesignTokens.spacing12),
       );
       expect(tester.takeException(), isNull);
     });
